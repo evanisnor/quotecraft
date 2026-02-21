@@ -73,3 +73,19 @@ This task is purely structural — no conflicting patterns or design decisions e
 **Persistent volume:** `postgres-data` named volume preserves data across container restarts during development.
 
 ### No technical challenges
+
+---
+
+## Task: INFR-US1-A004 — Add root Makefile targets for service lifecycle
+
+**Requirements:** Infrastructure prerequisite (no direct functional requirement ID)
+
+### Decisions
+
+**Targets are thin one-liners:** Unlike `bootstrap`, these targets have no multi-step logic, so they invoke `docker compose` directly rather than delegating to scripts.
+
+**Services targeted:** All four acceptance criteria targets are present: `services-up`, `services-down`, `services-status`, `services-logs`. They operate on all services in `compose.yaml` (currently just PostgreSQL; more services may be added later).
+
+**`services-down` preserves volume:** `docker compose down` removes containers but keeps the `postgres-data` volume. A developer wanting a clean slate can run `docker compose down -v` manually, or use `make db-reset` once it is implemented in INFR-US1-A010.
+
+### No technical challenges
