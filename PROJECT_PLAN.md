@@ -8,32 +8,86 @@ Cross-reference: [PRODUCT_SPEC.md](./PRODUCT_SPEC.md) · [REQUIREMENTS.md](./REQ
 
 ### [Phase 1: MVP](#phase-1-mvp)
 
-- [INFR — Infrastructure & Backend Foundation](#infr--infrastructure--backend-foundation)
-  - [INFR-US1: Project Scaffolding (P0)](#infr-us1-project-scaffolding-p0)
-  - [INFR-US2: Database & Migrations (P0)](#infr-us2-database--migrations-p0)
-  - [INFR-US3: API Server Skeleton (P0)](#infr-us3-api-server-skeleton-p0)
-  - [INFR-US4: Authentication (P0)](#infr-us4-authentication-p0)
-  - [INFR-US5: Calculator CRUD API (P0)](#infr-us5-calculator-crud-api-p0)
-  - [INFR-US6: Object Storage & CDN (P0)](#infr-us6-object-storage--cdn-p0)
-- [BLDR — Visual Calculator Builder](#bldr--visual-calculator-builder)
-  - [BLDR-US1: Dashboard Shell & Navigation (P0)](#bldr-us1-dashboard-shell--navigation-p0)
-  - [BLDR-US2: Field Type Palette & Configuration (P0)](#bldr-us2-field-type-palette--configuration-p0)
-  - [BLDR-US3: Layout & Conditional Flow (P1)](#bldr-us3-layout--conditional-flow-p1)
-  - [BLDR-US4: Live Preview Pane (P0)](#bldr-us4-live-preview-pane-p0)
-  - [BLDR-US5: Save & Auto-Save (P0)](#bldr-us5-save--auto-save-p0)
-- [CALC — Formula Engine & Results](#calc--formula-engine--results)
-  - [CALC-US1: Formula Engine Core (P0)](#calc-us1-formula-engine-core-p0)
-  - [CALC-US2: Formula Editor UI (P0)](#calc-us2-formula-editor-ui-p0)
-  - [CALC-US3: Results Display Configuration (P1)](#calc-us3-results-display-configuration-p1)
-- [STYL — Styling & Branding](#styl--styling--branding)
-  - [STYL-US1: Theme & Appearance Controls (P1)](#styl-us1-theme--appearance-controls-p1)
-  - [STYL-US2: Powered-by Badge (P0)](#styl-us2-powered-by-badge-p0)
-- [WDGT — Embeddable Widget](#wdgt--embeddable-widget)
-  - [WDGT-US1: Widget Bundle & Loader (P0)](#wdgt-us1-widget-bundle--loader-p0)
-  - [WDGT-US2: iFrame Embed Fallback (P2)](#wdgt-us2-iframe-embed-fallback-p2)
-  - [WDGT-US3: Widget Error Reporting (P1)](#wdgt-us3-widget-error-reporting-p1)
-- [TMPL — Templates](#tmpl--templates)
-  - [TMPL-US1: Template System & Starter Set (P1)](#tmpl-us1-template-system--starter-set-p1)
+- [QuoteCraft — Project Plan](#quotecraft--project-plan)
+  - [Table of Contents](#table-of-contents)
+    - [Phase 1: MVP](#phase-1-mvp)
+    - [Phase 2: Growth](#phase-2-growth)
+    - [Phase 3: Monetization](#phase-3-monetization)
+    - [Phase 4: Expansion](#phase-4-expansion)
+    - [Appendix: Requirement Traceability](#appendix-requirement-traceability)
+- [Phase 1: MVP](#phase-1-mvp-1)
+  - [INFR — Infrastructure \& Backend Foundation](#infr--infrastructure--backend-foundation)
+    - [INFR-US1: Project Scaffolding \& Developer Experience (P0)](#infr-us1-project-scaffolding--developer-experience-p0)
+    - [INFR-US2: Database \& Migrations (P0)](#infr-us2-database--migrations-p0)
+    - [INFR-US3: API Server Skeleton (P0)](#infr-us3-api-server-skeleton-p0)
+    - [INFR-US4: Authentication (P0)](#infr-us4-authentication-p0)
+    - [INFR-US5: Calculator CRUD API (P0)](#infr-us5-calculator-crud-api-p0)
+    - [INFR-US6: Object Storage \& CDN (P0)](#infr-us6-object-storage--cdn-p0)
+  - [BLDR — Visual Calculator Builder](#bldr--visual-calculator-builder)
+    - [BLDR-US1: Dashboard Shell \& Navigation (P0)](#bldr-us1-dashboard-shell--navigation-p0)
+    - [BLDR-US2: Field Type Palette \& Configuration (P0)](#bldr-us2-field-type-palette--configuration-p0)
+    - [BLDR-US3: Layout \& Conditional Flow (P1)](#bldr-us3-layout--conditional-flow-p1)
+    - [BLDR-US4: Live Preview Pane (P0)](#bldr-us4-live-preview-pane-p0)
+    - [BLDR-US5: Save \& Auto-Save (P0)](#bldr-us5-save--auto-save-p0)
+  - [CALC — Formula Engine \& Results](#calc--formula-engine--results)
+    - [CALC-US1: Formula Engine Core (P0)](#calc-us1-formula-engine-core-p0)
+    - [CALC-US2: Formula Editor UI (P0)](#calc-us2-formula-editor-ui-p0)
+    - [CALC-US3: Results Display Configuration (P1)](#calc-us3-results-display-configuration-p1)
+  - [STYL — Styling \& Branding](#styl--styling--branding)
+    - [STYL-US1: Theme \& Appearance Controls (P1)](#styl-us1-theme--appearance-controls-p1)
+    - [STYL-US2: Powered-by Badge (P0)](#styl-us2-powered-by-badge-p0)
+  - [WDGT — Embeddable Widget](#wdgt--embeddable-widget)
+    - [WDGT-US1: Widget Bundle \& Loader (P0)](#wdgt-us1-widget-bundle--loader-p0)
+    - [WDGT-US2: iFrame Embed Fallback (P2)](#wdgt-us2-iframe-embed-fallback-p2)
+    - [WDGT-US3: Widget Error Reporting (P1)](#wdgt-us3-widget-error-reporting-p1)
+  - [TMPL — Templates](#tmpl--templates)
+    - [TMPL-US1: Template System \& Starter Set (P1)](#tmpl-us1-template-system--starter-set-p1)
+- [Phase 2: Growth](#phase-2-growth-1)
+  - [LEAD — Lead Capture \& Submissions](#lead--lead-capture--submissions)
+    - [LEAD-US1: Submission Pipeline (P0)](#lead-us1-submission-pipeline-p0)
+    - [LEAD-US2: Submission Dashboard (P1)](#lead-us2-submission-dashboard-p1)
+    - [LEAD-US3: Lead Capture Form (P1)](#lead-us3-lead-capture-form-p1)
+    - [LEAD-US4: Email Notifications (P1)](#lead-us4-email-notifications-p1)
+  - [SEOP — SEO Pages \& Template Gallery](#seop--seo-pages--template-gallery)
+    - [SEOP-US1: Template Gallery Pages (P1)](#seop-us1-template-gallery-pages-p1)
+    - [SEOP-US2: Blog Infrastructure (P2)](#seop-us2-blog-infrastructure-p2)
+  - [WSEO — Widget SEO Enhancements](#wseo--widget-seo-enhancements)
+    - [WSEO-US1: Widget Search Engine Compatibility (P2)](#wseo-us1-widget-search-engine-compatibility-p2)
+- [Phase 3: Monetization](#phase-3-monetization-1)
+  - [BILL — Billing \& Subscriptions](#bill--billing--subscriptions)
+    - [BILL-US1: Stripe Integration \& Plan Management (P0)](#bill-us1-stripe-integration--plan-management-p0)
+  - [PROT — Pro Tier Features](#prot--pro-tier-features)
+    - [PROT-US1: Branding Removal (P1)](#prot-us1-branding-removal-p1)
+    - [PROT-US2: PDF Quote Generation (P2)](#prot-us2-pdf-quote-generation-p2)
+    - [PROT-US3: Custom Redirects \& Tracking (P2)](#prot-us3-custom-redirects--tracking-p2)
+    - [PROT-US4: Unlimited Submission History (P2)](#prot-us4-unlimited-submission-history-p2)
+  - [BSNS — Business Tier Features](#bsns--business-tier-features)
+    - [BSNS-US1: CRM \& Webhook Integrations (P3)](#bsns-us1-crm--webhook-integrations-p3)
+    - [BSNS-US2: A/B Testing (P4)](#bsns-us2-ab-testing-p4)
+    - [BSNS-US3: Team Management (P3)](#bsns-us3-team-management-p3)
+    - [BSNS-US4: Submission Analytics Dashboard (P4)](#bsns-us4-submission-analytics-dashboard-p4)
+    - [BSNS-US5: Custom Domain for Standalone Pages (P4)](#bsns-us5-custom-domain-for-standalone-pages-p4)
+    - [BSNS-US6: Conditional Email Sequences (P4)](#bsns-us6-conditional-email-sequences-p4)
+  - [AGCY — Agency Tier Features](#agcy--agency-tier-features)
+    - [AGCY-US1: White-Label \& Sub-Accounts (P5)](#agcy-us1-white-label--sub-accounts-p5)
+    - [AGCY-US2: Public API \& Webhooks (P5)](#agcy-us2-public-api--webhooks-p5)
+    - [AGCY-US3: Bulk Operations (P6)](#agcy-us3-bulk-operations-p6)
+    - [AGCY-US4: SSO / SAML Support (P6)](#agcy-us4-sso--saml-support-p6)
+- [Phase 4: Expansion](#phase-4-expansion-1)
+  - [PLAT — Platform Integrations](#plat--platform-integrations)
+    - [PLAT-US1: WordPress Plugin (P4)](#plat-us1-wordpress-plugin-p4)
+    - [PLAT-US2: Zapier Native Integration (P5)](#plat-us2-zapier-native-integration-p5)
+    - [PLAT-US3: Shopify App (P5)](#plat-us3-shopify-app-p5)
+    - [PLAT-US4: Make (Integromat) Native Integration (P5)](#plat-us4-make-integromat-native-integration-p5)
+  - [EMBD — Advanced Embed Modes](#embd--advanced-embed-modes)
+    - [EMBD-US1: Popup \& Slide-In Modes (P3)](#embd-us1-popup--slide-in-modes-p3)
+    - [EMBD-US2: Standalone Hosted Pages (P4)](#embd-us2-standalone-hosted-pages-p4)
+  - [I18N — Multi-Language Support](#i18n--multi-language-support)
+    - [I18N-US1: Widget Localization (P5)](#i18n-us1-widget-localization-p5)
+- [Appendix: Requirement Traceability](#appendix-requirement-traceability-1)
+  - [Coverage Summary](#coverage-summary)
+  - [Remaining Gaps](#remaining-gaps)
+  - [User Stories Not Traced to Requirements](#user-stories-not-traced-to-requirements)
 
 ### [Phase 2: Growth](#phase-2-growth)
 
@@ -97,24 +151,40 @@ Everything here ships before the first public user. The end-to-end flow: sign up
 
 The API server, database, authentication, and deployment pipeline. Every other epic depends on this.
 
-### INFR-US1: Project Scaffolding (P0)
+### INFR-US1: Project Scaffolding & Developer Experience (P0)
 
-**As a** developer, **I need** a monorepo with build tooling, linting, testing, and CI so that all subsequent work has a consistent foundation.
+**As a** developer, **I need** a monorepo with build tooling, containerized local services, Makefile-driven workflows, and CI so that all subsequent work has a consistent foundation and every engineer can bootstrap, run, and test the full stack with minimal friction.
 
 **Depends on:** Nothing
 **Requirements:** Infrastructure prerequisite — no direct functional requirement. Enables all subsequent work.
 **Acceptance Criteria:**
-- Monorepo contains separate packages for: API server, dashboard (React), widget, and shared libraries (formula engine, config schema, field renderers)
-- Build, lint, and test commands work for each package
+- Monorepo contains separate packages for: API server (Go), dashboard + marketing site (Next.js), widget (Vanilla TypeScript), and shared libraries (formula engine, config schema, field renderers)
+- Root Makefile provides comprehensive local environment controls and delegates to sub-project Makefiles; complex logic lives in shell scripts under `scripts/` — Makefile targets stay thin and call scripts for anything beyond simple commands
+- `make bootstrap` installs all required development tools via Homebrew (Go, Node.js, pnpm, air, Docker)
+- `make services-up` / `make services-down` manage local Docker Compose services (PostgreSQL)
+- `make dev` starts all sub-projects in hot-reload/watch mode concurrently
+- `make db-seed` / `make db-reset` manage local database state
+- Each sub-project has its own Makefile with build, test, lint, and dev targets — no duplicate logic; sub-project Makefiles may also delegate to `scripts/` for multi-step operations
+- Go API server runs locally via air for hot-reload during development
+- Dashboard is scaffolded using `create-next-app` (Next.js with TypeScript, App Router, Tailwind CSS)
+- Build, lint, and test commands work for each package individually and from the root
 - CI pipeline runs on every push: lint, type-check, unit tests
-- README documents local dev setup
+- README documents local dev setup with a single `make bootstrap && make dev` getting-started path
 
 | ID | Task | P |
 |----|------|---|
-| INFR-US1-A001 | Initialize monorepo with package manager workspaces | 0 |
-| INFR-US1-A002 | Configure TypeScript, linting, and formatting rules | 0 |
-| INFR-US1-A003 | Set up CI pipeline (lint, type-check, test) | 0 |
-| INFR-US1-A004 | Create package stubs for api, dashboard, widget, and shared | 0 |
+| INFR-US1-A001 | Initialize monorepo with pnpm workspaces (pnpm-workspace.yaml, root package.json, .gitignore, .editorconfig) | 0 |
+| INFR-US1-A002 | Create root Makefile with `bootstrap` target that installs dev tools via Homebrew Brewfile (go, node, pnpm, air, docker) | 0 |
+| INFR-US1-A003 | Create Docker Compose configuration for local development services (PostgreSQL with health check, persistent volume) | 0 |
+| INFR-US1-A004 | Add root Makefile targets for service lifecycle (`services-up`, `services-down`, `services-status`, `services-logs`) | 0 |
+| INFR-US1-A005 | Initialize Go API server module (`go mod init`, main.go entrypoint, `.air.toml` for hot-reload) with sub-project Makefile (build, test, lint, dev) | 0 |
+| INFR-US1-A006 | Scaffold dashboard + marketing site Next.js app using `create-next-app` (TypeScript, App Router, Tailwind CSS, ESLint) with sub-project Makefile (build, test, lint, dev) | 0 |
+| INFR-US1-A007 | Create widget package stub with TypeScript bundler configuration (esbuild/Vite) and sub-project Makefile (build, test, lint, dev) | 0 |
+| INFR-US1-A008 | Create shared TypeScript package stubs (formula-engine, config-schema, field-renderers) with sub-project Makefile (build, test, lint) | 0 |
+| INFR-US1-A009 | Configure shared TypeScript (root tsconfig with project references), ESLint, and Prettier configs inherited by sub-projects | 0 |
+| INFR-US1-A010 | Add root Makefile targets for database management (`db-migrate`, `db-seed`, `db-reset`) delegating to API sub-project | 0 |
+| INFR-US1-A011 | Add root Makefile target for full-stack dev-watch mode (`dev`) that starts Docker services, API via air, and Next.js/widget in watch mode concurrently | 0 |
+| INFR-US1-A012 | Set up CI pipeline with GitHub Actions (lint, type-check, test for all sub-projects) | 0 |
 
 ### INFR-US2: Database & Migrations (P0)
 

@@ -44,16 +44,24 @@ Last updated: 2026-02-20
 
 [Epic in PROJECT_PLAN.md](./PROJECT_PLAN.md#infr--infrastructure--backend-foundation)
 
-### [INFR-US1: Project Scaffolding](./PROJECT_PLAN.md#infr-us1-project-scaffolding-p0) (P0)
+### [INFR-US1: Project Scaffolding & Developer Experience](./PROJECT_PLAN.md#infr-us1-project-scaffolding--developer-experience-p0) (P0)
 
 **Requirements:** Infrastructure prerequisite — no direct functional requirement
 
 | Status | ID | Task | P | Completed |
-|--------|----|------|---|-----------|
-| | INFR-US1-A001 | Initialize monorepo with package manager workspaces | 0 | |
-| | INFR-US1-A002 | Configure TypeScript, linting, and formatting rules | 0 | |
-| | INFR-US1-A003 | Set up CI pipeline (lint, type-check, test) | 0 | |
-| | INFR-US1-A004 | Create package stubs for api, dashboard, widget, and shared | 0 | |
+|--------|----|------|---|-----------||
+| | INFR-US1-A001 | Initialize monorepo with pnpm workspaces | 0 | |
+| | INFR-US1-A002 | Create root Makefile with `bootstrap` target (Homebrew Brewfile) | 0 | |
+| | INFR-US1-A003 | Create Docker Compose for local dev services (PostgreSQL) | 0 | |
+| | INFR-US1-A004 | Add root Makefile targets for service lifecycle | 0 | |
+| | INFR-US1-A005 | Initialize Go API server module with air hot-reload + Makefile | 0 | |
+| | INFR-US1-A006 | Scaffold dashboard Next.js app via create-next-app + Makefile | 0 | |
+| | INFR-US1-A007 | Create widget package stub with TypeScript bundler + Makefile | 0 | |
+| | INFR-US1-A008 | Create shared TypeScript package stubs + Makefile | 0 | |
+| | INFR-US1-A009 | Configure shared TypeScript, ESLint, and Prettier configs | 0 | |
+| | INFR-US1-A010 | Add root Makefile targets for database management | 0 | |
+| | INFR-US1-A011 | Add root Makefile target for full-stack dev-watch mode | 0 | |
+| | INFR-US1-A012 | Set up CI pipeline with GitHub Actions | 0 | |
 
 ### [INFR-US2: Database & Migrations](./PROJECT_PLAN.md#infr-us2-database--migrations-p0) (P0)
 
