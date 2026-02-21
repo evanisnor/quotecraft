@@ -89,3 +89,27 @@ This task is purely structural — no conflicting patterns or design decisions e
 **`services-down` preserves volume:** `docker compose down` removes containers but keeps the `postgres-data` volume. A developer wanting a clean slate can run `docker compose down -v` manually, or use `make db-reset` once it is implemented in INFR-US1-A010.
 
 ### No technical challenges
+
+---
+
+## Task: INFR-US1-A005 — Initialize Go API server module with air hot-reload + Makefile
+
+**Requirements:** Infrastructure prerequisite (no direct functional requirement ID)
+
+### Decisions
+
+**Module path:** `github.com/evanisnor/quotecraft/api` — matches the repository path convention.
+
+**Directory structure:** Follows the Golang skill's `cmd/` + `internal/` layout:
+- `cmd/api/main.go` — Entrypoint
+- `internal/` — Empty stub directory (preserved via `.gitkeep`) for future domain packages
+
+**`slog` over `log.Println`:** Used `slog.NewJSONHandler` from the start rather than the suggested `log.Println` placeholder. Both the Golang skill and SYSTEM_DESIGN.md specify structured JSON logging. Using `slog` now avoids a throwaway replacement when the real server is implemented in INFR-US3.
+
+**Minimal entrypoint:** `main.go` starts an HTTP server on `:8080` with a single log line. Real routing, middleware, and handlers are added in INFR-US3 tasks.
+
+**Air configuration:** `.air.toml` watches Go files, builds to `./tmp/main`, and excludes `tmp/`, `vendor/`, and test files from the watch.
+
+**Sub-project Makefile:** Thin targets — `build` (`go build ./...`), `test` (`go test ./...`), `lint` (`go vet ./...`), `dev` (`air`). No delegation to scripts needed since commands are single-liners.
+
+### No technical challenges

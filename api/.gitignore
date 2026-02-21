@@ -1,0 +1,5 @@
+# Compiled binary (produced by go build ./cmd/api/)
+/api
+
+# Air hot-reload artifacts
+/tmp/

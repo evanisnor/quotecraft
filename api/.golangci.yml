@@ -1,0 +1,14 @@
+run:
+  go: "1.25"
+
+linters:
+  # Explicitly enable only specific linters. This avoids enabling the default
+  # typecheck linter, which can fail with "file requires newer Go version" errors
+  # when the installed Go toolchain is newer than the version golangci-lint was
+  # built with. Type correctness is enforced by `go build` and `go test`.
+  disable-all: true
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
