@@ -1,9 +1,6 @@
 {
   "sandbox": {
-    "enabled": true,
-    "autoAllowBashIfSandboxed": true,
-    "allowUnsandboxedCommands": false,
-    "excludedCommands": ["docker", "docker-compose"],
+    "enabled": false,
     "network": {
       "allowLocalBinding": true,
       "allowedDomains": [
@@ -23,7 +20,6 @@
     "deny": [
       "Read(~/.ssh/**)",
       "Read(~/.aws/**)",
-      "Read(~/.gnupg/**)",
       "Read(~/.config/gcloud/**)"
     ]
   }

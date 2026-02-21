@@ -4,14 +4,13 @@ set -euo pipefail
 # ===========================================================================
 # autoclaude.sh — Automated Claude Code runner for QuoteCraft
 #
-# Runs Claude Code in headless mode to build the project according to the
-# plan. When usage limits are hit, detects the reset time and schedules a
-# cron job to automatically resume.
+# Runs Claude Code in headless mode to build the project. When usage limits
+# are hit, waits for the reset window and resumes automatically.
 #
 # Usage:
 #   ./autoclaude.sh              # Start a new session
 #   ./autoclaude.sh --continue   # Continue the most recent session
-#   ./autoclaude.sh --resume     # Resume a specific session (interactive picker)
+#   ./autoclaude.sh --resume     # Resume the saved session ID
 # ===========================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -19,8 +18,10 @@ PROJECT_DIR="$SCRIPT_DIR"
 LOG_DIR="$PROJECT_DIR/.autoclaude"
 LOG_FILE="$LOG_DIR/autoclaude.log"
 SESSION_FILE="$LOG_DIR/session_id"
-CRON_TAG="# autoclaude-quotecraft"
+SESSION_EVENTS="$LOG_DIR/last_session.jsonl"
+RUN_STATE="$LOG_DIR/run_state"
 
+CLAUDE_BIN="${CLAUDE_BIN:-/usr/local/bin/claude}"
 MODEL="sonnet"
 
 PROMPT='You are building the QuoteCraft project. Follow the workflow defined in CLAUDE.md exactly:
@@ -50,134 +51,44 @@ log() {
 }
 
 # ===========================================================================
-# Cron management
+# Event interpretation
 # ===========================================================================
 
-remove_cron() {
-    crontab -l 2>/dev/null | grep -v "$CRON_TAG" | crontab - 2>/dev/null || true
-    log "Removed any existing autoclaude cron job."
-}
+# Called for each stream-json event line. Logs human-readable summaries.
+interpret_event() {
+    local line="$1"
+    local type
+    type=$(echo "$line" | jq -r '.type // empty' 2>/dev/null) || return 0
+    [[ -z "$type" ]] && return 0
 
-schedule_cron() {
-    local resume_time="$1" # epoch timestamp
-    local session_id="${2:-}" # optional session ID
-    local minute hour day month
-
-    minute="$(date -r "$resume_time" '+%M')"
-    hour="$(date -r "$resume_time" '+%H')"
-    day="$(date -r "$resume_time" '+%d')"
-    month="$(date -r "$resume_time" '+%m')"
-
-    local resume_flag="--continue"
-    if [[ -n "$session_id" ]]; then
-        resume_flag="--resume $session_id"
-    fi
-
-    local cron_line="$minute $hour $day $month * cd $PROJECT_DIR && ./autoclaude.sh $resume_flag >> $LOG_FILE 2>&1 $CRON_TAG"
-
-    (crontab -l 2>/dev/null || true; echo "$cron_line") | crontab -
-    log "Scheduled resume at $(date -r "$resume_time" '+%Y-%m-%d %H:%M:%S') via cron."
-    log "Cron entry: $cron_line"
-}
-
-# ===========================================================================
-# Rate limit detection
-# ===========================================================================
-
-parse_reset_time() {
-    local output="$1"
-
-    # Pattern 1: resetsAt epoch from rate_limit_event (most reliable — use first)
-    local resets_at
-    resets_at=$(echo "$output" | jq -r '[.[] | select(.type == "rate_limit_event")] | first | .rate_limit_info.resetsAt // empty' 2>/dev/null || true)
-    if [[ -n "$resets_at" && "$resets_at" != "null" ]]; then
-        echo $(( resets_at + 120 ))
-        return 0
-    fi
-
-    # Pattern 2: "in N minutes" or "in N hours"
-    local minutes_match hours_match
-    minutes_match=$(echo "$output" | grep -oiE 'in ([0-9]+) minutes?' | head -1 | grep -oE '[0-9]+')
-    hours_match=$(echo "$output" | grep -oiE 'in ([0-9]+) hours?' | head -1 | grep -oE '[0-9]+')
-
-    if [[ -n "$minutes_match" ]]; then
-        echo $(( $(date +%s) + minutes_match * 60 + 120 ))
-        return 0
-    fi
-
-    if [[ -n "$hours_match" ]]; then
-        echo $(( $(date +%s) + hours_match * 3600 + 120 ))
-        return 0
-    fi
-
-    # Pattern 3: ISO 8601 timestamp
-    local iso_match
-    iso_match=$(echo "$output" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}' | head -1)
-    if [[ -n "$iso_match" ]]; then
-        local epoch
-        epoch=$(date -jf '%Y-%m-%dT%H:%M:%S' "$iso_match" '+%s' 2>/dev/null || true)
-        if [[ -n "$epoch" ]]; then
-            echo $(( epoch + 120 ))
-            return 0
-        fi
-    fi
-
-    # Pattern 4: "at H:MM AM/PM" style
-    local time_match
-    time_match=$(echo "$output" | grep -oiE 'at ([0-9]{1,2}:[0-9]{2}\s*(AM|PM))' | head -1 | sed 's/^at //i')
-    if [[ -n "$time_match" ]]; then
-        local epoch
-        epoch=$(date -jf '%I:%M %p' "$time_match" '+%s' 2>/dev/null || true)
-        if [[ -n "$epoch" ]]; then
-            if (( epoch < $(date +%s) )); then
-                epoch=$(( epoch + 86400 ))
-            fi
-            echo $(( epoch + 120 ))
-            return 0
-        fi
-    fi
-
-    # Pattern 5: "resets 1pm (America/Halifax)" from JSON result field
-    local result_field
-    result_field=$(echo "$output" | jq -r '[.[] | select(.type == "result")] | first | .result // ""' 2>/dev/null || true)
-    local resets_time resets_tz
-    resets_time=$(echo "$result_field" | grep -oiE 'resets [0-9]{1,2}(:[0-9]{2})?(am|pm)' | grep -oiE '[0-9]{1,2}(:[0-9]{2})?(am|pm)')
-    resets_tz=$(echo "$result_field" | grep -oiE '\([A-Za-z_/]+\)' | tr -d '()')
-    if [[ -n "$resets_time" && -n "$resets_tz" ]]; then
-        local epoch
-        epoch=$(python3 - "$resets_time" "$resets_tz" <<'EOF'
-import sys
-from datetime import datetime, timedelta
-try:
-    from zoneinfo import ZoneInfo
-except ImportError:
-    from backports.zoneinfo import ZoneInfo
-
-time_str = sys.argv[1].upper()  # e.g. "1PM" or "1:30PM"
-tz_str   = sys.argv[2]          # e.g. "America/Halifax"
-
-fmt = "%I:%M%p" if ":" in time_str else "%I%p"
-t = datetime.strptime(time_str, fmt)
-tz = ZoneInfo(tz_str)
-now = datetime.now(tz)
-candidate = now.replace(hour=t.hour, minute=t.minute, second=0, microsecond=0)
-if candidate <= now:
-    candidate += timedelta(days=1)
-print(int(candidate.timestamp()))
-EOF
-        2>/dev/null || true)
-        if [[ -n "$epoch" ]]; then
-            echo $(( epoch + 120 ))
-            return 0
-        fi
-    fi
-
-    return 1
-}
-
-is_rate_limited() {
-    local output="$1"
-    echo "$output" | grep -qiE 'rate.?limit|usage.?limit|exceeded.*limit|too many requests|over(loaded|capacity)|429|try again|reset'
+    case "$type" in
+        assistant)
+            while IFS= read -r tool_json; do
+                [[ -z "$tool_json" ]] && continue
+                local name input_summary
+                name=$(echo "$tool_json" | jq -r '.name // ""' 2>/dev/null) || continue
+                case "$name" in
+                    Bash)       input_summary=$(echo "$tool_json" | jq -r '.input.description // .input.command // ""' 2>/dev/null | head -c 120) ;;
+                    Read)       input_summary=$(echo "$tool_json" | jq -r '.input.file_path // ""' 2>/dev/null) ;;
+                    Edit|Write) input_summary=$(echo "$tool_json" | jq -r '.input.file_path // ""' 2>/dev/null) ;;
+                    Glob)       input_summary=$(echo "$tool_json" | jq -r '.input.pattern // ""' 2>/dev/null) ;;
+                    Grep)       input_summary=$(echo "$tool_json" | jq -r '"\(.input.pattern // "") in \(.input.path // ".")"' 2>/dev/null) ;;
+                    Task)       input_summary=$(echo "$tool_json" | jq -r '.input.description // ""' 2>/dev/null) ;;
+                    TodoWrite)  input_summary="updating todo list" ;;
+                    *)          input_summary=$(echo "$tool_json" | jq -r '.input | keys | join(", ")' 2>/dev/null) ;;
+                esac
+                log "  [$name] ${input_summary:0:120}"
+            done < <(echo "$line" | jq -c '.message.content[]? | select(.type == "tool_use")' 2>/dev/null || true)
+            ;;
+        result)
+            local result
+            result=$(echo "$line" | jq -r '.result // ""' 2>/dev/null) || return 0
+            [[ -n "$result" ]] && log "Result: ${result:0:300}"
+            ;;
+        rate_limit_event)
+            log "Rate limit reached."
+            ;;
+    esac
 }
 
 # ===========================================================================
@@ -186,25 +97,11 @@ is_rate_limited() {
 
 main() {
     local mode="new"
-    local session_id=""
-
-    # Remove any existing cron job on fresh run
-    remove_cron
-
-    # Parse arguments
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --continue)
-                mode="continue"
-                shift
-                ;;
-            --resume)
-                mode="resume"
-                shift
-                ;;
-            *)
-                shift
-                ;;
+            --continue) mode="continue"; shift ;;
+            --resume)   mode="resume";   shift ;;
+            *)          shift ;;
         esac
     done
 
@@ -212,28 +109,28 @@ main() {
     log "autoclaude starting (mode=$mode)"
     log "============================================"
 
-    # Build the claude command
-    local -a cmd=(
-        claude
+    local -a base_cmd=(
+        "$CLAUDE_BIN"
         -p "$PROMPT"
         --model "$MODEL"
         --dangerously-skip-permissions
-        --output-format json
+        --output-format stream-json
         --verbose
     )
 
+    # Set initial resume flags based on mode
+    local resume_flag=""
     case "$mode" in
         continue)
-            cmd+=(--continue)
+            resume_flag="--continue"
             log "Continuing most recent session."
             ;;
         resume)
             if [[ -f "$SESSION_FILE" ]]; then
-                session_id="$(cat "$SESSION_FILE")"
-                cmd+=(--resume "$session_id")
-                log "Resuming session: $session_id"
+                resume_flag="--resume $(cat "$SESSION_FILE")"
+                log "Resuming session: $(cat "$SESSION_FILE")"
             else
-                log "No saved session ID found. Starting new session."
+                log "No saved session. Starting new."
             fi
             ;;
         new)
@@ -241,74 +138,88 @@ main() {
             ;;
     esac
 
-    # Run Claude
-    local output=""
-    local exit_code=0
+    while true; do
+        # Build command with current resume flag
+        local -a cmd=("${base_cmd[@]}")
+        if [[ -n "$resume_flag" ]]; then
+            read -ra resume_args <<< "$resume_flag"
+            cmd+=("${resume_args[@]}")
+        fi
 
-    # Log the actual command being run (minus the prompt for readability)
-    local cmd_display=("${cmd[@]}")
-    for i in "${!cmd_display[@]}"; do
-        if [[ "${cmd_display[$i]}" == "$PROMPT" ]]; then
-            cmd_display[$i]="<prompt>"
+        log "Running: $CLAUDE_BIN -p <prompt> --model $MODEL --dangerously-skip-permissions --output-format stream-json --verbose${resume_flag:+ $resume_flag}"
+
+        > "$SESSION_EVENTS"
+        > "$RUN_STATE"
+
+        cd "$PROJECT_DIR"
+        unset CLAUDECODE 2>/dev/null || true
+
+        # Stream events line by line. Use set +e to capture exit code through
+        # the pipeline — PIPESTATUS[0] gives claude's exit code after the pipe.
+        local exit_code=0
+        set +e
+        "${cmd[@]}" 2>&1 | while IFS= read -r line; do
+            echo "$line" >> "$SESSION_EVENTS"
+            interpret_event "$line" 2>/dev/null || true
+
+            local type
+            type=$(echo "$line" | jq -r '.type // empty' 2>/dev/null || true)
+
+            case "$type" in
+                result)
+                    local sid
+                    sid=$(echo "$line" | jq -r '.session_id // empty' 2>/dev/null || true)
+                    [[ -n "$sid" ]] && echo "SESSION_ID=$sid" >> "$RUN_STATE"
+                    ;;
+                rate_limit_event)
+                    local resets_at
+                    resets_at=$(echo "$line" | jq -r '.rate_limit_info.resetsAt // empty' 2>/dev/null || true)
+                    [[ -n "$resets_at" ]] && echo "RESETS_AT=$resets_at" >> "$RUN_STATE"
+                    ;;
+            esac
+        done
+        exit_code=${PIPESTATUS[0]}
+        set -e
+
+        # Read state written by the stream processor
+        local session_id="" resets_at=""
+        if [[ -f "$RUN_STATE" ]]; then
+            session_id=$(grep '^SESSION_ID=' "$RUN_STATE" 2>/dev/null | cut -d= -f2 | tail -1 || true)
+            resets_at=$(grep '^RESETS_AT=' "$RUN_STATE" 2>/dev/null | cut -d= -f2 | tail -1 || true)
+        fi
+
+        if [[ -n "$session_id" ]]; then
+            echo "$session_id" > "$SESSION_FILE"
+            log "Session ID saved: $session_id"
+        fi
+
+        if [[ -n "$resets_at" ]]; then
+            local now resume_at wait_seconds resume_human
+            now=$(date +%s)
+            resume_at=$(( resets_at + 120 ))
+            wait_seconds=$(( resume_at - now ))
+            resume_human="$(date -r "$resume_at" '+%Y-%m-%d %H:%M:%S')"
+
+            if (( wait_seconds > 0 )); then
+                log "Waiting until $resume_human for rate limit to reset..."
+                sleep "$wait_seconds"
+            fi
+
+            log "Resuming..."
+            if [[ -n "$session_id" ]]; then
+                resume_flag="--resume $session_id"
+            else
+                resume_flag="--continue"
+            fi
+        elif [[ $exit_code -ne 0 ]]; then
+            log "Claude exited with error (exit code: $exit_code). See $SESSION_EVENTS for details."
+            exit 1
+        else
+            log "Claude exited cleanly."
+            log "Session complete."
+            break
         fi
     done
-    log "Running: ${cmd_display[*]}"
-
-    cd "$PROJECT_DIR"
-    unset CLAUDECODE 2>/dev/null || true
-    output=$("${cmd[@]}" 2>&1) || exit_code=$?
-
-    # Always log raw output on failure so we can actually debug
-    if [[ $exit_code -ne 0 ]]; then
-        log "Claude exited with code $exit_code. Raw output:"
-        log "$output"
-    fi
-
-    # Extract the JSON array from output — it's the last thing printed but may
-    # be preceded by other non-JSON lines (e.g. warnings, status messages)
-    local json_output
-    json_output=$(echo "$output" | awk '/^\[/{found=1} found{print}')
-
-    # Save session ID for future resumes
-    local new_session_id
-    new_session_id=$(echo "$json_output" | jq -r '[.[] | select(.type == "result")] | first | .session_id // empty' 2>/dev/null || true)
-    if [[ -n "$new_session_id" ]]; then
-        echo "$new_session_id" > "$SESSION_FILE"
-        log "Session ID saved: $new_session_id"
-    fi
-
-    # Log result summary
-    local result_preview
-    result_preview=$(echo "$json_output" | jq -r '[.[] | select(.type == "result")] | first | .result // empty' 2>/dev/null | head -20 || true)
-    if [[ -n "$result_preview" ]]; then
-        log "Result preview:"
-        log "$result_preview"
-    fi
-
-    # Check for rate limiting
-    if [[ $exit_code -ne 0 ]] || is_rate_limited "$output"; then
-        log "Detected rate limit or error (exit code: $exit_code)."
-
-        local reset_epoch
-        if reset_epoch=$(parse_reset_time "$json_output"); then
-            local reset_human
-            reset_human="$(date -r "$reset_epoch" '+%Y-%m-%d %H:%M:%S')"
-            log "Usage limit resets at: $reset_human"
-            schedule_cron "$reset_epoch" "$new_session_id"
-        else
-            # Default: retry in 5 hours (typical Pro plan reset window)
-            local default_wait=18000
-            local fallback_epoch=$(( $(date +%s) + default_wait ))
-            local fallback_human
-            fallback_human="$(date -r "$fallback_epoch" '+%Y-%m-%d %H:%M:%S')"
-            log "Could not parse reset time. Defaulting to 5-hour wait."
-            log "Scheduled retry at: $fallback_human"
-            schedule_cron "$fallback_epoch" "$new_session_id"
-        fi
-    else
-        log "Claude exited cleanly (exit code: $exit_code)."
-        log "Session complete. Run './autoclaude.sh --continue' to pick up more tasks."
-    fi
 
     log "============================================"
     log "autoclaude finished"
