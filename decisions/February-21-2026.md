@@ -228,3 +228,17 @@ This task is purely structural — no conflicting patterns or design decisions e
 **Prettier config:** Standard settings — `singleQuote: true`, `trailingComma: "all"`, `printWidth: 100`. Excludes `.claude/` (agent definitions), `decisions/`, and project documentation Markdown files from formatting since these have author-controlled formatting.
 
 ### No blocking technical challenges
+
+---
+
+## Task: INFR-US1-A010 — Add root Makefile targets for database management
+
+**Requirements:** Infrastructure prerequisite (no direct functional requirement ID)
+
+### Decisions
+
+**Delegation via `$(MAKE) -C api`:** Root targets stay thin — they change into the `api/` directory and invoke the corresponding target in the API sub-project Makefile. This is consistent with the monorepo's established convention (e.g., how CI would delegate per sub-project).
+
+**API stubs exit 1:** The three stub targets in `api/Makefile` print an informative message referencing INFR-US2 and immediately exit with a non-zero status. This makes misuse visible: any developer (or CI step) that invokes these before INFR-US2 is implemented will get a clear error rather than a silent no-op.
+
+### No technical challenges

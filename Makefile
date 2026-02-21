@@ -6,7 +6,8 @@
 .DEFAULT_GOAL := help
 
 .PHONY: help bootstrap \
-        services-up services-down services-status services-logs
+        services-up services-down services-status services-logs \
+        db-migrate db-seed db-reset
 
 ## help: Print this help message
 help:
@@ -36,3 +37,17 @@ services-status:
 ## services-logs: Tail logs from local Docker Compose services
 services-logs:
 	docker compose logs -f
+
+# ── Database ───────────────────────────────────────────────────────────────────
+
+## db-migrate: Run all pending database migrations
+db-migrate:
+	$(MAKE) -C api db-migrate
+
+## db-seed: Seed the database with initial data
+db-seed:
+	$(MAKE) -C api db-seed
+
+## db-reset: Drop, recreate, migrate, and seed the database
+db-reset:
+	$(MAKE) -C api db-reset

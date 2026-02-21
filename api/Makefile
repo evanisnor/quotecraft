@@ -2,7 +2,7 @@
 
 .DEFAULT_GOAL := help
 
-.PHONY: help build test lint dev
+.PHONY: help build test lint dev db-migrate db-seed db-reset
 
 ## help: Print this help message
 help:
@@ -31,3 +31,20 @@ lint:
 ## dev: Start API server with hot-reload (requires air)
 dev:
 	air
+
+# ── Database ───────────────────────────────────────────────────────────────────
+
+## db-migrate: Run all pending database migrations
+db-migrate:
+	@echo "db-migrate: not yet implemented (see INFR-US2)"
+	@exit 1
+
+## db-seed: Seed the database with initial data
+db-seed:
+	@echo "db-seed: not yet implemented (see INFR-US2)"
+	@exit 1
+
+## db-reset: Drop, recreate, migrate, and seed the database
+db-reset:
+	@echo "db-reset: not yet implemented (see INFR-US2)"
+	@exit 1
