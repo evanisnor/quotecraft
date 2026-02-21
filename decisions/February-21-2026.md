@@ -51,3 +51,25 @@ This task is purely structural — no conflicting patterns or design decisions e
 **Bootstrap sequence:** The script checks that Homebrew is present (errors clearly if not), then runs `brew bundle`, then installs root Node.js dependencies via `pnpm install`. This gives developers a complete environment in one command.
 
 ### No technical challenges
+
+---
+
+## Task: INFR-US1-A003 — Create Docker Compose for local dev services (PostgreSQL)
+
+**Requirements:** Infrastructure prerequisite (no direct functional requirement ID)
+
+### Decisions
+
+**Compose file name:** Used `compose.yaml` (the modern canonical name, replacing `docker-compose.yml`).
+
+**PostgreSQL version:** `postgres:16-alpine` — PostgreSQL 16 is the latest stable major version; Alpine variant keeps the image small.
+
+**Credentials:** Hardcoded `quotecraft`/`quotecraft` for local dev only. Never used in production. Production credentials will be injected via environment variables.
+
+**Port binding:** `5432:5432` — standard PostgreSQL port. If a local Postgres instance conflicts, developers can override via an `.env` file.
+
+**Health check:** Uses `pg_isready` to verify PostgreSQL is accepting connections before dependent services start. `start_period: 10s` gives the container time to initialize before health checks are evaluated.
+
+**Persistent volume:** `postgres-data` named volume preserves data across container restarts during development.
+
+### No technical challenges
