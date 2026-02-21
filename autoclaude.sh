@@ -2,15 +2,19 @@
 set -euo pipefail
 
 # ===========================================================================
-# autoclaude.sh — Automated Claude Code runner for QuoteCraft
+# autoclaude.sh — Automated Claude Code runner
 #
-# Runs Claude Code in headless mode to build the project. When usage limits
+# Runs Claude Code in headless mode to build a project. When usage limits
 # are hit, waits for the reset window and resumes automatically.
 #
+# By default, reads the prompt from autoclaude/prompt.md or autoclaude/prompt.txt.
+# Override with --prompt path/to/file.
+#
 # Usage:
-#   ./autoclaude.sh              # Start a new session
-#   ./autoclaude.sh --continue   # Continue the most recent session
-#   ./autoclaude.sh --resume     # Resume the saved session ID
+#   ./autoclaude.sh                        # Start a new session
+#   ./autoclaude.sh --continue             # Continue the most recent session
+#   ./autoclaude.sh --resume               # Resume the saved session ID
+#   ./autoclaude.sh --prompt my-prompt.md  # Use a custom prompt file
 # ===========================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -24,19 +28,30 @@ RUN_STATE="$LOG_DIR/run_state"
 CLAUDE_BIN="${CLAUDE_BIN:-/usr/local/bin/claude}"
 MODEL="sonnet"
 
-PROMPT='You are building the QuoteCraft project. Follow the workflow defined in CLAUDE.md exactly:
+CONFIG_DIR="$PROJECT_DIR/autoclaude"
 
-0. If there are uncommitted changes, resume the implementation. If you cant find an "In Progress" task, check the git log and "decision" directory for context."
-1. Open PROJECT_STATUS.md and find the next incomplete task (P0 first, top-to-bottom). Mark its status as "In Progress".
-2. Read the user story and acceptance criteria in PROJECT_PLAN.md.
-3. Read linked requirements in REQUIREMENTS.md.
-4. Read relevant sections of SYSTEM_DESIGN.md.
-5. Implement the task. Write tests alongside implementation.
-6. After implementation, invoke the code-reviewer agent. Fix issues until it passes.
-7. Commit with the format: [TASK-ID] Brief description. Include updated PROJECT_STATUS.md.
-8. Move to the next task and repeat.
+# ---------------------------------------------------------------------------
+# Load prompt from the given file, or fall back to autoclaude/prompt.{md,txt}
+# ---------------------------------------------------------------------------
+load_prompt() {
+    local prompt_file="${1:-}"
 
-Continue until you run out of tasks or context. Stay focused — one task at a time.'
+    if [[ -z "$prompt_file" ]]; then
+        for candidate in "$CONFIG_DIR/prompt.md" "$CONFIG_DIR/prompt.txt"; do
+            if [[ -f "$candidate" ]]; then
+                prompt_file="$candidate"
+                break
+            fi
+        done
+    fi
+
+    if [[ -z "$prompt_file" || ! -f "$prompt_file" ]]; then
+        echo "ERROR: No prompt file found. Provide --prompt <file> or create $CONFIG_DIR/prompt.md" >&2
+        exit 1
+    fi
+
+    cat "$prompt_file"
+}
 
 # ===========================================================================
 # Setup
@@ -99,10 +114,12 @@ interpret_event() {
 
 main() {
     local mode="new"
+    local prompt_path=""
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --continue) mode="continue"; shift ;;
             --resume)   mode="resume";   shift ;;
+            --prompt)   prompt_path="${2:-}"; shift 2 ;;
             *)          shift ;;
         esac
     done
@@ -110,6 +127,10 @@ main() {
     log "============================================"
     log "autoclaude starting (mode=$mode)"
     log "============================================"
+
+    local PROMPT
+    PROMPT="$(load_prompt "$prompt_path")"
+    log "Loaded prompt${prompt_path:+ from $prompt_path}"
 
     local -a base_cmd=(
         "$CLAUDE_BIN"
