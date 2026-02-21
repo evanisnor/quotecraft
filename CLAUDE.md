@@ -38,7 +38,7 @@ Open `PROJECT_STATUS.md` and find the next incomplete task. Work in order:
 ### 3. Implement the Task
 
 - Follow the architecture in `SYSTEM_DESIGN.md`. Don't deviate without discussing it first.
-- Write tests alongside implementation, not as an afterthought. Follow code conventions as prescribed.
+- Write tests before implementation. TDD with 100% line and branch coverage is MANDATORY. Follow code conventions as prescribed.
 - Keep changes focused — stay on task.
 
 As you implement tasks, maintain a record of your decisions in the `decisions` sub-directory. Each session must leave a decision log in a file in this directory following the naming convention `MMMM-dd-yyyy.md`. The contents of this doc should include:
@@ -139,6 +139,7 @@ Specialized agents are available for delegating implementation work. They carry 
 - All API endpoints follow the patterns in SYSTEM_DESIGN.md (auth, validation, error handling)
 - Code to interfaces. Composition over inheritance.
 - Build on top of abstraction layers (meaningful internal APIs) that keep state and behavior de-coupled. Push complexity down the stack.
+- TDD is mandatory. Write hermetic tests by using stubs, fakes, and custom mocks whenever necessary with a strong preference for stubs.
 - Use ubiquitous language and bounded contexts based on the QuoteCraft domain specification to keep code logically organized and understandable.
 - Externalize all system configuration into the root `config.yaml` which is organized by service
 - Automated testing needs to be comprehensive
@@ -146,6 +147,7 @@ Specialized agents are available for delegating implementation work. They carry 
 ## What Not to Do
 
 - Don't skip writing tests to save time
+- Don't half-ass an implementation by leaving stubs and TODOs
 - Don't add features or refactor code beyond what the current task requires
 - Don't deviate from SYSTEM_DESIGN.md architecture without explicit approval
 - Don't panic and delete relevant code
