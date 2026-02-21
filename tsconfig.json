@@ -1,0 +1,8 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/config-schema/tsconfig.build.json" },
+    { "path": "./packages/formula-engine/tsconfig.build.json" },
+    { "path": "./packages/field-renderers/tsconfig.build.json" }
+  ]
+}

@@ -18,8 +18,7 @@ describe('FieldRenderer types', () => {
   });
 
   it('accepts a FieldRenderer function returning a string', () => {
-    const renderer: FieldRenderer<string> = (props) =>
-      `<input id="${props.field.id}" />`;
+    const renderer: FieldRenderer<string> = (props) => `<input id="${props.field.id}" />`;
 
     const result = renderer({
       field: { id: 'qty', label: 'Quantity', type: 'number', required: true },

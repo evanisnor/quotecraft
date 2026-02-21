@@ -8,10 +8,7 @@ import type { FormulaContext, FormulaResult } from './types';
  *
  * Full implementation is delivered in CALC-US1.
  */
-export function evaluate(
-  _expression: string,
-  _context: FormulaContext,
-): FormulaResult {
+export function evaluate(_expression: string, _context: FormulaContext): FormulaResult {
   // Stub — full formula evaluation is implemented in CALC-US1
   return { value: 0 };
 }

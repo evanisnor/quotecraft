@@ -200,3 +200,31 @@ This task is purely structural — no conflicting patterns or design decisions e
 **ts-jest + jest version pairing:** Code reviewer flagged `jest@^30` with `ts-jest@^29` as a potential incompatibility. Confirmed via `npm info ts-jest peerDependencies` that ts-jest@29 explicitly supports `jest: '^29.0.0 || ^30.0.0'`. No change required.
 
 **Test files in dist:** Initial `tsconfig.build.json` files did not exclude test files, causing `.test.js` and `.test.d.ts` files to appear in `dist/`. Fixed by adding `"**/*.test.ts"` to `exclude` in all three `tsconfig.build.json` files.
+
+---
+
+## Task: INFR-US1-A009 — Configure shared TypeScript, ESLint, and Prettier configs
+
+**Requirements:** Infrastructure prerequisite (no direct functional requirement ID)
+
+### Decisions
+
+**`tsconfig.base.json` at root:** Centralizes the options shared by all TypeScript packages: `target: "ES2020"`, `module: "ESNext"`, `moduleResolution: "bundler"`, `strict: true`, `skipLibCheck: true`, `isolatedModules: true`, `esModuleInterop: true`, `resolveJsonModule: true`. Sub-projects extend it and add only what's specific to them (e.g., widget adds `lib: ["dom", "esnext"]`).
+
+**`dashboard/tsconfig.json` not extended:** The dashboard tsconfig is owned by Next.js (`create-next-app` generated it; the `next` TypeScript plugin injects into it). Extending the base would break Next.js-specific options (`target: "ES2017"` required by Next.js 15+, `plugins`, `paths`). Left as-is intentionally.
+
+**Root `tsconfig.json` = solution file:** Uses `"files": []` + `"references": [...]` pattern so it acts as a project reference aggregator only and never compiles source directly. References point to `tsconfig.build.json` files (not `tsconfig.json`) since those are the composite-enabled configs.
+
+**`composite: true` added to `tsconfig.build.json`:** Required for TypeScript project references. Enables incremental builds via `.tsbuildinfo` files (which go to `dist/`, already gitignored). `field-renderers/tsconfig.build.json` adds a reference to `config-schema/tsconfig.build.json` to enforce build ordering.
+
+**TypeScript added to root devDependencies:** Required for `tsc --build` to work from the monorepo root when using project references. Each package also has TypeScript in its own devDependencies for local `tsc` invocations.
+
+**ESLint hoisting via `.npmrc`:** `public-hoist-pattern[]=@typescript-eslint/*` makes TypeScript ESLint packages resolvable from any workspace package. This avoids duplicating `@typescript-eslint/parser` and `@typescript-eslint/plugin` across every package's devDependencies while still allowing sub-project `eslint.config.mjs` files to import them. `eslint`, `globals`, and `@eslint/js` are also in root devDependencies for root-level config resolution.
+
+**Root `eslint.config.mjs` scope:** Covers `packages/*/src/**/*.ts` and widget TypeScript files. Does not cover `dashboard/` (which has its own Next.js ESLint config) or test files with Jest globals for the widget (the widget's local config handles that). This is an acceptable split since `pnpm -r run lint` delegates to each sub-project's config.
+
+**`@typescript-eslint/no-unused-vars` rule:** Overrides the recommended rule to allow underscore-prefixed arguments (`argsIgnorePattern: '^_'`). This is the established convention for stub parameters in this codebase (e.g., `_expression`, `_context` in `evaluate.ts`).
+
+**Prettier config:** Standard settings — `singleQuote: true`, `trailingComma: "all"`, `printWidth: 100`. Excludes `.claude/` (agent definitions), `decisions/`, and project documentation Markdown files from formatting since these have author-controlled formatting.
+
+### No blocking technical challenges

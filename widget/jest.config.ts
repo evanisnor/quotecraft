@@ -1,11 +1,11 @@
-import type { Config } from "jest";
+import type { Config } from 'jest';
 
 const config: Config = {
-  preset: "ts-jest",
-  testEnvironment: "jest-environment-jsdom",
-  testMatch: ["**/*.test.ts"],
+  preset: 'ts-jest',
+  testEnvironment: 'jest-environment-jsdom',
+  testMatch: ['**/*.test.ts'],
   transform: {
-    "^.+\\.ts$": ["ts-jest", { tsconfig: { module: "CommonJS" } }],
+    '^.+\\.ts$': ['ts-jest', { tsconfig: { module: 'CommonJS' } }],
   },
 };
 

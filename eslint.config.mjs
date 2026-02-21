@@ -6,22 +6,25 @@ import globals from 'globals';
 export default [
   js.configs.recommended,
   {
-    files: ['src/**/*.ts', 'build.mts'],
+    files: ['packages/*/src/**/*.ts', 'widget/src/**/*.ts'],
     languageOptions: {
       parser: tsParser,
-      globals: {
-        ...globals.browser,
-      },
     },
     plugins: {
       '@typescript-eslint': tsPlugin,
     },
     rules: {
       ...tsPlugin.configs.recommended.rules,
+      // Allow underscore-prefixed parameters to mark intentionally unused args
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
     },
   },
   {
-    files: ['src/**/*.test.ts'],
+    // Jest globals for test files
+    files: ['packages/*/src/**/*.test.ts'],
     languageOptions: {
       globals: {
         ...globals.jest,
@@ -29,6 +32,6 @@ export default [
     },
   },
   {
-    ignores: ['dist/', 'node_modules/'],
+    ignores: ['**/dist/', '**/node_modules/', '**/.next/', '**/tmp/'],
   },
 ];

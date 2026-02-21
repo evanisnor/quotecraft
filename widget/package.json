@@ -7,7 +7,7 @@
     "dev": "tsx build.mts --watch",
     "test": "jest --passWithNoTests",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint --no-error-on-unmatched-pattern --no-warn-ignored \"src/**/*.{js,mjs}\""
+    "lint": "eslint src"
   },
   "devDependencies": {
     "@types/jest": "^30",

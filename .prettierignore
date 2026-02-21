@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.next/
+tmp/
+pnpm-lock.yaml
+*.tsbuildinfo
+# Claude agent definitions and skill files have specific formatting requirements
+.claude/
+# Project documentation (large Markdown files — formatted by authors)
+PRODUCT_SPEC.md
+PROJECT_PLAN.md
+REQUIREMENTS.md
+SYSTEM_DESIGN.md
+decisions/

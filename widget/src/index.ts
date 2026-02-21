@@ -4,7 +4,7 @@
 
     constructor() {
       super();
-      this.shadow = this.attachShadow({ mode: "open" });
+      this.shadow = this.attachShadow({ mode: 'open' });
     }
 
     connectedCallback(): void {
@@ -12,7 +12,7 @@
     }
   }
 
-  if (!customElements.get("quotecraft-widget")) {
-    customElements.define("quotecraft-widget", QuoteCraftWidget);
+  if (!customElements.get('quotecraft-widget')) {
+    customElements.define('quotecraft-widget', QuoteCraftWidget);
   }
 })();
