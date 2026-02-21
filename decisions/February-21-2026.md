@@ -26,3 +26,28 @@ The Go API server is not a Node.js package, so it is not listed in `pnpm-workspa
 
 ### No technical challenges or inconsistencies
 This task is purely structural — no conflicting patterns or design decisions encountered.
+
+---
+
+## Task: INFR-US1-A002 — Create root Makefile with `bootstrap` target (Homebrew Brewfile)
+
+**Requirements:** Infrastructure prerequisite (no direct functional requirement ID)
+
+### Decisions
+
+**Makefile stays thin:** Per the acceptance criteria convention, complex bootstrap logic lives in `scripts/bootstrap.sh`. The `make bootstrap` target simply delegates to this script.
+
+**Brewfile tools:**
+- `go` — Go language toolchain
+- `node` — Node.js runtime
+- `pnpm` — pnpm package manager
+- `air` — Go hot-reload server (available in Homebrew core)
+- `docker` (cask) — Docker Desktop for macOS
+
+**`air` formula:** Used `brew "air"` from Homebrew core rather than the `cosmtrek/air` tap. As of late 2024, `air` is available in Homebrew core. If the formula is not found on a given system, fall back to `brew install cosmtrek/air/air`.
+
+**`help` target:** Added a `help` target as `.DEFAULT_GOAL` that auto-documents targets via `grep` on `## ` comments. This is a low-friction convention for developer discoverability.
+
+**Bootstrap sequence:** The script checks that Homebrew is present (errors clearly if not), then runs `brew bundle`, then installs root Node.js dependencies via `pnpm install`. This gives developers a complete environment in one command.
+
+### No technical challenges

@@ -2,7 +2,7 @@
 
 Cross-reference: [PROJECT_PLAN.md](./PROJECT_PLAN.md) · [REQUIREMENTS.md](./REQUIREMENTS.md)
 
-Last updated: 2026-02-20
+Last updated: 2026-02-21
 
 ---
 
@@ -51,7 +51,7 @@ Last updated: 2026-02-20
 | Status | ID | Task | P | Completed |
 |--------|----|------|---|-----------||
 | ✅ | INFR-US1-A001 | Initialize monorepo with pnpm workspaces | 0 | 2026-02-21 |
-| | INFR-US1-A002 | Create root Makefile with `bootstrap` target (Homebrew Brewfile) | 0 | |
+| ✅ | INFR-US1-A002 | Create root Makefile with `bootstrap` target (Homebrew Brewfile) | 0 | 2026-02-21 |
 | | INFR-US1-A003 | Create Docker Compose for local dev services (PostgreSQL) | 0 | |
 | | INFR-US1-A004 | Add root Makefile targets for service lifecycle | 0 | |
 | | INFR-US1-A005 | Initialize Go API server module with air hot-reload + Makefile | 0 | |
