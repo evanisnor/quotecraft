@@ -1,0 +1,21 @@
+{
+  "name": "@quotecraft/formula-engine",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "test": "jest --passWithNoTests",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src"
+  },
+  "devDependencies": {
+    "@types/jest": "^30",
+    "jest": "^30",
+    "ts-jest": "^29",
+    "typescript": "^5"
+  }
+}

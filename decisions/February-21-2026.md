@@ -172,3 +172,31 @@ This task is purely structural — no conflicting patterns or design decisions e
 **Top-level await in build script not supported with CJS output:** `tsx build.ts` failed because esbuild (v0.24, resolved as the widget's direct dependency) itself processes `build.ts` as CJS when `"type": "module"` is absent, then rejects top-level await. The resolution was renaming to `build.mts` so Node.js and tsx treat it as ESM natively.
 
 **ESLint cannot parse TypeScript class field syntax:** The `private shadow: ShadowRoot` class field declaration fails Espree parsing. Since `@typescript-eslint/parser` is deferred to A009, the lint script is scoped to JS/MJS files only for this task. TypeScript correctness is enforced by `tsc --noEmit` (the `typecheck` script), which `make lint` also runs.
+
+---
+
+## Task: INFR-US1-A008 — Create shared TypeScript package stubs with sub-project Makefile
+
+**Requirements:** Infrastructure prerequisite (no direct functional requirement ID)
+
+### Decisions
+
+**Three packages:** `@quotecraft/formula-engine`, `@quotecraft/config-schema`, `@quotecraft/field-renderers` — matching the decisions documented in INFR-US1-A001.
+
+**`main`/`exports` points to TypeScript source:** All three packages set `"main": "./src/index.ts"` instead of a compiled `dist/` path. Dashboard (Next.js) and widget (esbuild) both handle TypeScript natively, so a separate build step is not needed for development. The `tsc --project tsconfig.build.json` target produces `dist/` for any future toolchain that requires pre-compiled output.
+
+**Separate `tsconfig.build.json`:** Extends `tsconfig.json` but enables `declaration`, `declarationMap`, `sourceMap`, and sets `outDir: dist`. Excludes `**/*.test.ts` so test files are not compiled into the library output.
+
+**No `dev` target in Makefiles:** These are libraries, not apps. Libraries don't have dev servers. Only `build`, `test`, `lint`.
+
+**field-renderers depends on config-schema:** `FieldRenderProps.field` is typed as `FieldConfig` from `@quotecraft/config-schema`. Declared as a `dependencies` (not `devDependencies`) entry since it's a runtime import, not a build tool.
+
+**`FieldRenderer<TOutput>` is generic:** The widget renders to `HTMLElement`, the dashboard to React elements. The generic type parameter lets each environment provide its own output type without duplicating the props interface.
+
+**formula-engine stub:** `evaluate()` parameters use `_expression` and `_context` naming to suppress unused-variable warnings while making the stub nature explicit. Full implementation is in CALC-US1.
+
+### Technical challenges
+
+**ts-jest + jest version pairing:** Code reviewer flagged `jest@^30` with `ts-jest@^29` as a potential incompatibility. Confirmed via `npm info ts-jest peerDependencies` that ts-jest@29 explicitly supports `jest: '^29.0.0 || ^30.0.0'`. No change required.
+
+**Test files in dist:** Initial `tsconfig.build.json` files did not exclude test files, causing `.test.js` and `.test.d.ts` files to appear in `dist/`. Fixed by adding `"**/*.test.ts"` to `exclude` in all three `tsconfig.build.json` files.
