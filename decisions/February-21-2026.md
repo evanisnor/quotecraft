@@ -113,3 +113,36 @@ This task is purely structural — no conflicting patterns or design decisions e
 **Sub-project Makefile:** Thin targets — `build` (`go build ./...`), `test` (`go test ./...`), `lint` (`go vet ./...`), `dev` (`air`). No delegation to scripts needed since commands are single-liners.
 
 ### No technical challenges
+
+---
+
+## Task: INFR-US1-A006 — Scaffold dashboard Next.js app via create-next-app + Makefile
+
+**Requirements:** Infrastructure prerequisite (no direct functional requirement ID)
+
+### Decisions
+
+**Next.js version:** `create-next-app` installed Next.js 16.1.6 (latest stable at time of scaffolding).
+
+**App Router with `src/` layout:** Used `--src-dir` flag so Next.js App Router files live under `src/app/`. This allows FSD layers (`src/pages/`, `src/widgets/`, etc.) to coexist without conflicting with Next.js routing conventions. The `src/app/` directory is the Next.js routing entry point; the FSD `pages` layer lives at `src/pages/`.
+
+**Feature-Sliced Design layer stubs:** Created empty directories with `.gitkeep` files for all FSD layers:
+- `src/pages/` — FSD pages layer (page-level compositions)
+- `src/widgets/` — Large self-contained UI blocks
+- `src/features/` — User-facing capabilities
+- `src/entities/` — Business domain objects
+- `src/shared/ui/`, `src/shared/lib/`, `src/shared/api/`, `src/shared/config/`
+
+**Import alias:** `@/*` maps to `./src/*` in `tsconfig.json`, consistent with the SKILL.md convention.
+
+**Tailwind CSS v4:** create-next-app scaffolded with `@tailwindcss/postcss` (Tailwind v4 PostCSS plugin).
+
+**Makefile targets:** `build` → `pnpm run build`, `test` → `pnpm jest --passWithNoTests`, `lint` → `pnpm run lint && pnpm tsc --noEmit`, `dev` → `pnpm run dev`.
+
+**Jest included:** create-next-app included `jest@30.2.0` as a dev dependency. `--passWithNoTests` allows `make test` to succeed until tests are added in future tasks.
+
+### Technical Challenges
+
+**Duplicate lockfiles:** `create-next-app` generated a `pnpm-workspace.yaml` (with `ignoredBuiltDependencies`) and `pnpm-lock.yaml` inside `dashboard/`. This caused Next.js to warn about multiple lockfiles and confused workspace resolution.
+
+**Resolution:** Merged `ignoredBuiltDependencies` into the root `pnpm-workspace.yaml`, deleted `dashboard/pnpm-workspace.yaml`, `dashboard/pnpm-lock.yaml`, and `dashboard/node_modules/`, then reinstalled from the monorepo root.

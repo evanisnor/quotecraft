@@ -55,7 +55,7 @@ Last updated: 2026-02-21
 | ✅ | INFR-US1-A003 | Create Docker Compose for local dev services (PostgreSQL) | 0 | 2026-02-21 |
 | ✅ | INFR-US1-A004 | Add root Makefile targets for service lifecycle | 0 | 2026-02-21 |
 | ✅ | INFR-US1-A005 | Initialize Go API server module with air hot-reload + Makefile | 0 | 2026-02-21 |
-| | INFR-US1-A006 | Scaffold dashboard Next.js app via create-next-app + Makefile | 0 | |
+| ✅ | INFR-US1-A006 | Scaffold dashboard Next.js app via create-next-app + Makefile | 0 | 2026-02-21 |
 | | INFR-US1-A007 | Create widget package stub with TypeScript bundler + Makefile | 0 | |
 | | INFR-US1-A008 | Create shared TypeScript package stubs + Makefile | 0 | |
 | | INFR-US1-A009 | Configure shared TypeScript, ESLint, and Prettier configs | 0 | |
