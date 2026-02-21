@@ -22,9 +22,11 @@ Reference this comprehensive project plan when it is referenced, or when you nee
 ### 1. Choose the Next Task
 
 Open `PROJECT_STATUS.md` and find the next incomplete task. Work in order:
+- **Resume**: If there are uncommitted changes, or if a task is marked as 'In Progress', finish the current task before proceeding.
 - **Priority first**: P0 before P1, P1 before P2, etc.
 - **Dependencies matter**: Check `PROJECT_PLAN.md` for dependency notes. Don't start a story if its dependencies aren't complete.
 - **Within a priority level**: Work top-to-bottom (task order within a story, story order within an epic).
+- **Status**: After chosing a task, update its status to 'In Progress'
 
 ### 2. Before Writing Code
 

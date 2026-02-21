@@ -25,7 +25,8 @@ MODEL="sonnet"
 
 PROMPT='You are building the QuoteCraft project. Follow the workflow defined in CLAUDE.md exactly:
 
-1. Open PROJECT_STATUS.md and find the next incomplete task (P0 first, top-to-bottom).
+0. If there are uncommitted changes, resume the implementation. If you cant find an "In Progress" task, check the git log and "decision" directory for context."
+1. Open PROJECT_STATUS.md and find the next incomplete task (P0 first, top-to-bottom). Mark its status as "In Progress".
 2. Read the user story and acceptance criteria in PROJECT_PLAN.md.
 3. Read linked requirements in REQUIREMENTS.md.
 4. Read relevant sections of SYSTEM_DESIGN.md.
@@ -59,6 +60,7 @@ remove_cron() {
 
 schedule_cron() {
     local resume_time="$1" # epoch timestamp
+    local session_id="${2:-}" # optional session ID
     local minute hour day month
 
     minute="$(date -r "$resume_time" '+%M')"
@@ -66,9 +68,12 @@ schedule_cron() {
     day="$(date -r "$resume_time" '+%d')"
     month="$(date -r "$resume_time" '+%m')"
 
-    remove_cron
+    local resume_flag="--continue"
+    if [[ -n "$session_id" ]]; then
+        resume_flag="--resume $session_id"
+    fi
 
-    local cron_line="$minute $hour $day $month * cd $PROJECT_DIR && ./autoclaude.sh --continue >> $LOG_FILE 2>&1 $CRON_TAG"
+    local cron_line="$minute $hour $day $month * cd $PROJECT_DIR && ./autoclaude.sh $resume_flag >> $LOG_FILE 2>&1 $CRON_TAG"
 
     (crontab -l 2>/dev/null || true; echo "$cron_line") | crontab -
     log "Scheduled resume at $(date -r "$resume_time" '+%Y-%m-%d %H:%M:%S') via cron."
@@ -82,21 +87,21 @@ schedule_cron() {
 parse_reset_time() {
     local output="$1"
 
-    # Try to extract a reset time from Claude's output.
-    # Common patterns:
-    #   "resets at 3:45 PM"
-    #   "resets at 2026-02-21T15:45:00"
-    #   "try again in X minutes"
-    #   "retry after X hours"
-    #   "will reset in X hours"
+    # Pattern 1: resetsAt epoch from rate_limit_event (most reliable — use first)
+    local resets_at
+    resets_at=$(echo "$output" | jq -r '[.[] | select(.type == "rate_limit_event")] | first | .rate_limit_info.resetsAt // empty' 2>/dev/null || true)
+    if [[ -n "$resets_at" && "$resets_at" != "null" ]]; then
+        echo $(( resets_at + 120 ))
+        return 0
+    fi
 
-    # Pattern 1: "in N minutes" or "in N hours"
+    # Pattern 2: "in N minutes" or "in N hours"
     local minutes_match hours_match
     minutes_match=$(echo "$output" | grep -oiE 'in ([0-9]+) minutes?' | head -1 | grep -oE '[0-9]+')
     hours_match=$(echo "$output" | grep -oiE 'in ([0-9]+) hours?' | head -1 | grep -oE '[0-9]+')
 
     if [[ -n "$minutes_match" ]]; then
-        echo $(( $(date +%s) + minutes_match * 60 + 120 )) # Add 2 min buffer
+        echo $(( $(date +%s) + minutes_match * 60 + 120 ))
         return 0
     fi
 
@@ -105,7 +110,7 @@ parse_reset_time() {
         return 0
     fi
 
-    # Pattern 2: ISO 8601 timestamp
+    # Pattern 3: ISO 8601 timestamp
     local iso_match
     iso_match=$(echo "$output" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}' | head -1)
     if [[ -n "$iso_match" ]]; then
@@ -117,17 +122,51 @@ parse_reset_time() {
         fi
     fi
 
-    # Pattern 3: "at H:MM AM/PM" style
+    # Pattern 4: "at H:MM AM/PM" style
     local time_match
     time_match=$(echo "$output" | grep -oiE 'at ([0-9]{1,2}:[0-9]{2}\s*(AM|PM))' | head -1 | sed 's/^at //i')
     if [[ -n "$time_match" ]]; then
         local epoch
         epoch=$(date -jf '%I:%M %p' "$time_match" '+%s' 2>/dev/null || true)
         if [[ -n "$epoch" ]]; then
-            # If parsed time is in the past, it's tomorrow
             if (( epoch < $(date +%s) )); then
                 epoch=$(( epoch + 86400 ))
             fi
+            echo $(( epoch + 120 ))
+            return 0
+        fi
+    fi
+
+    # Pattern 5: "resets 1pm (America/Halifax)" from JSON result field
+    local result_field
+    result_field=$(echo "$output" | jq -r '[.[] | select(.type == "result")] | first | .result // ""' 2>/dev/null || true)
+    local resets_time resets_tz
+    resets_time=$(echo "$result_field" | grep -oiE 'resets [0-9]{1,2}(:[0-9]{2})?(am|pm)' | grep -oiE '[0-9]{1,2}(:[0-9]{2})?(am|pm)')
+    resets_tz=$(echo "$result_field" | grep -oiE '\([A-Za-z_/]+\)' | tr -d '()')
+    if [[ -n "$resets_time" && -n "$resets_tz" ]]; then
+        local epoch
+        epoch=$(python3 - "$resets_time" "$resets_tz" <<'EOF'
+import sys
+from datetime import datetime, timedelta
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo
+
+time_str = sys.argv[1].upper()  # e.g. "1PM" or "1:30PM"
+tz_str   = sys.argv[2]          # e.g. "America/Halifax"
+
+fmt = "%I:%M%p" if ":" in time_str else "%I%p"
+t = datetime.strptime(time_str, fmt)
+tz = ZoneInfo(tz_str)
+now = datetime.now(tz)
+candidate = now.replace(hour=t.hour, minute=t.minute, second=0, microsecond=0)
+if candidate <= now:
+    candidate += timedelta(days=1)
+print(int(candidate.timestamp()))
+EOF
+        2>/dev/null || true)
+        if [[ -n "$epoch" ]]; then
             echo $(( epoch + 120 ))
             return 0
         fi
@@ -225,9 +264,14 @@ main() {
         log "$output"
     fi
 
+    # Extract the JSON array from output — it's the last thing printed but may
+    # be preceded by other non-JSON lines (e.g. warnings, status messages)
+    local json_output
+    json_output=$(echo "$output" | awk '/^\[/{found=1} found{print}')
+
     # Save session ID for future resumes
     local new_session_id
-    new_session_id=$(echo "$output" | jq -r '.session_id // empty' 2>/dev/null || true)
+    new_session_id=$(echo "$json_output" | jq -r '[.[] | select(.type == "result")] | first | .session_id // empty' 2>/dev/null || true)
     if [[ -n "$new_session_id" ]]; then
         echo "$new_session_id" > "$SESSION_FILE"
         log "Session ID saved: $new_session_id"
@@ -235,7 +279,7 @@ main() {
 
     # Log result summary
     local result_preview
-    result_preview=$(echo "$output" | jq -r '.result // empty' 2>/dev/null | head -20 || true)
+    result_preview=$(echo "$json_output" | jq -r '[.[] | select(.type == "result")] | first | .result // empty' 2>/dev/null | head -20 || true)
     if [[ -n "$result_preview" ]]; then
         log "Result preview:"
         log "$result_preview"
@@ -246,11 +290,11 @@ main() {
         log "Detected rate limit or error (exit code: $exit_code)."
 
         local reset_epoch
-        if reset_epoch=$(parse_reset_time "$output"); then
+        if reset_epoch=$(parse_reset_time "$json_output"); then
             local reset_human
             reset_human="$(date -r "$reset_epoch" '+%Y-%m-%d %H:%M:%S')"
             log "Usage limit resets at: $reset_human"
-            schedule_cron "$reset_epoch"
+            schedule_cron "$reset_epoch" "$new_session_id"
         else
             # Default: retry in 5 hours (typical Pro plan reset window)
             local default_wait=18000
@@ -259,7 +303,7 @@ main() {
             fallback_human="$(date -r "$fallback_epoch" '+%Y-%m-%d %H:%M:%S')"
             log "Could not parse reset time. Defaulting to 5-hour wait."
             log "Scheduled retry at: $fallback_human"
-            schedule_cron "$fallback_epoch"
+            schedule_cron "$fallback_epoch" "$new_session_id"
         fi
     else
         log "Claude exited cleanly (exit code: $exit_code)."
