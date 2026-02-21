@@ -86,7 +86,9 @@ interpret_event() {
             [[ -n "$result" ]] && log "Result: ${result:0:300}"
             ;;
         rate_limit_event)
-            log "Rate limit reached."
+            local status
+            status=$(echo "$line" | jq -r '.rate_limit_info.status // ""' 2>/dev/null) || return 0
+            [[ "$status" == "rejected" ]] && log "Rate limit reached."
             ;;
     esac
 }
@@ -172,9 +174,10 @@ main() {
                     [[ -n "$sid" ]] && echo "SESSION_ID=$sid" >> "$RUN_STATE"
                     ;;
                 rate_limit_event)
-                    local resets_at
+                    local rl_status resets_at
+                    rl_status=$(echo "$line" | jq -r '.rate_limit_info.status // ""' 2>/dev/null || true)
                     resets_at=$(echo "$line" | jq -r '.rate_limit_info.resetsAt // empty' 2>/dev/null || true)
-                    [[ -n "$resets_at" ]] && echo "RESETS_AT=$resets_at" >> "$RUN_STATE"
+                    [[ "$rl_status" == "rejected" && -n "$resets_at" ]] && echo "RESETS_AT=$resets_at" >> "$RUN_STATE"
                     ;;
             esac
         done
