@@ -146,3 +146,29 @@ This task is purely structural — no conflicting patterns or design decisions e
 **Duplicate lockfiles:** `create-next-app` generated a `pnpm-workspace.yaml` (with `ignoredBuiltDependencies`) and `pnpm-lock.yaml` inside `dashboard/`. This caused Next.js to warn about multiple lockfiles and confused workspace resolution.
 
 **Resolution:** Merged `ignoredBuiltDependencies` into the root `pnpm-workspace.yaml`, deleted `dashboard/pnpm-workspace.yaml`, `dashboard/pnpm-lock.yaml`, and `dashboard/node_modules/`, then reinstalled from the monorepo root.
+
+---
+
+## Task: INFR-US1-A007 — Create widget package stub with TypeScript bundler + Makefile
+
+**Requirements:** Infrastructure prerequisite (no direct functional requirement ID)
+
+### Decisions
+
+**Build script extension — `build.mts` not `build.ts`:** The build script uses top-level `await` (required by esbuild's context API for watch mode). When `tsx` runs a `.ts` file without `"type": "module"` in `package.json`, it defaults to CJS, which does not support top-level await. Naming the file `build.mts` forces ESM treatment unconditionally without adding `"type": "module"` to `package.json` (which would break Jest's CommonJS transformation pipeline).
+
+**No `"type": "module"` in `package.json`:** Adding `"type": "module"` would require Jest to use an ESM transform setup, which is more complex. Keeping CJS as the default and using `.mts` only for the build script keeps Jest straightforward.
+
+**ESLint targeting JS files only — deferring TypeScript linting to A009:** ESLint v9 with only `@eslint/js` (the baseline JS config) uses the Espree parser, which cannot parse TypeScript syntax (e.g., `private shadow: ShadowRoot`). Adding `@typescript-eslint/parser` is deferred to INFR-US1-A009 (shared ESLint config task). For this stub, the `lint` script uses `--no-error-on-unmatched-pattern` targeting `src/**/*.{js,mjs}` so there are no errors on a TypeScript-only source directory. The `typecheck` script (`tsc --noEmit`) provides type-safety checking in the interim.
+
+**`globals` package added as devDependency:** The ESLint flat config references `globals` to declare browser and Jest globals. The package exists in root `node_modules` (pulled in by ESLint transitively) but must be explicitly declared in `widget/package.json` for reliable workspace resolution.
+
+**Jest configuration — `ts-jest` with CommonJS override:** `jest.config.ts` uses `ts-jest` with `{ tsconfig: { module: 'CommonJS' } }` to override the `module: "ESNext"` in the main `tsconfig.json`. This allows Jest to import TypeScript files without needing full ESM test support.
+
+**`jest-environment-jsdom` v30:** Jest v30 dropped built-in jsdom support. The `jest-environment-jsdom` package must be installed separately. It provides the DOM globals (`document`, `customElements`) required to test Custom Elements.
+
+### Technical Challenges
+
+**Top-level await in build script not supported with CJS output:** `tsx build.ts` failed because esbuild (v0.24, resolved as the widget's direct dependency) itself processes `build.ts` as CJS when `"type": "module"` is absent, then rejects top-level await. The resolution was renaming to `build.mts` so Node.js and tsx treat it as ESM natively.
+
+**ESLint cannot parse TypeScript class field syntax:** The `private shadow: ShadowRoot` class field declaration fails Espree parsing. Since `@typescript-eslint/parser` is deferred to A009, the lint script is scoped to JS/MJS files only for this task. TypeScript correctness is enforced by `tsc --noEmit` (the `typecheck` script), which `make lint` also runs.
