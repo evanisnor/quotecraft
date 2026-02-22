@@ -46,7 +46,7 @@ Open `PROJECT_STATUS.md` and find the next incomplete task. Work in order:
 - Write tests before implementation. TDD with 100% line and branch coverage is MANDATORY. Follow code conventions as prescribed.
 - Keep changes focused — stay on task.
 
-As you implement tasks, maintain a record of your decisions in the `decisions` sub-directory. Each session must leave a decision log in a file in this directory following the naming convention `MMMM-dd-yyyy.md`. The contents of this doc should include:
+As you implement tasks, maintain a record of your decisions in the `decisions` sub-directory. Each session must leave a decision log in a file in this directory following the naming convention `YYYY-MM-DD.md`. The contents of this doc should include:
 
 - Which task and requirement IDs are being worked on
 - Which decisions were made when implementing the task
