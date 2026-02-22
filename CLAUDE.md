@@ -66,7 +66,8 @@ After implementation is complete but **before committing**, invoke the **code-re
 
 ### 5. Commit the Task
 
-Each completed task gets its own commit. Every commit must include the updated `PROJECT_STATUS.md`.
+1. Each completed task gets its own commit. Every commit must include the updated `PROJECT_STATUS.md`.
+2. Push the updated local main branch to origin.
 
 **Commit format:**
 
