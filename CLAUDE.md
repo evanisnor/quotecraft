@@ -1,8 +1,12 @@
 # QuoteCraft — Development Guide
 
+Project Repository URL: https://github.com/evanisnor/quotecraft
+
 ## Project Overview
 
 QuoteCraft is a free, no-code, embeddable quote/pricing calculator builder (SaaS). Users build calculators in a visual editor, customize appearance, and embed on any website via `<script>` tag. Free tier is unlimited (views, submissions, calculators) with a "Powered by QuoteCraft" badge. Paid tiers: Pro ($19/mo), Business ($49/mo), Agency ($99/mo).
+
+
 
 ## Project Documents
 
@@ -66,8 +70,7 @@ After implementation is complete but **before committing**, invoke the **code-re
 
 ### 5. Commit the Task
 
-1. Each completed task gets its own commit. Every commit must include the updated `PROJECT_STATUS.md`.
-2. Push the updated local main branch to origin.
+Each completed task gets its own commit. Every commit must include the updated `PROJECT_STATUS.md`.
 
 **Commit format:**
 
@@ -94,6 +97,10 @@ After implementation is complete but **before committing**, invoke the **code-re
 4. Update `PROJECT_STATUS.md`: set the task's Status to `✅` and Completed to today's date (YYYY-MM-DD)
 5. Stage `PROJECT_STATUS.md`
 6. Commit with the format above
+7. Push to `origin/main` on GitHub
+8. Wait for CI to pass using `gh run watch` to monitor the latest workflow run. If CI fails:
+   - If the failure is unrelated to your commit (e.g., a pre-existing broken test or infra flake), fix it as an independent change, commit it separately with a descriptive message (no task ID required), push, and confirm CI passes before moving on.
+   - If the failure is caused by your commit, fix it in a follow-up commit (use the relevant task ID), push, and re-confirm CI passes. Do not force push!
 
 ### 6. When a Story is Complete
 
@@ -158,6 +165,8 @@ Specialized agents are available for delegating implementation work. They carry 
 
 ## What Not to Do
 
+- Don't force push to remote. Always make separate commits to fix issues
+- Don't ignore failing CI results
 - Don't skip writing tests to save time
 - Don't half-ass an implementation by leaving stubs and TODOs
 - Don't add features or refactor code beyond what the current task requires
