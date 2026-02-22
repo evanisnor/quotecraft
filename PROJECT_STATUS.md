@@ -70,7 +70,7 @@ Last updated: 2026-02-21
 | Status | ID            | Task                                                   | P   | Completed |
 | ------ | ------------- | ------------------------------------------------------ | --- | --------- |
 | ✅ | INFR-US2-A001 | Choose and configure migration tool                    | 0   | 2026-02-21 |
-|        | INFR-US2-A002 | Write initial migration: users table                   | 0   |           |
+| ✅ | INFR-US2-A002 | Write initial migration: users table                   | 0   | 2026-02-21 |
 |        | INFR-US2-A003 | Write initial migration: calculators table             | 0   |           |
 |        | INFR-US2-A004 | Write initial migration: sessions table                | 0   |           |
 |        | INFR-US2-A005 | Configure CI to run migrations against a test database | 0   |           |

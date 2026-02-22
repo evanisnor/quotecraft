@@ -326,3 +326,27 @@ Initial approach tested `NewFileMigrator` only with an invalid URL (hitting the 
 **`on.push.branches: ['**']`:** CI runs on every push to any branch, satisfying the acceptance criterion. Pull request trigger is scoped to `main` only, which matches the expected branching model.
 
 ### No technical challenges
+
+---
+
+## Task: INFR-US2-A002 — Write initial migration: users table
+
+**Requirements:** 1.9.2, 1.9.8
+
+### Decisions
+
+**Sequential numbering `000001`:** golang-migrate requires migration files to be named with a numeric sequence prefix. This is the first migration.
+
+**`TIMESTAMPTZ` over `TIMESTAMP`:** Timezone-aware timestamps prevent ambiguity when the application server runs in a different timezone than UTC. All timestamp columns in this project will use `TIMESTAMPTZ`.
+
+**`gen_random_uuid()` for primary keys:** Available in PostgreSQL 13+ core (no extension needed). PostgreSQL 16 is specified in compose.yaml. UUID primary keys avoid sequential ID leakage and are safe for distributed inserts.
+
+**`TEXT` for string columns:** PostgreSQL `TEXT` is functionally equivalent to `VARCHAR` with no length limit and avoids picking arbitrary length caps for fields like `oauth_id` (which varies by provider).
+
+**Nullable `password_hash`, `oauth_provider`, `oauth_id`:** Either auth method may be NULL — OAuth-only users have no password hash; email/password users have no OAuth fields. The partial unique index on `(oauth_provider, oauth_id) WHERE both NOT NULL` enforces OAuth identity uniqueness without treating rows with NULL values as duplicates (NULL != NULL in SQL equality).
+
+**No auth method CHECK constraint:** Whether a user must have at least one auth method (password or OAuth) is a policy enforced at the application layer, not the schema. INFR-US4 will define the registration flow. A premature CHECK constraint would constrain INFR-US4 needlessly.
+
+**Down migration drops table only:** The partial index is automatically dropped with the table, so only `DROP TABLE users` is needed.
+
+### No technical challenges
