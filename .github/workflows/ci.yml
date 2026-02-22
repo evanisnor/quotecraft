@@ -30,6 +30,38 @@ jobs:
       - name: Build
         run: make -C api build
 
+  migrations:
+    name: Migrations — apply and verify
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: quotecraft
+          POSTGRES_PASSWORD: quotecraft
+          POSTGRES_DB: quotecraft
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://quotecraft:quotecraft@localhost:5432/quotecraft?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: api/go.mod
+
+      - name: Install golang-migrate CLI
+        run: go install github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.1
+
+      - name: Run up migrations
+        run: migrate -path api/migrations -database "$DATABASE_URL" up
+
   node:
     name: Node — lint / typecheck / test
     runs-on: ubuntu-latest

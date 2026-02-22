@@ -73,7 +73,7 @@ Last updated: 2026-02-21
 | ✅ | INFR-US2-A002 | Write initial migration: users table                   | 0   | 2026-02-21 |
 | ✅ | INFR-US2-A003 | Write initial migration: calculators table             | 0   | 2026-02-21 |
 | ✅ | INFR-US2-A004 | Write initial migration: sessions table                | 0   | 2026-02-21 |
-|        | INFR-US2-A005 | Configure CI to run migrations against a test database | 0   |           |
+| ✅ | INFR-US2-A005 | Configure CI to run migrations against a test database | 0   | 2026-02-21 |
 
 ### [INFR-US3: API Server Skeleton](./PROJECT_PLAN.md#infr-us3-api-server-skeleton-p0) (P0)
 

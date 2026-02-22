@@ -396,3 +396,21 @@ Initial approach tested `NewFileMigrator` only with an invalid URL (hitting the 
 **`ON DELETE CASCADE` for `user_id` FK:** Deleting a user atomically removes all sessions — no orphaned active tokens.
 
 ### No technical challenges
+
+---
+
+## Task: INFR-US2-A005 — Configure CI to run migrations against a test database
+
+**Requirements:** 1.9.8 (migrations versioned and reproducible)
+
+### Decisions
+
+**Separate `migrations` CI job:** Runs independently of `api` and `node` — no dependency relationship, executes in parallel. The migration correctness check is a distinct concern from compilation and unit tests.
+
+**PostgreSQL service container:** Uses `postgres:16-alpine` (matching compose.yaml) with the same `quotecraft`/`quotecraft` credentials and health-check configuration. The service container is ephemeral — credentials are not sensitive.
+
+**`go install` for migrate CLI:** Homebrew is not available on `ubuntu-latest`. Installing via `go install` is idiomatic and consistent with the Go toolchain already configured by `actions/setup-go@v5`. The version is pinned to `v4.19.1` (matching `api/go.mod`) to ensure reproducibility — `@latest` would allow a future golang-migrate release to silently change CI behavior.
+
+**`migrate up` as the test:** The migrate CLI exits non-zero on any SQL error. Successful completion of `migrate up` against a fresh database is sufficient proof that the migrations are valid SQL and apply cleanly in sequence. No additional schema verification (psql) was added — it would require installing the PostgreSQL client and adds complexity for marginal benefit.
+
+### No technical challenges
