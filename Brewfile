@@ -11,5 +11,8 @@ brew "pnpm"
 # Go hot-reload
 brew "air"
 
+# Database migrations
+brew "golang-migrate"
+
 # Containerization
 cask "docker"

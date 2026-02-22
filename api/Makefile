@@ -2,6 +2,8 @@
 
 .DEFAULT_GOAL := help
 
+DATABASE_URL ?= postgres://quotecraft:quotecraft@localhost:5432/quotecraft?sslmode=disable
+
 .PHONY: help build test lint dev db-migrate db-seed db-reset
 
 ## help: Print this help message
@@ -36,8 +38,7 @@ dev:
 
 ## db-migrate: Run all pending database migrations
 db-migrate:
-	@echo "db-migrate: not yet implemented (see INFR-US2)"
-	@exit 1
+	migrate -path migrations -database "$(DATABASE_URL)" up
 
 ## db-seed: Seed the database with initial data
 db-seed:

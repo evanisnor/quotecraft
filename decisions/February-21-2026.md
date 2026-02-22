@@ -261,6 +261,52 @@ This task is purely structural — no conflicting patterns or design decisions e
 
 ---
 
+## Task: INFR-US2-A001 — Choose and configure migration tool
+
+**Requirements:** [1.9.2](./REQUIREMENTS.md#19-backend-api--data-storage), [1.9.8](./REQUIREMENTS.md#19-backend-api--data-storage)
+
+### Decisions
+
+**Migration tool: golang-migrate v4 with file source and postgres driver**
+
+`github.com/golang-migrate/migrate/v4` was selected as the migration library. It is the most widely adopted Go migration tool, supports numbered up/down migration files, and integrates directly with `database/sql`. The CLI binary (`golang-migrate` formula via Homebrew) handles developer invocations from `make db-migrate`. The Go library (`golang-migrate/migrate/v4`) is used programmatically for integration tests in INFR-US2-A005.
+
+**Driver registration via blank imports**
+
+Both `github.com/golang-migrate/migrate/v4/database/postgres` and `github.com/golang-migrate/migrate/v4/source/file` register themselves in `init()`. They are imported with blank identifiers in `migrate.go`. This is the idiomatic pattern for golang-migrate drivers and avoids the caller needing to know about driver registration.
+
+**`Migrator` interface defined in the `db` package (consumer)**
+
+Per the Go skill convention, interfaces are defined where consumed, not where implemented. `Migrator` lives in `internal/db` because that is the boundary that callers will depend on. Application-layer code will depend on `db.Migrator`, not `*db.FileMigrator`.
+
+**`runner` unexported interface for seam injection**
+
+`*migrate.Migrate` cannot be instantiated without a database connection, making it unsuitable for unit tests. An unexported `runner` interface isolates `FileMigrator` from the real golang-migrate type, allowing `stubRunner` in tests to exercise all branches without network I/O. This follows the skill's "interfaces where consumed" pattern — `runner` is the internal seam, not a public contract.
+
+**`migrateFactory` function type for `NewFileMigrator` coverage**
+
+The success path of `NewFileMigrator` (`return &FileMigrator{r: m}, nil`) cannot be reached in a unit test because `migrate.New()` requires both a readable migrations directory and a reachable database. To achieve 100% line and branch coverage without integration infrastructure, the internal `newFileMigratorWithFactory` constructor accepts an injectable `migrateFactory` function. `NewFileMigrator` delegates to it using `defaultFactory`. Tests use a stub factory that returns a `stubRunner`. This avoids real database connections while keeping the public API clean — callers only ever see `NewFileMigrator`.
+
+**`DATABASE_URL` default in api/Makefile**
+
+The default `postgres://quotecraft:quotecraft@localhost:5432/quotecraft?sslmode=disable` matches the credentials and port in `compose.yaml` for local development. Override by setting `DATABASE_URL` in the environment.
+
+**`db-seed` and `db-reset` remain as stubs**
+
+Seed data and the reset flow depend on migration content (INFR-US2-A002 through A004). They remain as `exit 1` stubs with informative messages referencing INFR-US2.
+
+### Technical challenges
+
+**`go mod tidy` pruned dependencies before source files existed**
+
+`go get` was run to add the three golang-migrate packages and `lib/pq`, then `go mod tidy` was run. Because no Go source file imported those packages at that point, `tidy` removed them from `go.mod`. After creating `migrate.go`, `go get` was run again. Lesson: run `go mod tidy` only after all source files importing the new packages are in place.
+
+**100% coverage on `NewFileMigrator` required a factory abstraction**
+
+Initial approach tested `NewFileMigrator` only with an invalid URL (hitting the error branch at 75% coverage). The success return statement was unreachable without a real database. Introduced `newFileMigratorWithFactory` as the internal constructor with an injectable `migrateFactory` function type. This achieved 100% coverage on every function in `migrate.go` while keeping the implementation hermetic.
+
+---
+
 ## Task: INFR-US1-A012 — Set up CI pipeline with GitHub Actions
 
 **Requirements:** Infrastructure prerequisite (no direct functional requirement ID)
