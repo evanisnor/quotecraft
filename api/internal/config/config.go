@@ -20,6 +20,9 @@ type APIConfig struct {
 	// DashboardOrigins lists the allowed CORS origins for authenticated
 	// (dashboard) endpoints. Public endpoints use a wildcard origin.
 	DashboardOrigins []string `yaml:"dashboard_origins"`
+
+	// DatabaseURL is the PostgreSQL connection string used by the API server.
+	DatabaseURL string `yaml:"database_url"`
 }
 
 // Load reads and parses the YAML configuration file at the given path.
@@ -45,6 +48,7 @@ func Default() *Config {
 		API: APIConfig{
 			Port:             8080,
 			DashboardOrigins: []string{"http://localhost:3000"},
+			DatabaseURL:      "postgres://quotecraft:quotecraft@localhost:5432/quotecraft?sslmode=disable",
 		},
 	}
 }

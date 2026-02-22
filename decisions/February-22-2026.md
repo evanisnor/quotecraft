@@ -157,3 +157,61 @@ go-chi/cors is the idiomatic CORS library for chi-based servers. It handles the 
 ### Technical Challenges
 
 No significant challenges. The main care taken was ensuring the `securityHeaders` middleware position relative to `Recoverer` — placing `securityHeaders` after `Recoverer` means the middleware runs inside the panic recovery boundary, so if a bug in `securityHeaders` panicked, `Recoverer` would catch it. However, `securityHeaders` only calls `w.Header().Set()` and `next.ServeHTTP()`, neither of which can panic under normal conditions. The current ordering (Recoverer before securityHeaders) is correct: headers set before `next.ServeHTTP()` are applied before the handler runs, which is the intent.
+
+---
+
+## Task: INFR-US4-A001 — Implement email+password registration with password hashing
+
+**Requirements:** 1.1.1, 1.1.2, 1.1.3, 1.1.4, 1.1.5
+
+### Decisions
+
+**`auth.Service` holds an injected `passwordHasher` function field**
+
+The bcrypt hasher is injected as a `passwordHasher` type alias (`func([]byte, int) ([]byte, error)`) on `Service` rather than called directly as a package-level function. This lets tests inject a fake hasher that returns a configurable error, enabling 100% coverage of the `Register` function's hasher error branch. The public `NewService` wires bcrypt's `GenerateFromPassword` automatically. A package-private `newServiceWithHasher` constructor is provided for test use only — it is not exported and adds no surface area to the public API.
+
+**`generateToken` panics on entropy failure**
+
+Per the task specification, the `generateToken` function panics if `io.ReadFull(rand.Reader, buf)` returns an error. Entropy exhaustion is a kernel-level failure and there is no meaningful recovery path. The panic branch is intentionally not covered by tests — covering it would require mocking the OS entropy source, which introduces more complexity than value. The coverage gap (2 statements inside the panic block) is accepted and documented.
+
+**`db.DB` wraps a `dbPool` interface, not `*sql.DB` directly**
+
+The `DB` struct stores its database operations behind a `dbPool` interface (`PingContext`, `Close`) rather than holding `*sql.DB` directly. This allows the `Ping` error branch and `Close` error branch to be tested by injecting a `fakePool` that returns configurable errors. The raw `*sql.DB` is kept as a separate `sqlDB` field and exposed via `DB()` for repository use (repositories need the full `*sql.DB` for `QueryRowContext` etc., which is not in the interface). In production, both fields point to the same `*sql.DB`.
+
+**`openWithOpener` factory for DB construction**
+
+Following the same pattern established by `FileMigrator.newFileMigratorWithFactory` in `db/migrate.go`, `DB.openWithOpener` accepts a `sqlOpener` function that is substituted in tests to avoid real network connections. The public `Open` function delegates to `openWithOpener(driverName, dataSourceName, sql.Open)` — a single-line wrapper tested by a `TestOpen_PublicFunction` test that expects an error from a bad DSN.
+
+**`go-sqlmock` v1 for repository tests**
+
+`github.com/DATA-DOG/go-sqlmock` (v1.5.2, the latest version of the module) is used for `PostgresUserRepository` and `PostgresSessionRepository` tests. The repositories take `*sql.DB` directly (not an interface), so sqlmock is the right tool here — it implements `database/sql/driver` to return mocked rows and errors. `mock.ExpectClose()` must be declared after each query expectation so the mock's ordered expectation list matches the call sequence (query, then deferred close).
+
+**Email validation is intentionally minimal**
+
+Email validation checks for non-empty string containing "@". Full RFC 5322 validation is not required by the task spec and would add complexity for little benefit at this stage. The constraint check `strings.Contains(email, "@")` is sufficient to catch obvious mistakes (empty string, no domain separator) without rejecting valid addresses that strict regex would flag.
+
+**`Registrar` interface defined in `server` package (consumer)**
+
+Following the interfaces-at-consumer convention, `Registrar` is defined in `internal/server/auth.go`, not in the `auth` package. The `auth.Service` struct satisfies `Registrar` without being aware of it. This maintains the correct dependency direction: `server` depends on `auth`, not the reverse.
+
+**`auth.ErrEmailConflict` and `auth.ErrInvalidInput` sentinel errors**
+
+Two package-level sentinel errors are defined in `auth`. The handler uses `errors.Is()` to detect them and map to the appropriate HTTP status codes (409 and 400). This avoids string matching in the handler layer. The `ErrEmailConflict` detection in `Service.Register` uses `strings.Contains(err.Error(), "unique")` on the raw database error — this is a deliberate choice to avoid importing `github.com/lib/pq` into the auth package. The `pq.Error` type check would create a direct dependency on the pq driver in the domain/application layer, violating the hexagonal architecture boundary.
+
+**Session token: 32 bytes from `crypto/rand`, base64url (no padding), SHA-256 stored**
+
+The token is 32 bytes of cryptographically random data encoded as base64url without padding, giving 43 characters of URL-safe entropy. The SHA-256 hash (lowercase hex, 64 characters) is stored in the `sessions.token_hash` column. The raw token is returned to the client and never stored. This design means even with database access, an attacker cannot reverse the stored hash to obtain valid session tokens.
+
+### Technical Challenges
+
+**`go-sqlmock` v1 `New()` auto-pings the DB**
+
+`sqlmock.New()` in v1 automatically pings the database (registers an `ExpectPing` internally) and then consumes it. This means tests do not need to call `mock.ExpectPing()` explicitly, but they do need `mock.ExpectClose()` declared *after* all query expectations (not before), because sqlmock processes expectations in order. Placing `ExpectClose()` before `ExpectQuery()` caused failures where sqlmock expected Close before the query ran.
+
+**`(*sql.DB).Close()` is idempotent and returns nil on double-close**
+
+The initial `TestClose_Error` implementation tried to call `db.Close()` twice on a real `*sql.DB` (obtained from a fake driver) and expected the second call to return an error. It doesn't — the standard library's `Close()` is idempotent and returns `nil` even after already being closed. The fix was to introduce the `dbPool` interface and test the error branch using a `fakePool` that returns a configurable error, rather than trying to trigger the error through the real `*sql.DB`.
+
+**`noopPinger` removed from `main.go`**
+
+`TestNoopPinger_AlwaysHealthy` in `main_test.go` referenced the `noopPinger` type that was removed as part of this task. The test was removed since the noopPinger no longer exists — the real database connection satisfies `server.Pinger` from this task onwards.

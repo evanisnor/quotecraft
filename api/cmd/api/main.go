@@ -1,29 +1,40 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 
+	"github.com/evanisnor/quotecraft/api/internal/auth"
 	"github.com/evanisnor/quotecraft/api/internal/config"
+	"github.com/evanisnor/quotecraft/api/internal/db"
 	"github.com/evanisnor/quotecraft/api/internal/server"
 )
-
-// noopPinger is a placeholder Pinger that always reports healthy. It is used
-// until the real database connection is wired up in INFR-US4.
-type noopPinger struct{}
-
-func (noopPinger) Ping(_ context.Context) error { return nil }
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil)).With("service", "api")
 
 	cfg := loadConfig(logger)
 
-	srv := server.New(&cfg.API, logger, noopPinger{})
+	dbConn, err := db.Open("postgres", cfg.API.DatabaseURL)
+	if err != nil {
+		logger.Error("failed to connect to database", "error", err)
+		os.Exit(1)
+	}
+	defer func() {
+		if err := dbConn.Close(); err != nil {
+			logger.Error("closing database connection", "error", err)
+		}
+	}()
+
+	userRepo := auth.NewPostgresUserRepository(dbConn.DB())
+	sessionRepo := auth.NewPostgresSessionRepository(dbConn.DB())
+	authService := auth.NewService(userRepo, sessionRepo)
+
+	srv := server.New(&cfg.API, logger, dbConn)
+	srv.MountAuth(authService)
 
 	addr := fmt.Sprintf(":%d", cfg.API.Port)
 	logger.Info("QuoteCraft API starting", "addr", addr)

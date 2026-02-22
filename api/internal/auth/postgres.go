@@ -1,0 +1,80 @@
+package auth
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/lib/pq"
+)
+
+// PostgresUserRepository implements UserWriter against a PostgreSQL database.
+type PostgresUserRepository struct {
+	db *sql.DB
+}
+
+// NewPostgresUserRepository creates a PostgresUserRepository backed by db.
+func NewPostgresUserRepository(db *sql.DB) *PostgresUserRepository {
+	return &PostgresUserRepository{db: db}
+}
+
+// CreateUser inserts a new user row and returns the created User.
+// Returns ErrEmailConflict if the email violates the unique constraint (pq code 23505).
+func (r *PostgresUserRepository) CreateUser(ctx context.Context, email, passwordHash string) (*User, error) {
+	const query = `
+		INSERT INTO users (email, password_hash)
+		VALUES ($1, $2)
+		RETURNING id, email, created_at
+	`
+
+	var u User
+	err := r.db.QueryRowContext(ctx, query, email, passwordHash).Scan(
+		&u.ID,
+		&u.Email,
+		&u.CreatedAt,
+	)
+	if err != nil {
+		var pgErr *pq.Error
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return nil, ErrEmailConflict
+		}
+		return nil, fmt.Errorf("inserting user: %w", err)
+	}
+
+	return &u, nil
+}
+
+// PostgresSessionRepository implements SessionWriter against a PostgreSQL database.
+type PostgresSessionRepository struct {
+	db *sql.DB
+}
+
+// NewPostgresSessionRepository creates a PostgresSessionRepository backed by db.
+func NewPostgresSessionRepository(db *sql.DB) *PostgresSessionRepository {
+	return &PostgresSessionRepository{db: db}
+}
+
+// CreateSession inserts a new session row and returns the created Session.
+func (r *PostgresSessionRepository) CreateSession(ctx context.Context, userID, tokenHash string, expiresAt time.Time) (*Session, error) {
+	const query = `
+		INSERT INTO sessions (user_id, token_hash, expires_at)
+		VALUES ($1, $2, $3)
+		RETURNING id, user_id, token_hash, created_at, expires_at
+	`
+
+	var sess Session
+	err := r.db.QueryRowContext(ctx, query, userID, tokenHash, expiresAt).Scan(
+		&sess.ID,
+		&sess.UserID,
+		&sess.TokenHash,
+		&sess.CreatedAt,
+		&sess.ExpiresAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("inserting session: %w", err)
+	}
+
+	return &sess, nil
+}

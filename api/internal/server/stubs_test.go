@@ -11,3 +11,13 @@ type stubPinger struct {
 func (s *stubPinger) Ping(_ context.Context) error {
 	return s.err
 }
+
+// stubRegistrar is a reusable test implementation of Registrar.
+type stubRegistrar struct {
+	token string
+	err   error
+}
+
+func (s *stubRegistrar) Register(_ context.Context, _, _ string) (string, error) {
+	return s.token, s.err
+}

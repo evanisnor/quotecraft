@@ -49,7 +49,7 @@ Last updated: 2026-02-22
 **Requirements:** Infrastructure prerequisite — no direct functional requirement
 
 | Status | ID | Task | P | Completed |
-|--------|----|------|---|-----------||
+|--------|----|------|---|-----------|
 | ✅ | INFR-US1-A001 | Initialize monorepo with pnpm workspaces | 0 | 2026-02-21 |
 | ✅ | INFR-US1-A002 | Create root Makefile with `bootstrap` target (Homebrew Brewfile) | 0 | 2026-02-21 |
 | ✅ | INFR-US1-A003 | Create Docker Compose for local dev services (PostgreSQL) | 0 | 2026-02-21 |
@@ -93,7 +93,7 @@ Last updated: 2026-02-22
 
 | Status | ID            | Task                                                                        | P   | Completed |
 | ------ | ------------- | --------------------------------------------------------------------------- | --- | --------- |
-|        | INFR-US4-A001 | Implement email+password registration with password hashing                 | 0   |           |
+| ✅ | INFR-US4-A001 | Implement email+password registration with password hashing                 | 0   | 2026-02-22 |
 |        | INFR-US4-A002 | Implement login endpoint with session token issuance                        | 0   |           |
 |        | INFR-US4-A003 | Implement logout with server-side token invalidation                        | 0   |           |
 |        | INFR-US4-A004 | Implement auth middleware that validates session tokens on protected routes | 0   |           |
