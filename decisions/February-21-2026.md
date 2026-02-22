@@ -258,3 +258,25 @@ This task is purely structural — no conflicting patterns or design decisions e
 **Docker services start synchronously before watchers:** `docker compose up -d` completes before any background process is spawned. This ensures the API watcher sees a running database container from the start, though the DB health check takes a few seconds; the API will handle that via retries.
 
 ### No technical challenges
+
+---
+
+## Task: INFR-US1-A012 — Set up CI pipeline with GitHub Actions
+
+**Requirements:** Infrastructure prerequisite (no direct functional requirement ID)
+
+### Decisions
+
+**Two parallel jobs — `api` and `node`:** Go and TypeScript work is independent so both jobs run concurrently. This keeps CI fast and provides clear separation of failure signal.
+
+**Go job steps:** `go mod verify` (module integrity check per SYSTEM_DESIGN.md security audit requirement), then `make -C api lint` (go vet + gofmt), then `make -C api test`, then `make -C api build`. Build is included so compilation errors are caught even when no tests cover new code paths.
+
+**Node job steps:** `pnpm install --frozen-lockfile` (lockfile as source of truth), `pnpm audit --audit-level=high` (dependency vulnerability scan per SYSTEM_DESIGN.md), `pnpm -r run lint` (ESLint for all packages), `pnpm -r run typecheck` (tsc --noEmit for all packages), `pnpm -r run test` (Jest for all packages). Type-check is a separate step from lint because each package's `lint` script only runs ESLint.
+
+**`pnpm/action-setup@v4` with explicit `version: 9`:** Matches the workspace's pnpm@9. Could be read from `packageManager` in `package.json`, but explicit version is more predictable in CI.
+
+**`go-version-file: api/go.mod`:** Go version derives from the module file rather than being hardcoded in the workflow, so updating go.mod automatically updates the CI Go version.
+
+**`on.push.branches: ['**']`:** CI runs on every push to any branch, satisfying the acceptance criterion. Pull request trigger is scoped to `main` only, which matches the expected branching model.
+
+### No technical challenges

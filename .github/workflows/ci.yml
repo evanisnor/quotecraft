@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  api:
+    name: API — lint / test / build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: api/go.mod
+
+      - name: Verify modules
+        run: go mod verify
+        working-directory: api
+
+      - name: Lint
+        run: make -C api lint
+
+      - name: Test
+        run: make -C api test
+
+      - name: Build
+        run: make -C api build
+
+  node:
+    name: Node — lint / typecheck / test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit dependencies
+        run: pnpm audit --audit-level=high
+
+      - name: Lint (all packages)
+        run: pnpm -r run lint
+
+      - name: Type-check (all packages)
+        run: pnpm -r run typecheck
+
+      - name: Test (all packages)
+        run: pnpm -r run test

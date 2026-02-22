@@ -61,7 +61,7 @@ Last updated: 2026-02-21
 | ✅ | INFR-US1-A009 | Configure shared TypeScript, ESLint, and Prettier configs | 0 | 2026-02-21 |
 | ✅ | INFR-US1-A010 | Add root Makefile targets for database management | 0 | 2026-02-21 |
 | ✅ | INFR-US1-A011 | Add root Makefile target for full-stack dev-watch mode | 0 | 2026-02-21 |
-| | INFR-US1-A012 | Set up CI pipeline with GitHub Actions | 0 | |
+| ✅ | INFR-US1-A012 | Set up CI pipeline with GitHub Actions | 0 | 2026-02-21 |
 
 ### [INFR-US2: Database & Migrations](./PROJECT_PLAN.md#infr-us2-database--migrations-p0) (P0)
 
