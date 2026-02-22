@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/evanisnor/quotecraft/api/internal/auth"
+	"github.com/evanisnor/quotecraft/api/internal/calculator"
 	"github.com/evanisnor/quotecraft/api/internal/config"
 	"github.com/evanisnor/quotecraft/api/internal/db"
 	"github.com/evanisnor/quotecraft/api/internal/server"
@@ -33,8 +34,12 @@ func main() {
 	sessionRepo := auth.NewPostgresSessionRepository(dbConn.DB())
 	authService := auth.NewService(userRepo, userRepo, sessionRepo, sessionRepo, sessionRepo)
 
+	calcRepo := calculator.NewPostgresCalculatorRepository(dbConn.DB())
+	calcService := calculator.NewService(calcRepo)
+
 	srv := server.New(&cfg.API, logger, dbConn)
 	srv.MountAuth(authService)
+	srv.MountCalculators(authService, calcService)
 
 	addr := fmt.Sprintf(":%d", cfg.API.Port)
 	logger.Info("QuoteCraft API starting", "addr", addr)

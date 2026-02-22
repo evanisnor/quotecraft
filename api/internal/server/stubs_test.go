@@ -1,6 +1,10 @@
 package server
 
-import "context"
+import (
+	"context"
+
+	"github.com/evanisnor/quotecraft/api/internal/calculator"
+)
 
 // stubPinger is a reusable test implementation of Pinger. It is shared across
 // test files in this package (health_test.go, server_test.go).
@@ -33,4 +37,14 @@ func (s *stubAuthService) Logout(_ context.Context, _ string) error {
 
 func (s *stubAuthService) ValidateToken(_ context.Context, _ string) (string, error) {
 	return s.userID, s.err
+}
+
+// stubCalculatorService is a reusable test implementation of CalculatorService.
+type stubCalculatorService struct {
+	calc *calculator.Calculator
+	err  error
+}
+
+func (s *stubCalculatorService) Create(_ context.Context, _ string) (*calculator.Calculator, error) {
+	return s.calc, s.err
 }
