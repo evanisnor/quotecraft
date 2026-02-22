@@ -350,3 +350,27 @@ Initial approach tested `NewFileMigrator` only with an invalid URL (hitting the 
 **Down migration drops table only:** The partial index is automatically dropped with the table, so only `DROP TABLE users` is needed.
 
 ### No technical challenges
+
+---
+
+## Task: INFR-US2-A003 — Write initial migration: calculators table
+
+**Requirements:** 1.9.2, 1.9.8
+
+### Decisions
+
+**Shared `set_updated_at()` trigger function:** A single PL/pgSQL function defined in migration 000002 handles `updated_at` maintenance for all tables. Each table gets its own named trigger (`calculators_set_updated_at`) pointing to the shared function. Future migrations create their own triggers pointing to the same function; their down migrations do NOT drop the function. Only migration 000002's down migration drops the function (since it created it), which is safe because sequential rollback requires rolling back 000003+ before 000002.
+
+**`CREATE OR REPLACE FUNCTION`:** Idempotent — safe for repeated migration runs.
+
+**`team_id` deferred:** SYSTEM_DESIGN.md includes `team_id FK` on CALCULATOR, but this is a Phase 3 (BSNS-US3) feature. Including it now would create a dependency on a teams table that doesn't exist yet. Added when teams are implemented.
+
+**Partial index on `(user_id) WHERE is_deleted = FALSE`:** The primary query pattern is listing active calculators per user. The partial index matches this access pattern and avoids indexing deleted rows.
+
+**`ON DELETE CASCADE` for `user_id` FK:** Maintains referential integrity when a user is deleted. Consistent with SYSTEM_DESIGN.md's data deletion policy for account deletion.
+
+**`DEFAULT '{}'` for config JSONB:** Avoids NULL config for newly created calculators. The application layer validates and populates the config document; the default is a safe starting state.
+
+### Technical challenges
+
+**Missing `updated_at` trigger (caught in code review):** Initial implementation omitted the `BEFORE UPDATE` trigger. Requirement 1.2.7 specifies "last modified date" — without the trigger, `updated_at` would never advance past its insert-time value. Fixed by adding the `set_updated_at()` function and trigger before commit.
