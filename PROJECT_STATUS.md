@@ -75,7 +75,7 @@ Last updated: 2026-02-22
 | ✅ | INFR-US2-A004 | Write initial migration: sessions table                | 0   | 2026-02-21 |
 | ✅ | INFR-US2-A005 | Configure CI to run migrations against a test database | 0   | 2026-02-21 |
 
-### [INFR-US3: API Server Skeleton](./PROJECT_PLAN.md#infr-us3-api-server-skeleton-p0) (P0)
+### ✅ [INFR-US3: API Server Skeleton](./PROJECT_PLAN.md#infr-us3-api-server-skeleton-p0) (P0)
 
 **Requirements:** [1.9.1](./REQUIREMENTS.md#19-backend-api--data-storage), [1.9.7](./REQUIREMENTS.md#19-backend-api--data-storage), [1.9.9](./REQUIREMENTS.md#19-backend-api--data-storage)
 
