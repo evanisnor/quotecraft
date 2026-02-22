@@ -5,7 +5,7 @@
 
 .DEFAULT_GOAL := help
 
-.PHONY: help bootstrap \
+.PHONY: help bootstrap dev \
         services-up services-down services-status services-logs \
         db-migrate db-seed db-reset
 
@@ -19,6 +19,10 @@ help:
 ## bootstrap: Install all development tools (requires Homebrew)
 bootstrap:
 	@bash scripts/bootstrap.sh
+
+## dev: Start the full development stack (Docker services + API + dashboard + widget)
+dev:
+	@bash scripts/dev.sh
 
 # ── Local Services ────────────────────────────────────────────────────────────
 

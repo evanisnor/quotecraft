@@ -242,3 +242,19 @@ This task is purely structural — no conflicting patterns or design decisions e
 **API stubs exit 1:** The three stub targets in `api/Makefile` print an informative message referencing INFR-US2 and immediately exit with a non-zero status. This makes misuse visible: any developer (or CI step) that invokes these before INFR-US2 is implemented will get a clear error rather than a silent no-op.
 
 ### No technical challenges
+
+---
+
+## Task: INFR-US1-A011 — Add root Makefile target for full-stack dev-watch mode
+
+**Requirements:** Infrastructure prerequisite (no direct functional requirement ID)
+
+### Decisions
+
+**`scripts/dev.sh` for complex orchestration:** Consistent with `bootstrap`, the multi-step logic lives in a script. The Makefile `dev` target stays thin (`@bash scripts/dev.sh`).
+
+**`EXIT` trap in addition to `INT`/`TERM`:** The script traps `EXIT` so that if any background child exits non-zero (e.g., `air` fails to start because Go toolchain is missing), all remaining sibling processes are killed rather than left as orphans. `wait "${pids[@]}"` in `cleanup` waits for the specific tracked PIDs rather than all children.
+
+**Docker services start synchronously before watchers:** `docker compose up -d` completes before any background process is spawned. This ensures the API watcher sees a running database container from the start, though the DB health check takes a few seconds; the API will handle that via retries.
+
+### No technical challenges
