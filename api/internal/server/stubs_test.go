@@ -25,3 +25,7 @@ func (s *stubAuthService) Register(_ context.Context, _, _ string) (string, erro
 func (s *stubAuthService) Login(_ context.Context, _, _ string) (string, error) {
 	return s.token, s.err
 }
+
+func (s *stubAuthService) Logout(_ context.Context, _ string) error {
+	return s.err
+}

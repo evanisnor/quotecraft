@@ -22,10 +22,17 @@ type Authenticator interface {
 	Login(ctx context.Context, email, password string) (token string, err error)
 }
 
+// Logouter invalidates an existing session by raw token.
+// Defined here at the consumer (server package) per the interfaces-where-consumed convention.
+type Logouter interface {
+	Logout(ctx context.Context, token string) error
+}
+
 // AuthService is the full set of authentication capabilities consumed by the server.
 type AuthService interface {
 	Registrar
 	Authenticator
+	Logouter
 }
 
 // registerRequest is the JSON body expected by POST /v1/auth/register.
@@ -105,8 +112,36 @@ func loginHandler(a Authenticator) http.HandlerFunc {
 	}
 }
 
+// extractBearerToken parses the Authorization header and returns the raw token.
+// Returns an empty string if the header is absent or does not start with "Bearer ".
+func extractBearerToken(r *http.Request) string {
+	h := r.Header.Get("Authorization")
+	if !strings.HasPrefix(h, "Bearer ") {
+		return ""
+	}
+	return strings.TrimPrefix(h, "Bearer ")
+}
+
+// logoutHandler returns an http.HandlerFunc that handles POST /v1/auth/logout.
+func logoutHandler(auth Logouter) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		token := extractBearerToken(r)
+		if token == "" {
+			WriteError(w, http.StatusUnauthorized, ErrCodeUnauthorized, "missing or invalid authorization header")
+			return
+		}
+		if err := auth.Logout(r.Context(), token); err != nil {
+			LoggerFrom(r.Context()).Error("logout", "error", err)
+			WriteError(w, http.StatusInternalServerError, ErrCodeInternal, "internal error")
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
 // MountAuth registers all authentication routes on the server's private route group.
 func (s *Server) MountAuth(svc AuthService) {
 	s.privateGroup.Post("/auth/register", registerHandler(svc))
 	s.privateGroup.Post("/auth/login", loginHandler(svc))
+	s.privateGroup.Post("/auth/logout", logoutHandler(svc))
 }

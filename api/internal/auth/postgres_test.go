@@ -210,6 +210,88 @@ func TestGetUserByEmail_QueryError(t *testing.T) {
 	}
 }
 
+// TestDeleteSession_Success verifies that DeleteSession executes the DELETE
+// statement with the correct token hash and returns no error when a row is matched.
+func TestDeleteSession_Success(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("creating sqlmock: %v", err)
+	}
+
+	mock.ExpectExec(regexp.QuoteMeta("DELETE FROM sessions WHERE token_hash = $1")).
+		WithArgs("abc123hash").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectClose()
+
+	repo := NewPostgresSessionRepository(db)
+	if err := repo.DeleteSession(context.Background(), "abc123hash"); err != nil {
+		t.Fatalf("DeleteSession() returned unexpected error: %v", err)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Errorf("closing mock db: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestDeleteSession_NoRows verifies that DeleteSession returns no error when
+// the DELETE affects zero rows (idempotent — session already gone).
+func TestDeleteSession_NoRows(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("creating sqlmock: %v", err)
+	}
+
+	mock.ExpectExec(regexp.QuoteMeta("DELETE FROM sessions WHERE token_hash = $1")).
+		WithArgs("nonexistent-hash").
+		WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectClose()
+
+	repo := NewPostgresSessionRepository(db)
+	if err := repo.DeleteSession(context.Background(), "nonexistent-hash"); err != nil {
+		t.Fatalf("DeleteSession() returned unexpected error for zero rows affected: %v", err)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Errorf("closing mock db: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestDeleteSession_QueryError verifies that ExecContext errors are wrapped and propagated.
+func TestDeleteSession_QueryError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("creating sqlmock: %v", err)
+	}
+
+	wantErr := errors.New("connection refused")
+	mock.ExpectExec(regexp.QuoteMeta("DELETE FROM sessions WHERE token_hash = $1")).
+		WithArgs("abc123hash").
+		WillReturnError(wantErr)
+	mock.ExpectClose()
+
+	repo := NewPostgresSessionRepository(db)
+	err = repo.DeleteSession(context.Background(), "abc123hash")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Errorf("closing mock db: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
 // TestCreateSession_Success verifies that CreateSession executes the INSERT and
 // scans the RETURNING columns into a Session.
 func TestCreateSession_Success(t *testing.T) {

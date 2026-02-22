@@ -71,6 +71,17 @@ func NewPostgresSessionRepository(db *sql.DB) *PostgresSessionRepository {
 	return &PostgresSessionRepository{db: db}
 }
 
+// DeleteSession removes the session row identified by tokenHash.
+// If no row matches, no error is returned (the operation is idempotent).
+func (r *PostgresSessionRepository) DeleteSession(ctx context.Context, tokenHash string) error {
+	const query = `DELETE FROM sessions WHERE token_hash = $1`
+	_, err := r.db.ExecContext(ctx, query, tokenHash)
+	if err != nil {
+		return fmt.Errorf("deleting session: %w", err)
+	}
+	return nil
+}
+
 // CreateSession inserts a new session row and returns the created Session.
 func (r *PostgresSessionRepository) CreateSession(ctx context.Context, userID, tokenHash string, expiresAt time.Time) (*Session, error) {
 	const query = `

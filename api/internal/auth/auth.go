@@ -65,6 +65,11 @@ type SessionWriter interface {
 	CreateSession(ctx context.Context, userID, tokenHash string, expiresAt time.Time) (*Session, error)
 }
 
+// SessionDeleter deletes session records.
+type SessionDeleter interface {
+	DeleteSession(ctx context.Context, tokenHash string) error
+}
+
 // passwordHasher hashes a plaintext password. Abstracted for testability.
 type passwordHasher func(password []byte, cost int) ([]byte, error)
 
@@ -78,36 +83,39 @@ type tokenGenerator func() (token, tokenHash string, err error)
 
 // Service handles authentication business logic.
 type Service struct {
-	users      UserWriter
-	userReader UserReader
-	sessions   SessionWriter
-	hasher     passwordHasher
-	verifier   passwordVerifier
-	genToken   tokenGenerator
+	users          UserWriter
+	userReader     UserReader
+	sessions       SessionWriter
+	sessionDeleter SessionDeleter
+	hasher         passwordHasher
+	verifier       passwordVerifier
+	genToken       tokenGenerator
 }
 
 // NewService creates an auth Service with the given repositories.
-func NewService(users UserWriter, userReader UserReader, sessions SessionWriter) *Service {
+func NewService(users UserWriter, userReader UserReader, sessions SessionWriter, sessionDeleter SessionDeleter) *Service {
 	return &Service{
-		users:      users,
-		userReader: userReader,
-		sessions:   sessions,
-		hasher:     bcrypt.GenerateFromPassword,
-		verifier:   bcrypt.CompareHashAndPassword,
-		genToken:   generateToken,
+		users:          users,
+		userReader:     userReader,
+		sessions:       sessions,
+		sessionDeleter: sessionDeleter,
+		hasher:         bcrypt.GenerateFromPassword,
+		verifier:       bcrypt.CompareHashAndPassword,
+		genToken:       generateToken,
 	}
 }
 
 // newServiceForTest creates an auth Service with injectable dependencies.
 // Used in tests to exercise specific code paths without production side-effects.
-func newServiceForTest(users UserWriter, userReader UserReader, sessions SessionWriter, hasher passwordHasher, verifier passwordVerifier, gen tokenGenerator) *Service {
+func newServiceForTest(users UserWriter, userReader UserReader, sessions SessionWriter, sessionDeleter SessionDeleter, hasher passwordHasher, verifier passwordVerifier, gen tokenGenerator) *Service {
 	return &Service{
-		users:      users,
-		userReader: userReader,
-		sessions:   sessions,
-		hasher:     hasher,
-		verifier:   verifier,
-		genToken:   gen,
+		users:          users,
+		userReader:     userReader,
+		sessions:       sessions,
+		sessionDeleter: sessionDeleter,
+		hasher:         hasher,
+		verifier:       verifier,
+		genToken:       gen,
 	}
 }
 
@@ -179,6 +187,15 @@ func (s *Service) Login(ctx context.Context, email, password string) (string, er
 	}
 
 	return token, nil
+}
+
+// Logout invalidates the session associated with the given raw token by deleting
+// it from the session store. If the session does not exist, no error is returned
+// (the operation is idempotent).
+func (s *Service) Logout(ctx context.Context, token string) error {
+	h := sha256.Sum256([]byte(token))
+	tokenHash := hex.EncodeToString(h[:])
+	return s.sessionDeleter.DeleteSession(ctx, tokenHash)
 }
 
 // validateRegistrationInput checks email and password constraints.

@@ -95,7 +95,7 @@ Last updated: 2026-02-22
 | ------ | ------------- | --------------------------------------------------------------------------- | --- | --------- |
 | ✅ | INFR-US4-A001 | Implement email+password registration with password hashing                 | 0   | 2026-02-22 |
 | ✅ | INFR-US4-A002 | Implement login endpoint with session token issuance                        | 0   | 2026-02-22 |
-|        | INFR-US4-A003 | Implement logout with server-side token invalidation                        | 0   |           |
+| ✅ | INFR-US4-A003 | Implement logout with server-side token invalidation                        | 0   | 2026-02-22 |
 |        | INFR-US4-A004 | Implement auth middleware that validates session tokens on protected routes | 0   |           |
 |        | INFR-US4-A005 | Implement password reset flow (forgot + reset endpoints)                    | 1   |           |
 |        | INFR-US4-A006 | Implement Google OAuth with PKCE                                            | 1   |           |

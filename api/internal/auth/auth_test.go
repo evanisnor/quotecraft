@@ -14,7 +14,7 @@ import (
 func TestRegister_Success(t *testing.T) {
 	users := &stubUserWriter{}
 	sessions := &stubSessionWriter{}
-	svc := NewService(users, &stubUserReader{}, sessions)
+	svc := NewService(users, &stubUserReader{}, sessions, &stubSessionDeleter{})
 
 	token, err := svc.Register(context.Background(), "alice@example.com", "securepassword")
 	if err != nil {
@@ -44,7 +44,7 @@ func TestRegister_InvalidEmail(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := NewService(&stubUserWriter{}, &stubUserReader{}, &stubSessionWriter{})
+			svc := NewService(&stubUserWriter{}, &stubUserReader{}, &stubSessionWriter{}, &stubSessionDeleter{})
 			_, err := svc.Register(context.Background(), tt.email, "securepassword")
 			if err == nil {
 				t.Fatal("expected error for invalid email, got nil")
@@ -59,7 +59,7 @@ func TestRegister_InvalidEmail(t *testing.T) {
 // TestRegister_ShortPassword verifies that a password shorter than 8 characters
 // returns ErrInvalidInput.
 func TestRegister_ShortPassword(t *testing.T) {
-	svc := NewService(&stubUserWriter{}, &stubUserReader{}, &stubSessionWriter{})
+	svc := NewService(&stubUserWriter{}, &stubUserReader{}, &stubSessionWriter{}, &stubSessionDeleter{})
 
 	_, err := svc.Register(context.Background(), "alice@example.com", "short")
 	if err == nil {
@@ -72,7 +72,7 @@ func TestRegister_ShortPassword(t *testing.T) {
 
 // TestRegister_PasswordExactly8Chars verifies that a password of exactly 8 characters passes.
 func TestRegister_PasswordExactly8Chars(t *testing.T) {
-	svc := NewService(&stubUserWriter{}, &stubUserReader{}, &stubSessionWriter{})
+	svc := NewService(&stubUserWriter{}, &stubUserReader{}, &stubSessionWriter{}, &stubSessionDeleter{})
 
 	_, err := svc.Register(context.Background(), "alice@example.com", "exactly8")
 	if err != nil {
@@ -84,7 +84,7 @@ func TestRegister_PasswordExactly8Chars(t *testing.T) {
 // (as the repository does for pq code 23505), Register propagates it.
 func TestRegister_EmailConflict(t *testing.T) {
 	users := &stubUserWriter{err: ErrEmailConflict}
-	svc := NewService(users, &stubUserReader{}, &stubSessionWriter{})
+	svc := NewService(users, &stubUserReader{}, &stubSessionWriter{}, &stubSessionDeleter{})
 
 	_, err := svc.Register(context.Background(), "alice@example.com", "securepassword")
 	if err == nil {
@@ -100,7 +100,7 @@ func TestRegister_EmailConflict(t *testing.T) {
 func TestRegister_CreateUserInternalError(t *testing.T) {
 	wantErr := errors.New("database connection lost")
 	users := &stubUserWriter{err: wantErr}
-	svc := NewService(users, &stubUserReader{}, &stubSessionWriter{})
+	svc := NewService(users, &stubUserReader{}, &stubSessionWriter{}, &stubSessionDeleter{})
 
 	_, err := svc.Register(context.Background(), "alice@example.com", "securepassword")
 	if err == nil {
@@ -118,7 +118,7 @@ func TestRegister_CreateUserInternalError(t *testing.T) {
 func TestRegister_CreateSessionError(t *testing.T) {
 	wantErr := errors.New("session table unreachable")
 	sessions := &stubSessionWriter{err: wantErr}
-	svc := NewService(&stubUserWriter{}, &stubUserReader{}, sessions)
+	svc := NewService(&stubUserWriter{}, &stubUserReader{}, sessions, &stubSessionDeleter{})
 
 	_, err := svc.Register(context.Background(), "alice@example.com", "securepassword")
 	if err == nil {
@@ -137,6 +137,7 @@ func TestRegister_HasherError(t *testing.T) {
 		&stubUserWriter{},
 		&stubUserReader{},
 		&stubSessionWriter{},
+		&stubSessionDeleter{},
 		func(_ []byte, _ int) ([]byte, error) { return nil, wantErr },
 		bcrypt.CompareHashAndPassword,
 		generateToken,
@@ -159,6 +160,7 @@ func TestRegister_TokenGenerationError(t *testing.T) {
 		&stubUserWriter{},
 		&stubUserReader{},
 		&stubSessionWriter{},
+		&stubSessionDeleter{},
 		bcrypt.GenerateFromPassword,
 		bcrypt.CompareHashAndPassword,
 		func() (string, string, error) { return "", "", wantErr },
@@ -179,6 +181,7 @@ func TestLogin_Success(t *testing.T) {
 		&stubUserWriter{},
 		&stubUserReader{},
 		&stubSessionWriter{},
+		&stubSessionDeleter{},
 		bcrypt.GenerateFromPassword,
 		func(_, _ []byte) error { return nil }, // verifier always succeeds
 		generateToken,
@@ -200,6 +203,7 @@ func TestLogin_UserNotFound(t *testing.T) {
 		&stubUserWriter{},
 		&stubUserReader{err: ErrUserNotFound},
 		&stubSessionWriter{},
+		&stubSessionDeleter{},
 		bcrypt.GenerateFromPassword,
 		bcrypt.CompareHashAndPassword,
 		generateToken,
@@ -222,6 +226,7 @@ func TestLogin_GetUserInternalError(t *testing.T) {
 		&stubUserWriter{},
 		&stubUserReader{err: wantErr},
 		&stubSessionWriter{},
+		&stubSessionDeleter{},
 		bcrypt.GenerateFromPassword,
 		bcrypt.CompareHashAndPassword,
 		generateToken,
@@ -246,6 +251,7 @@ func TestLogin_InvalidPassword(t *testing.T) {
 		&stubUserWriter{},
 		&stubUserReader{},
 		&stubSessionWriter{},
+		&stubSessionDeleter{},
 		bcrypt.GenerateFromPassword,
 		func(_, _ []byte) error { return errors.New("bcrypt mismatch") },
 		generateToken,
@@ -268,6 +274,7 @@ func TestLogin_TokenGenerationError(t *testing.T) {
 		&stubUserWriter{},
 		&stubUserReader{},
 		&stubSessionWriter{},
+		&stubSessionDeleter{},
 		bcrypt.GenerateFromPassword,
 		func(_, _ []byte) error { return nil },
 		func() (string, string, error) { return "", "", wantErr },
@@ -290,6 +297,7 @@ func TestLogin_CreateSessionError(t *testing.T) {
 		&stubUserWriter{},
 		&stubUserReader{},
 		&stubSessionWriter{err: wantErr},
+		&stubSessionDeleter{},
 		bcrypt.GenerateFromPassword,
 		func(_, _ []byte) error { return nil },
 		generateToken,
@@ -431,5 +439,30 @@ func TestGenerateToken(t *testing.T) {
 	// Hash must not equal token.
 	if token1 == hash1 {
 		t.Error("token and hash are identical — hashing is not applied")
+	}
+}
+
+// TestLogout_Success verifies that Logout hashes the token and calls DeleteSession.
+func TestLogout_Success(t *testing.T) {
+	deleter := &stubSessionDeleter{}
+	svc := NewService(&stubUserWriter{}, &stubUserReader{}, &stubSessionWriter{}, deleter)
+
+	if err := svc.Logout(context.Background(), "some-raw-token"); err != nil {
+		t.Fatalf("Logout() returned unexpected error: %v", err)
+	}
+}
+
+// TestLogout_DeleteError verifies that a DeleteSession error is propagated by Logout.
+func TestLogout_DeleteError(t *testing.T) {
+	wantErr := errors.New("delete failed")
+	deleter := &stubSessionDeleter{err: wantErr}
+	svc := NewService(&stubUserWriter{}, &stubUserReader{}, &stubSessionWriter{}, deleter)
+
+	err := svc.Logout(context.Background(), "some-raw-token")
+	if err == nil {
+		t.Fatal("expected error from Logout, got nil")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
 	}
 }

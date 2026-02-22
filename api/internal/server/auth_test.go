@@ -299,3 +299,114 @@ func TestLoginHandler_InternalError(t *testing.T) {
 		t.Errorf("expected error code %q, got %q", ErrCodeInternal, env.Error.Code)
 	}
 }
+
+// TestLogoutHandler_Success verifies that a valid Bearer token results in 204 No Content.
+func TestLogoutHandler_Success(t *testing.T) {
+	svc := &stubAuthService{}
+	h := logoutHandler(svc)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/logout", nil)
+	req.Header.Set("Authorization", "Bearer valid-token-abc123")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNoContent {
+		t.Errorf("expected 204, got %d", rec.Code)
+	}
+}
+
+// TestLogoutHandler_MissingAuthHeader verifies that an absent Authorization header
+// results in 401 Unauthorized.
+func TestLogoutHandler_MissingAuthHeader(t *testing.T) {
+	svc := &stubAuthService{}
+	h := logoutHandler(svc)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/logout", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", rec.Code)
+	}
+
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeUnauthorized {
+		t.Errorf("expected error code %q, got %q", ErrCodeUnauthorized, env.Error.Code)
+	}
+}
+
+// TestLogoutHandler_MalformedAuthHeader verifies that a non-Bearer Authorization
+// header results in 401 Unauthorized.
+func TestLogoutHandler_MalformedAuthHeader(t *testing.T) {
+	svc := &stubAuthService{}
+	h := logoutHandler(svc)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/logout", nil)
+	req.Header.Set("Authorization", "notbearer token")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", rec.Code)
+	}
+
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeUnauthorized {
+		t.Errorf("expected error code %q, got %q", ErrCodeUnauthorized, env.Error.Code)
+	}
+}
+
+// TestLogoutHandler_InternalError verifies that a Logout service error results in 500.
+func TestLogoutHandler_InternalError(t *testing.T) {
+	svc := &stubAuthService{err: errors.New("database unreachable")}
+	h := logoutHandler(svc)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/logout", nil)
+	req.Header.Set("Authorization", "Bearer valid-token-abc123")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", rec.Code)
+	}
+
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeInternal {
+		t.Errorf("expected error code %q, got %q", ErrCodeInternal, env.Error.Code)
+	}
+}
+
+// TestMountAuth_RegistersLogoutRoute verifies that MountAuth registers the logout
+// endpoint and it responds to POST /v1/auth/logout.
+func TestMountAuth_RegistersLogoutRoute(t *testing.T) {
+	s := testServer(t)
+	svc := &stubAuthService{}
+	s.MountAuth(svc)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/logout", nil)
+	req.Header.Set("Authorization", "Bearer some-valid-token")
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNoContent {
+		t.Errorf("expected 204 from mounted route, got %d", rec.Code)
+	}
+}

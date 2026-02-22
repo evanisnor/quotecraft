@@ -59,6 +59,15 @@ func (s *stubSessionWriter) CreateSession(_ context.Context, userID, tokenHash s
 	}, nil
 }
 
+// stubSessionDeleter is a reusable test double for SessionDeleter.
+type stubSessionDeleter struct {
+	err error
+}
+
+func (s *stubSessionDeleter) DeleteSession(_ context.Context, _ string) error {
+	return s.err
+}
+
 // errorReader is an io.Reader that always returns an error.
 type errorReader struct{ err error }
 
