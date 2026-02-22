@@ -117,3 +117,43 @@ Adding `pinger Pinger` as a third parameter to `New` follows the explicit depend
 ### No technical challenges
 
 The implementation was straightforward. The primary decision points were about where to define the interface and how to format the response — both resolved clearly by the existing conventions in SYSTEM_DESIGN.md and the Golang skill file.
+
+---
+
+## Task: INFR-US3-A005 — Configure CORS: wildcard for public endpoints, restricted for dashboard endpoints
+
+**Requirements:** Security section of SYSTEM_DESIGN.md (A05: Security Misconfiguration)
+
+### Decisions
+
+**`securityHeaders` middleware applied globally, before route-specific CORS**
+
+Security headers (`X-Content-Type-Options`, `Strict-Transport-Security`) must apply to every response including `/healthz` and future routes. Placing `securityHeaders` in the root middleware chain (after `StripSlashes`) ensures this without any per-handler boilerplate. The ordering is: `RealIP → RequestID → InjectLogger → RequestLogger → Recoverer → StripSlashes → securityHeaders`. This means security headers are set before route dispatch, so even 404s and panic recoveries carry them.
+
+**`X-Content-Type-Options` removed from `health.go`**
+
+With `securityHeaders` in the global stack, the manual `w.Header().Set("X-Content-Type-Options", "nosniff")` in `healthHandler` became redundant. It was removed to avoid the false impression that handlers are responsible for setting security headers. The health tests were updated to remove the per-handler assertion on this header; a new integration test (`TestServer_SecurityHeadersOnHealthz`) in `cors_test.go` verifies the header is still present via the full middleware stack.
+
+**Two `/v1` route sub-groups with distinct CORS policies**
+
+The `/v1` route is split into two `r.Group()` blocks inside `r.Route("/v1", ...)`. The public group uses `publicCORS()` (wildcard, no credentials); the private group uses `privateCORS(cfg.DashboardOrigins)` (restricted origins, credentials allowed). This structure is ready for future tasks to register handlers in the correct group without needing to configure CORS themselves.
+
+**`publicCORS` uses `AllowCredentials: false`**
+
+Per the CORS specification, `Access-Control-Allow-Origin: *` cannot be combined with `Access-Control-Allow-Credentials: true`. This is also correct for the security model — public endpoints (config fetch, submissions) must not accept cookies or session tokens. Setting `AllowCredentials: false` is explicit about this intent.
+
+**`privateCORS` uses `AllowCredentials: true` with a restricted origin list**
+
+Dashboard endpoints will use session cookies for authentication. For the browser to include cookies on cross-origin requests, the server must respond with `Access-Control-Allow-Credentials: true` and a specific (non-wildcard) origin. The `cfg.DashboardOrigins` slice is passed directly from config so this is externalized and configurable without code changes.
+
+**CORS functions tested in isolation, not through route groups**
+
+Testing CORS through the full server's route group structure would require registering dummy handlers in the public/private groups. This is brittle and couples tests to the route structure, which is not yet stable (future tasks will populate these groups). Instead, `publicCORS()` and `privateCORS()` are tested by wrapping a `dummyHandler` directly — this is both simpler and more directly tests the functions' behavior. Integration coverage of the middleware chain is provided by `TestServer_SecurityHeadersOnHealthz`.
+
+**`github.com/go-chi/cors` chosen over a hand-rolled middleware**
+
+go-chi/cors is the idiomatic CORS library for chi-based servers. It handles the full CORS specification including preflight response generation, origin matching, and the `Vary: Origin` header needed when using a restricted origin list. Writing a hand-rolled middleware would require re-implementing these details correctly. go-chi/cors is maintained by the same team as chi, so the integration is guaranteed to be compatible.
+
+### Technical Challenges
+
+No significant challenges. The main care taken was ensuring the `securityHeaders` middleware position relative to `Recoverer` — placing `securityHeaders` after `Recoverer` means the middleware runs inside the panic recovery boundary, so if a bug in `securityHeaders` panicked, `Recoverer` would catch it. However, `securityHeaders` only calls `w.Header().Set()` and `next.ServeHTTP()`, neither of which can panic under normal conditions. The current ordering (Recoverer before securityHeaders) is correct: headers set before `next.ServeHTTP()` are applied before the handler runs, which is the intent.

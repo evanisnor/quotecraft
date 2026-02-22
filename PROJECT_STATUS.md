@@ -85,7 +85,7 @@ Last updated: 2026-02-22
 | ✅ | INFR-US3-A002 | Implement structured JSON logging with trace_id propagation             | 0   | 2026-02-22 |
 | ✅ | INFR-US3-A003 | Implement consistent error response format                              | 0   | 2026-02-22 |
 | ✅ | INFR-US3-A004 | Implement `GET /healthz` with DB connectivity check                     | 0   | 2026-02-22 |
-|        | INFR-US3-A005 | Configure CORS: wildcard for public endpoints, restricted for dashboard | 0   |           |
+| ✅ | INFR-US3-A005 | Configure CORS: wildcard for public endpoints, restricted for dashboard | 0   | 2026-02-22 |
 
 ### [INFR-US4: Authentication](./PROJECT_PLAN.md#infr-us4-authentication-p0) (P0)
 

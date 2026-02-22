@@ -29,9 +29,10 @@ func TestHealthHandler_Healthy(t *testing.T) {
 	if ct := rec.Header().Get("Content-Type"); ct != "application/json" {
 		t.Errorf("expected Content-Type application/json, got %q", ct)
 	}
-	if xct := rec.Header().Get("X-Content-Type-Options"); xct != "nosniff" {
-		t.Errorf("expected X-Content-Type-Options nosniff, got %q", xct)
-	}
+	// X-Content-Type-Options is set by the securityHeaders middleware in
+	// server.go. The handler itself no longer sets it. Coverage of the header
+	// via the full middleware stack is in TestServer_SecurityHeadersOnHealthz
+	// in cors_test.go.
 }
 
 func TestHealthHandler_Degraded(t *testing.T) {
@@ -56,7 +57,8 @@ func TestHealthHandler_Degraded(t *testing.T) {
 	if ct := rec.Header().Get("Content-Type"); ct != "application/json" {
 		t.Errorf("expected Content-Type application/json, got %q", ct)
 	}
-	if xct := rec.Header().Get("X-Content-Type-Options"); xct != "nosniff" {
-		t.Errorf("expected X-Content-Type-Options nosniff, got %q", xct)
-	}
+	// X-Content-Type-Options is set by the securityHeaders middleware in
+	// server.go. The handler itself no longer sets it. Coverage of the header
+	// via the full middleware stack is in TestServer_SecurityHeadersOnHealthz
+	// in cors_test.go.
 }

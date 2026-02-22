@@ -33,8 +33,10 @@ func healthHandler(pinger Pinger) http.HandlerFunc {
 
 		body, _ := json.Marshal(map[string]string{"db": dbStatus})
 
+		// X-Content-Type-Options and Strict-Transport-Security are set by the
+		// securityHeaders middleware registered in server.go. No manual header
+		// setting is needed here.
 		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.WriteHeader(status)
 		_, _ = w.Write(body)
 	}
