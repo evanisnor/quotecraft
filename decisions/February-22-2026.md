@@ -215,3 +215,49 @@ The initial `TestClose_Error` implementation tried to call `db.Close()` twice on
 **`noopPinger` removed from `main.go`**
 
 `TestNoopPinger_AlwaysHealthy` in `main_test.go` referenced the `noopPinger` type that was removed as part of this task. The test was removed since the noopPinger no longer exists — the real database connection satisfies `server.Pinger` from this task onwards.
+
+---
+
+## Task: INFR-US4-A002 — Implement login endpoint with session token issuance
+
+**Requirements:** 1.1.3, 1.1.4
+
+### Decisions
+
+**`UserReader` interface separate from `UserWriter`**
+
+`GetUserByEmail` is defined in a new `UserReader` interface, separate from `UserWriter`. `Register` only needs `UserWriter`; `Login` only needs `UserReader`. Keeping them separate follows ISP and means future consumers can take only what they need. `PostgresUserRepository` implements both. `NewService` now accepts `userWriter UserWriter, userReader UserReader, sessions SessionWriter` — `main.go` passes `userRepo` for both user params since the same struct satisfies both.
+
+**`ErrUserNotFound` sentinel returned by repository, mapped to `ErrInvalidCredentials` by service**
+
+`GetUserByEmail` returns `ErrUserNotFound` (not `sql.ErrNoRows` directly) when the email is not found. The service then maps `ErrUserNotFound` → `ErrInvalidCredentials`. This keeps the postgres driver dependency inside the adapter layer and gives the service a clean domain-level signal. An analogous pattern to `ErrEmailConflict` in `CreateUser`.
+
+**Timing-safe login: dummy bcrypt comparison when user not found**
+
+When `GetUserByEmail` returns `ErrUserNotFound`, the service still calls `s.verifier` against a hardcoded dummy bcrypt hash before returning `ErrInvalidCredentials`. Without this, an attacker can distinguish "email not registered" from "wrong password" via response latency (~0ms vs ~100–300ms for bcrypt). The dummy hash is a pre-computed cost-12 bcrypt value stored as a package-level `var`. The `notFound` boolean is captured before the verifier call so a nil `user.PasswordHash` is never dereferenced.
+
+**`passwordVerifier` injectable field on `Service`**
+
+`bcrypt.CompareHashAndPassword` is injected as a `passwordVerifier` function type on `Service`, following the same pattern as `passwordHasher`. This lets tests inject a stub verifier that returns `nil` (success) or a configurable error, enabling full coverage of all Login branches without running real bcrypt against real hashes in fast unit tests.
+
+**`generateTokenFrom(io.Reader)` extracted for coverage of the entropy error path**
+
+The original `generateToken()` called `io.ReadFull(rand.Reader, buf)` directly, making the error branch unreachable in tests. The fix splits it: `generateToken()` delegates to `generateTokenFrom(rand.Reader)`, and `generateTokenFrom` accepts any `io.Reader`. Tests inject an `errorReader` stub to cover the `io.ReadFull` error path. This achieves 100% statement coverage in `auth.go`.
+
+**`AuthService` composite interface in `server` package**
+
+`MountAuth` was updated from accepting `Registrar` to accepting `AuthService` — a composite interface embedding both `Registrar` and `Authenticator`. This keeps the handler registration co-located in a single `MountAuth` call. `auth.Service` satisfies both interfaces automatically. The `stubRegistrar` in `server/stubs_test.go` was replaced by `stubAuthService` which implements both methods, covering all existing and new handler tests.
+
+**`loginHandler` returns 200 OK (not 201 Created) on success**
+
+Login does not create a new resource — it creates a session and returns a token. The appropriate response code is 200 OK, matching the convention for authentication endpoints that return state rather than creating primary resources.
+
+**`ErrInvalidCredentials` mapped to 401 in handler, not 400**
+
+Invalid credentials mean the request is unauthenticated, not malformed. HTTP 401 Unauthorized is the correct code. The handler maps `auth.ErrInvalidCredentials` → 401, other errors → 500.
+
+### Technical Challenges
+
+**`newServiceForTest` signature grew with each new injectable field**
+
+After adding `userReader`, `verifier`, and updated `genToken` handling, `newServiceForTest` grew to six parameters. All existing test call sites were updated in one pass. The function remains package-private and test-only, so the expansion has no impact on the public API.

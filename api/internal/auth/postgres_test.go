@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"regexp"
 	"testing"
@@ -94,6 +95,106 @@ func TestCreateUser_QueryError(t *testing.T) {
 
 	repo := NewPostgresUserRepository(db)
 	_, err = repo.CreateUser(context.Background(), "alice@example.com", "hashed")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Errorf("closing mock db: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestGetUserByEmail_Success verifies that GetUserByEmail executes the SELECT and
+// scans the result columns into a User.
+func TestGetUserByEmail_Success(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("creating sqlmock: %v", err)
+	}
+
+	now := time.Now().UTC()
+	rows := sqlmock.NewRows([]string{"id", "email", "password_hash", "created_at"}).
+		AddRow("user-123", "alice@example.com", "$2a$12$somehash", now)
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, email, password_hash, created_at FROM users WHERE email = $1")).
+		WithArgs("alice@example.com").
+		WillReturnRows(rows)
+	mock.ExpectClose()
+
+	repo := NewPostgresUserRepository(db)
+	user, err := repo.GetUserByEmail(context.Background(), "alice@example.com")
+	if err != nil {
+		t.Fatalf("GetUserByEmail() returned unexpected error: %v", err)
+	}
+	if user.ID != "user-123" {
+		t.Errorf("expected ID user-123, got %q", user.ID)
+	}
+	if user.Email != "alice@example.com" {
+		t.Errorf("expected email alice@example.com, got %q", user.Email)
+	}
+	if user.PasswordHash != "$2a$12$somehash" {
+		t.Errorf("expected password hash, got %q", user.PasswordHash)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Errorf("closing mock db: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestGetUserByEmail_NotFound verifies that sql.ErrNoRows is translated to
+// ErrUserNotFound by the repository.
+func TestGetUserByEmail_NotFound(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("creating sqlmock: %v", err)
+	}
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, email, password_hash, created_at FROM users WHERE email = $1")).
+		WithArgs("nobody@example.com").
+		WillReturnError(sql.ErrNoRows)
+	mock.ExpectClose()
+
+	repo := NewPostgresUserRepository(db)
+	_, err = repo.GetUserByEmail(context.Background(), "nobody@example.com")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrUserNotFound) {
+		t.Errorf("expected ErrUserNotFound, got: %v", err)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Errorf("closing mock db: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestGetUserByEmail_QueryError verifies that arbitrary query errors are propagated.
+func TestGetUserByEmail_QueryError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("creating sqlmock: %v", err)
+	}
+
+	wantErr := errors.New("connection refused")
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, email, password_hash, created_at FROM users WHERE email = $1")).
+		WithArgs("alice@example.com").
+		WillReturnError(wantErr)
+	mock.ExpectClose()
+
+	repo := NewPostgresUserRepository(db)
+	_, err = repo.GetUserByEmail(context.Background(), "alice@example.com")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}

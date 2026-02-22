@@ -31,7 +31,7 @@ func main() {
 
 	userRepo := auth.NewPostgresUserRepository(dbConn.DB())
 	sessionRepo := auth.NewPostgresSessionRepository(dbConn.DB())
-	authService := auth.NewService(userRepo, sessionRepo)
+	authService := auth.NewService(userRepo, userRepo, sessionRepo)
 
 	srv := server.New(&cfg.API, logger, dbConn)
 	srv.MountAuth(authService)

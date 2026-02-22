@@ -46,6 +46,21 @@ func (r *PostgresUserRepository) CreateUser(ctx context.Context, email, password
 	return &u, nil
 }
 
+// GetUserByEmail fetches a user by email address.
+// Returns ErrUserNotFound if no user with that email exists.
+func (r *PostgresUserRepository) GetUserByEmail(ctx context.Context, email string) (*User, error) {
+	const query = `SELECT id, email, password_hash, created_at FROM users WHERE email = $1`
+	var u User
+	err := r.db.QueryRowContext(ctx, query, email).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.CreatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrUserNotFound
+		}
+		return nil, fmt.Errorf("querying user: %w", err)
+	}
+	return &u, nil
+}
+
 // PostgresSessionRepository implements SessionWriter against a PostgreSQL database.
 type PostgresSessionRepository struct {
 	db *sql.DB

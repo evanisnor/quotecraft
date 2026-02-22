@@ -12,12 +12,16 @@ func (s *stubPinger) Ping(_ context.Context) error {
 	return s.err
 }
 
-// stubRegistrar is a reusable test implementation of Registrar.
-type stubRegistrar struct {
+// stubAuthService is a reusable test implementation of AuthService.
+type stubAuthService struct {
 	token string
 	err   error
 }
 
-func (s *stubRegistrar) Register(_ context.Context, _, _ string) (string, error) {
+func (s *stubAuthService) Register(_ context.Context, _, _ string) (string, error) {
+	return s.token, s.err
+}
+
+func (s *stubAuthService) Login(_ context.Context, _, _ string) (string, error) {
 	return s.token, s.err
 }

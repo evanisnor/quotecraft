@@ -19,14 +19,26 @@ import (
 // ErrEmailConflict is returned when the email address is already registered.
 var ErrEmailConflict = errors.New("email already registered")
 
+// dummyHash is a pre-computed bcrypt hash (cost 12) used to perform a constant-time
+// comparison when a user is not found, preventing timing-based user enumeration.
+// The plaintext is irrelevant — no valid password will ever match it.
+var dummyHash = []byte("$2a$12$mCUnvq4OCM9ToWDg0VnHYeC30hMe9sgpRL2QFPBq4TwJSKEO946lK")
+
 // ErrInvalidInput is returned when registration parameters fail validation.
 var ErrInvalidInput = errors.New("invalid input")
 
+// ErrInvalidCredentials is returned when login credentials do not match any account.
+var ErrInvalidCredentials = errors.New("invalid credentials")
+
+// ErrUserNotFound is returned by UserReader when no user matches the query.
+var ErrUserNotFound = errors.New("user not found")
+
 // User represents a registered user account.
 type User struct {
-	ID        string
-	Email     string
-	CreatedAt time.Time
+	ID           string
+	Email        string
+	PasswordHash string
+	CreatedAt    time.Time
 }
 
 // Session represents an active user session.
@@ -43,6 +55,11 @@ type UserWriter interface {
 	CreateUser(ctx context.Context, email, passwordHash string) (*User, error)
 }
 
+// UserReader fetches existing user records.
+type UserReader interface {
+	GetUserByEmail(ctx context.Context, email string) (*User, error)
+}
+
 // SessionWriter creates new session records.
 type SessionWriter interface {
 	CreateSession(ctx context.Context, userID, tokenHash string, expiresAt time.Time) (*Session, error)
@@ -51,36 +68,46 @@ type SessionWriter interface {
 // passwordHasher hashes a plaintext password. Abstracted for testability.
 type passwordHasher func(password []byte, cost int) ([]byte, error)
 
+// passwordVerifier compares a bcrypt hash against a plaintext password.
+// Abstracted for testability — allows tests to inject a stub verifier.
+type passwordVerifier func(hash, password []byte) error
+
 // tokenGenerator generates an opaque token and its SHA-256 hash.
 // Abstracted for testability — allows tests to inject a failing generator.
 type tokenGenerator func() (token, tokenHash string, err error)
 
 // Service handles authentication business logic.
 type Service struct {
-	users    UserWriter
-	sessions SessionWriter
-	hasher   passwordHasher
-	genToken tokenGenerator
+	users      UserWriter
+	userReader UserReader
+	sessions   SessionWriter
+	hasher     passwordHasher
+	verifier   passwordVerifier
+	genToken   tokenGenerator
 }
 
 // NewService creates an auth Service with the given repositories.
-func NewService(users UserWriter, sessions SessionWriter) *Service {
+func NewService(users UserWriter, userReader UserReader, sessions SessionWriter) *Service {
 	return &Service{
-		users:    users,
-		sessions: sessions,
-		hasher:   bcrypt.GenerateFromPassword,
-		genToken: generateToken,
+		users:      users,
+		userReader: userReader,
+		sessions:   sessions,
+		hasher:     bcrypt.GenerateFromPassword,
+		verifier:   bcrypt.CompareHashAndPassword,
+		genToken:   generateToken,
 	}
 }
 
 // newServiceForTest creates an auth Service with injectable dependencies.
 // Used in tests to exercise specific code paths without production side-effects.
-func newServiceForTest(users UserWriter, sessions SessionWriter, hasher passwordHasher, gen tokenGenerator) *Service {
+func newServiceForTest(users UserWriter, userReader UserReader, sessions SessionWriter, hasher passwordHasher, verifier passwordVerifier, gen tokenGenerator) *Service {
 	return &Service{
-		users:    users,
-		sessions: sessions,
-		hasher:   hasher,
-		genToken: gen,
+		users:      users,
+		userReader: userReader,
+		sessions:   sessions,
+		hasher:     hasher,
+		verifier:   verifier,
+		genToken:   gen,
 	}
 }
 
@@ -119,6 +146,41 @@ func (s *Service) Register(ctx context.Context, email, password string) (string,
 	return token, nil
 }
 
+// Login validates the given credentials and, on success, creates a new session
+// and returns an opaque token.
+//
+// Returns ErrInvalidCredentials if the email is not registered or the password
+// does not match, so callers cannot distinguish which field was wrong.
+func (s *Service) Login(ctx context.Context, email, password string) (string, error) {
+	user, err := s.userReader.GetUserByEmail(ctx, email)
+	notFound := errors.Is(err, ErrUserNotFound)
+	if err != nil && !notFound {
+		return "", fmt.Errorf("looking up user: %w", err)
+	}
+
+	// Always run bcrypt to prevent timing-based user enumeration.
+	// If the user was not found, compare against a pre-computed dummy hash.
+	hashToVerify := dummyHash
+	if !notFound {
+		hashToVerify = []byte(user.PasswordHash)
+	}
+	verifyErr := s.verifier(hashToVerify, []byte(password))
+	if notFound || verifyErr != nil {
+		return "", ErrInvalidCredentials
+	}
+
+	token, tokenHash, err := s.genToken()
+	if err != nil {
+		return "", fmt.Errorf("generating session token: %w", err)
+	}
+
+	if _, err := s.sessions.CreateSession(ctx, user.ID, tokenHash, time.Now().UTC().Add(24*time.Hour)); err != nil {
+		return "", fmt.Errorf("creating session: %w", err)
+	}
+
+	return token, nil
+}
+
 // validateRegistrationInput checks email and password constraints.
 func validateRegistrationInput(email, password string) error {
 	if _, err := mail.ParseAddress(email); err != nil {
@@ -134,8 +196,14 @@ func validateRegistrationInput(email, password string) error {
 // (base64url encoded, no padding) and its SHA-256 hash (lowercase hex).
 // Returns an error if the system entropy source fails.
 func generateToken() (token, tokenHash string, err error) {
+	return generateTokenFrom(rand.Reader)
+}
+
+// generateTokenFrom generates a token using the provided reader.
+// Separated from generateToken to allow tests to inject a failing reader.
+func generateTokenFrom(r io.Reader) (token, tokenHash string, err error) {
 	buf := make([]byte, 32)
-	if _, err := io.ReadFull(rand.Reader, buf); err != nil {
+	if _, err := io.ReadFull(r, buf); err != nil {
 		return "", "", fmt.Errorf("reading random bytes: %w", err)
 	}
 

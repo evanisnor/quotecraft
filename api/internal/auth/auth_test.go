@@ -14,7 +14,7 @@ import (
 func TestRegister_Success(t *testing.T) {
 	users := &stubUserWriter{}
 	sessions := &stubSessionWriter{}
-	svc := NewService(users, sessions)
+	svc := NewService(users, &stubUserReader{}, sessions)
 
 	token, err := svc.Register(context.Background(), "alice@example.com", "securepassword")
 	if err != nil {
@@ -44,7 +44,7 @@ func TestRegister_InvalidEmail(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := NewService(&stubUserWriter{}, &stubSessionWriter{})
+			svc := NewService(&stubUserWriter{}, &stubUserReader{}, &stubSessionWriter{})
 			_, err := svc.Register(context.Background(), tt.email, "securepassword")
 			if err == nil {
 				t.Fatal("expected error for invalid email, got nil")
@@ -59,7 +59,7 @@ func TestRegister_InvalidEmail(t *testing.T) {
 // TestRegister_ShortPassword verifies that a password shorter than 8 characters
 // returns ErrInvalidInput.
 func TestRegister_ShortPassword(t *testing.T) {
-	svc := NewService(&stubUserWriter{}, &stubSessionWriter{})
+	svc := NewService(&stubUserWriter{}, &stubUserReader{}, &stubSessionWriter{})
 
 	_, err := svc.Register(context.Background(), "alice@example.com", "short")
 	if err == nil {
@@ -72,7 +72,7 @@ func TestRegister_ShortPassword(t *testing.T) {
 
 // TestRegister_PasswordExactly8Chars verifies that a password of exactly 8 characters passes.
 func TestRegister_PasswordExactly8Chars(t *testing.T) {
-	svc := NewService(&stubUserWriter{}, &stubSessionWriter{})
+	svc := NewService(&stubUserWriter{}, &stubUserReader{}, &stubSessionWriter{})
 
 	_, err := svc.Register(context.Background(), "alice@example.com", "exactly8")
 	if err != nil {
@@ -84,7 +84,7 @@ func TestRegister_PasswordExactly8Chars(t *testing.T) {
 // (as the repository does for pq code 23505), Register propagates it.
 func TestRegister_EmailConflict(t *testing.T) {
 	users := &stubUserWriter{err: ErrEmailConflict}
-	svc := NewService(users, &stubSessionWriter{})
+	svc := NewService(users, &stubUserReader{}, &stubSessionWriter{})
 
 	_, err := svc.Register(context.Background(), "alice@example.com", "securepassword")
 	if err == nil {
@@ -100,7 +100,7 @@ func TestRegister_EmailConflict(t *testing.T) {
 func TestRegister_CreateUserInternalError(t *testing.T) {
 	wantErr := errors.New("database connection lost")
 	users := &stubUserWriter{err: wantErr}
-	svc := NewService(users, &stubSessionWriter{})
+	svc := NewService(users, &stubUserReader{}, &stubSessionWriter{})
 
 	_, err := svc.Register(context.Background(), "alice@example.com", "securepassword")
 	if err == nil {
@@ -118,7 +118,7 @@ func TestRegister_CreateUserInternalError(t *testing.T) {
 func TestRegister_CreateSessionError(t *testing.T) {
 	wantErr := errors.New("session table unreachable")
 	sessions := &stubSessionWriter{err: wantErr}
-	svc := NewService(&stubUserWriter{}, sessions)
+	svc := NewService(&stubUserWriter{}, &stubUserReader{}, sessions)
 
 	_, err := svc.Register(context.Background(), "alice@example.com", "securepassword")
 	if err == nil {
@@ -135,8 +135,10 @@ func TestRegister_HasherError(t *testing.T) {
 	wantErr := errors.New("bcrypt failed")
 	svc := newServiceForTest(
 		&stubUserWriter{},
+		&stubUserReader{},
 		&stubSessionWriter{},
 		func(_ []byte, _ int) ([]byte, error) { return nil, wantErr },
+		bcrypt.CompareHashAndPassword,
 		generateToken,
 	)
 
@@ -155,14 +157,147 @@ func TestRegister_TokenGenerationError(t *testing.T) {
 	wantErr := errors.New("entropy exhausted")
 	svc := newServiceForTest(
 		&stubUserWriter{},
+		&stubUserReader{},
 		&stubSessionWriter{},
 		bcrypt.GenerateFromPassword,
+		bcrypt.CompareHashAndPassword,
 		func() (string, string, error) { return "", "", wantErr },
 	)
 
 	_, err := svc.Register(context.Background(), "alice@example.com", "securepassword")
 	if err == nil {
 		t.Fatal("expected error from token generator, got nil")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
+	}
+}
+
+// TestLogin_Success verifies that valid credentials return a non-empty opaque token.
+func TestLogin_Success(t *testing.T) {
+	svc := newServiceForTest(
+		&stubUserWriter{},
+		&stubUserReader{},
+		&stubSessionWriter{},
+		bcrypt.GenerateFromPassword,
+		func(_, _ []byte) error { return nil }, // verifier always succeeds
+		generateToken,
+	)
+
+	token, err := svc.Login(context.Background(), "alice@example.com", "securepassword")
+	if err != nil {
+		t.Fatalf("Login() returned unexpected error: %v", err)
+	}
+	if token == "" {
+		t.Error("Login() returned empty token")
+	}
+}
+
+// TestLogin_UserNotFound verifies that when GetUserByEmail returns ErrUserNotFound,
+// Login returns ErrInvalidCredentials (to avoid leaking user existence).
+func TestLogin_UserNotFound(t *testing.T) {
+	svc := newServiceForTest(
+		&stubUserWriter{},
+		&stubUserReader{err: ErrUserNotFound},
+		&stubSessionWriter{},
+		bcrypt.GenerateFromPassword,
+		bcrypt.CompareHashAndPassword,
+		generateToken,
+	)
+
+	_, err := svc.Login(context.Background(), "alice@example.com", "securepassword")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrInvalidCredentials) {
+		t.Errorf("expected ErrInvalidCredentials, got: %v", err)
+	}
+}
+
+// TestLogin_GetUserInternalError verifies that unexpected GetUserByEmail errors
+// are wrapped and propagated (not mapped to ErrInvalidCredentials).
+func TestLogin_GetUserInternalError(t *testing.T) {
+	wantErr := errors.New("database connection lost")
+	svc := newServiceForTest(
+		&stubUserWriter{},
+		&stubUserReader{err: wantErr},
+		&stubSessionWriter{},
+		bcrypt.GenerateFromPassword,
+		bcrypt.CompareHashAndPassword,
+		generateToken,
+	)
+
+	_, err := svc.Login(context.Background(), "alice@example.com", "securepassword")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if errors.Is(err, ErrInvalidCredentials) {
+		t.Error("expected non-credential error, but got ErrInvalidCredentials")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
+	}
+}
+
+// TestLogin_InvalidPassword verifies that when the verifier returns an error,
+// Login returns ErrInvalidCredentials.
+func TestLogin_InvalidPassword(t *testing.T) {
+	svc := newServiceForTest(
+		&stubUserWriter{},
+		&stubUserReader{},
+		&stubSessionWriter{},
+		bcrypt.GenerateFromPassword,
+		func(_, _ []byte) error { return errors.New("bcrypt mismatch") },
+		generateToken,
+	)
+
+	_, err := svc.Login(context.Background(), "alice@example.com", "wrongpassword")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrInvalidCredentials) {
+		t.Errorf("expected ErrInvalidCredentials, got: %v", err)
+	}
+}
+
+// TestLogin_TokenGenerationError verifies that a token generator error is
+// wrapped and propagated from Login.
+func TestLogin_TokenGenerationError(t *testing.T) {
+	wantErr := errors.New("entropy exhausted")
+	svc := newServiceForTest(
+		&stubUserWriter{},
+		&stubUserReader{},
+		&stubSessionWriter{},
+		bcrypt.GenerateFromPassword,
+		func(_, _ []byte) error { return nil },
+		func() (string, string, error) { return "", "", wantErr },
+	)
+
+	_, err := svc.Login(context.Background(), "alice@example.com", "securepassword")
+	if err == nil {
+		t.Fatal("expected error from token generator, got nil")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
+	}
+}
+
+// TestLogin_CreateSessionError verifies that CreateSession errors are
+// wrapped and propagated from Login.
+func TestLogin_CreateSessionError(t *testing.T) {
+	wantErr := errors.New("session table unreachable")
+	svc := newServiceForTest(
+		&stubUserWriter{},
+		&stubUserReader{},
+		&stubSessionWriter{err: wantErr},
+		bcrypt.GenerateFromPassword,
+		func(_, _ []byte) error { return nil },
+		generateToken,
+	)
+
+	_, err := svc.Login(context.Background(), "alice@example.com", "securepassword")
+	if err == nil {
+		t.Fatal("expected error from CreateSession, got nil")
 	}
 	if !errors.Is(err, wantErr) {
 		t.Errorf("expected wrapped wantErr, got: %v", err)
@@ -246,6 +381,20 @@ func TestValidateRegistrationInput(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestGenerateTokenFrom_ReaderError verifies that an io.ReadFull failure
+// is wrapped and propagated by generateTokenFrom.
+func TestGenerateTokenFrom_ReaderError(t *testing.T) {
+	wantErr := errors.New("entropy exhausted")
+	errReader := errorReader{err: wantErr}
+	_, _, err := generateTokenFrom(errReader)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
 	}
 }
 
