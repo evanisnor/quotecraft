@@ -17,6 +17,7 @@ type Server struct {
 	mux    *chi.Mux
 	logger *slog.Logger
 	cfg    *config.APIConfig
+	pinger Pinger
 }
 
 // New creates a Server with the configured middleware stack applied.
@@ -30,7 +31,7 @@ type Server struct {
 //  4. RequestLogger — structured JSON access log per request
 //  5. Recoverer     — catch panics, return 500
 //  6. StripSlashes  — normalize trailing slashes
-func New(cfg *config.APIConfig, logger *slog.Logger) *Server {
+func New(cfg *config.APIConfig, logger *slog.Logger, pinger Pinger) *Server {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RealIP)
@@ -39,6 +40,11 @@ func New(cfg *config.APIConfig, logger *slog.Logger) *Server {
 	r.Use(RequestLogger(logger))
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.StripSlashes)
+
+	// /healthz is at the root, not versioned. It is consumed by infrastructure
+	// monitoring tools rather than API clients, so it uses a flat JSON response
+	// rather than the standard Envelope[T] wrapper.
+	r.Get("/healthz", healthHandler(pinger))
 
 	// Mount the /v1 prefix. Individual route handlers are registered by
 	// subsequent tasks (A002–A005).
@@ -51,6 +57,7 @@ func New(cfg *config.APIConfig, logger *slog.Logger) *Server {
 		mux:    r,
 		logger: logger,
 		cfg:    cfg,
+		pinger: pinger,
 	}
 }
 

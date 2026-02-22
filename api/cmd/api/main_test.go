@@ -159,3 +159,12 @@ func TestLoadConfig_LogsWarningForInvalidYAML(t *testing.T) {
 		t.Error("expected a 'failed to load config' warning for invalid YAML, got none")
 	}
 }
+
+// TestNoopPinger_AlwaysHealthy verifies that the placeholder pinger used until
+// the real database connection is wired up always returns nil.
+func TestNoopPinger_AlwaysHealthy(t *testing.T) {
+	p := noopPinger{}
+	if err := p.Ping(context.Background()); err != nil {
+		t.Errorf("noopPinger.Ping() returned unexpected error: %v", err)
+	}
+}

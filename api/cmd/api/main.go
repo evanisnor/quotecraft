@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -11,12 +12,18 @@ import (
 	"github.com/evanisnor/quotecraft/api/internal/server"
 )
 
+// noopPinger is a placeholder Pinger that always reports healthy. It is used
+// until the real database connection is wired up in INFR-US4.
+type noopPinger struct{}
+
+func (noopPinger) Ping(_ context.Context) error { return nil }
+
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil)).With("service", "api")
 
 	cfg := loadConfig(logger)
 
-	srv := server.New(&cfg.API, logger)
+	srv := server.New(&cfg.API, logger, noopPinger{})
 
 	addr := fmt.Sprintf(":%d", cfg.API.Port)
 	logger.Info("QuoteCraft API starting", "addr", addr)

@@ -16,7 +16,7 @@ func testServer(t *testing.T) *Server {
 		DashboardOrigins: []string{"http://localhost:3000"},
 	}
 	logger := slog.Default()
-	return New(cfg, logger)
+	return New(cfg, logger, &stubPinger{err: nil})
 }
 
 func TestNew_DoesNotPanic(t *testing.T) {
@@ -78,7 +78,7 @@ func TestHandler_RecovererCatchesPanic(t *testing.T) {
 	// The Recoverer middleware must catch a panicking handler and return 500.
 	cfg := &config.APIConfig{Port: 8080}
 	logger := slog.Default()
-	s := New(cfg, logger)
+	s := New(cfg, logger, &stubPinger{err: nil})
 
 	// Mount a panicking handler directly on the mux for this test.
 	s.mux.Get("/panic-test", func(w http.ResponseWriter, r *http.Request) {
