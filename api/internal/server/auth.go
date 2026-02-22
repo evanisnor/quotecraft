@@ -10,6 +10,52 @@ import (
 	"github.com/evanisnor/quotecraft/api/internal/auth"
 )
 
+// TokenValidator validates a raw session token and returns the authenticated user's ID.
+// Defined here at the consumer (server package) per the interfaces-where-consumed convention.
+type TokenValidator interface {
+	ValidateToken(ctx context.Context, rawToken string) (string, error)
+}
+
+// authUserKey is an unexported context key type for the authenticated user ID.
+type authUserKey struct{}
+
+// UserIDFromContext returns the authenticated user ID stored in the context by
+// RequireAuth middleware. Returns ("", false) if not set.
+func UserIDFromContext(ctx context.Context) (string, bool) {
+	id, ok := ctx.Value(authUserKey{}).(string)
+	return id, ok && id != ""
+}
+
+// RequireAuth returns middleware that validates the Bearer token in the Authorization
+// header and stores the authenticated user ID in the request context.
+//
+// Responds with 401 Unauthorized if the header is missing, malformed, or the token
+// is invalid/expired (auth.ErrInvalidSession). Returns 500 Internal Server Error for
+// unexpected service errors.
+func RequireAuth(v TokenValidator) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			token := extractBearerToken(r)
+			if token == "" {
+				WriteError(w, http.StatusUnauthorized, ErrCodeUnauthorized, "missing or invalid authorization header")
+				return
+			}
+			userID, err := v.ValidateToken(r.Context(), token)
+			if err != nil {
+				if errors.Is(err, auth.ErrInvalidSession) {
+					WriteError(w, http.StatusUnauthorized, ErrCodeUnauthorized, "invalid or expired session")
+					return
+				}
+				LoggerFrom(r.Context()).Error("validating session token", "error", err)
+				WriteError(w, http.StatusInternalServerError, ErrCodeInternal, "internal error")
+				return
+			}
+			ctx := context.WithValue(r.Context(), authUserKey{}, userID)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
 // Registrar creates new user accounts and returns a session token.
 // Defined here at the consumer (server package) per the interfaces-where-consumed convention.
 type Registrar interface {
@@ -33,6 +79,7 @@ type AuthService interface {
 	Registrar
 	Authenticator
 	Logouter
+	TokenValidator
 }
 
 // registerRequest is the JSON body expected by POST /v1/auth/register.

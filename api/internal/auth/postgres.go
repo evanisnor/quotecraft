@@ -82,6 +82,23 @@ func (r *PostgresSessionRepository) DeleteSession(ctx context.Context, tokenHash
 	return nil
 }
 
+// GetSession fetches the session identified by tokenHash.
+// Returns ErrSessionNotFound if no row matches.
+func (r *PostgresSessionRepository) GetSession(ctx context.Context, tokenHash string) (*Session, error) {
+	const query = `SELECT id, user_id, token_hash, created_at, expires_at FROM sessions WHERE token_hash = $1`
+	var sess Session
+	err := r.db.QueryRowContext(ctx, query, tokenHash).Scan(
+		&sess.ID, &sess.UserID, &sess.TokenHash, &sess.CreatedAt, &sess.ExpiresAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrSessionNotFound
+		}
+		return nil, fmt.Errorf("querying session: %w", err)
+	}
+	return &sess, nil
+}
+
 // CreateSession inserts a new session row and returns the created Session.
 func (r *PostgresSessionRepository) CreateSession(ctx context.Context, userID, tokenHash string, expiresAt time.Time) (*Session, error) {
 	const query = `

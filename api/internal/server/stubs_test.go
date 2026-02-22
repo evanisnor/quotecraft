@@ -14,8 +14,9 @@ func (s *stubPinger) Ping(_ context.Context) error {
 
 // stubAuthService is a reusable test implementation of AuthService.
 type stubAuthService struct {
-	token string
-	err   error
+	token  string
+	userID string
+	err    error
 }
 
 func (s *stubAuthService) Register(_ context.Context, _, _ string) (string, error) {
@@ -28,4 +29,8 @@ func (s *stubAuthService) Login(_ context.Context, _, _ string) (string, error) 
 
 func (s *stubAuthService) Logout(_ context.Context, _ string) error {
 	return s.err
+}
+
+func (s *stubAuthService) ValidateToken(_ context.Context, _ string) (string, error) {
+	return s.userID, s.err
 }

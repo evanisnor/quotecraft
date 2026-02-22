@@ -19,6 +19,12 @@ import (
 // ErrEmailConflict is returned when the email address is already registered.
 var ErrEmailConflict = errors.New("email already registered")
 
+// ErrSessionNotFound is returned by SessionReader when no session matches the token hash.
+var ErrSessionNotFound = errors.New("session not found")
+
+// ErrInvalidSession is returned by ValidateToken when the token is missing, expired, or unknown.
+var ErrInvalidSession = errors.New("invalid session")
+
 // dummyHash is a pre-computed bcrypt hash (cost 12) used to perform a constant-time
 // comparison when a user is not found, preventing timing-based user enumeration.
 // The plaintext is irrelevant — no valid password will ever match it.
@@ -70,6 +76,11 @@ type SessionDeleter interface {
 	DeleteSession(ctx context.Context, tokenHash string) error
 }
 
+// SessionReader fetches session records.
+type SessionReader interface {
+	GetSession(ctx context.Context, tokenHash string) (*Session, error)
+}
+
 // passwordHasher hashes a plaintext password. Abstracted for testability.
 type passwordHasher func(password []byte, cost int) ([]byte, error)
 
@@ -87,18 +98,20 @@ type Service struct {
 	userReader     UserReader
 	sessions       SessionWriter
 	sessionDeleter SessionDeleter
+	sessionReader  SessionReader
 	hasher         passwordHasher
 	verifier       passwordVerifier
 	genToken       tokenGenerator
 }
 
 // NewService creates an auth Service with the given repositories.
-func NewService(users UserWriter, userReader UserReader, sessions SessionWriter, sessionDeleter SessionDeleter) *Service {
+func NewService(users UserWriter, userReader UserReader, sessions SessionWriter, sessionDeleter SessionDeleter, sessionReader SessionReader) *Service {
 	return &Service{
 		users:          users,
 		userReader:     userReader,
 		sessions:       sessions,
 		sessionDeleter: sessionDeleter,
+		sessionReader:  sessionReader,
 		hasher:         bcrypt.GenerateFromPassword,
 		verifier:       bcrypt.CompareHashAndPassword,
 		genToken:       generateToken,
@@ -107,12 +120,13 @@ func NewService(users UserWriter, userReader UserReader, sessions SessionWriter,
 
 // newServiceForTest creates an auth Service with injectable dependencies.
 // Used in tests to exercise specific code paths without production side-effects.
-func newServiceForTest(users UserWriter, userReader UserReader, sessions SessionWriter, sessionDeleter SessionDeleter, hasher passwordHasher, verifier passwordVerifier, gen tokenGenerator) *Service {
+func newServiceForTest(users UserWriter, userReader UserReader, sessions SessionWriter, sessionDeleter SessionDeleter, sessionReader SessionReader, hasher passwordHasher, verifier passwordVerifier, gen tokenGenerator) *Service {
 	return &Service{
 		users:          users,
 		userReader:     userReader,
 		sessions:       sessions,
 		sessionDeleter: sessionDeleter,
+		sessionReader:  sessionReader,
 		hasher:         hasher,
 		verifier:       verifier,
 		genToken:       gen,
@@ -196,6 +210,29 @@ func (s *Service) Logout(ctx context.Context, token string) error {
 	h := sha256.Sum256([]byte(token))
 	tokenHash := hex.EncodeToString(h[:])
 	return s.sessionDeleter.DeleteSession(ctx, tokenHash)
+}
+
+// ValidateToken hashes the raw token, looks up the corresponding session,
+// and checks that it has not expired. Returns the session's user ID on success.
+//
+// Returns ErrInvalidSession if the token is not found, the session has expired,
+// or any other validation failure. Returns a wrapped error for unexpected
+// repository failures.
+func (s *Service) ValidateToken(ctx context.Context, rawToken string) (string, error) {
+	h := sha256.Sum256([]byte(rawToken))
+	tokenHash := hex.EncodeToString(h[:])
+
+	sess, err := s.sessionReader.GetSession(ctx, tokenHash)
+	if errors.Is(err, ErrSessionNotFound) {
+		return "", ErrInvalidSession
+	}
+	if err != nil {
+		return "", fmt.Errorf("looking up session: %w", err)
+	}
+	if sess.ExpiresAt.Before(time.Now().UTC()) {
+		return "", ErrInvalidSession
+	}
+	return sess.UserID, nil
 }
 
 // validateRegistrationInput checks email and password constraints.

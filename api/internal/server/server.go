@@ -92,3 +92,15 @@ func New(cfg *config.APIConfig, logger *slog.Logger, pinger Pinger) *Server {
 func (s *Server) Handler() http.Handler {
 	return s.mux
 }
+
+// Authenticated returns a sub-router of the private group with RequireAuth applied.
+// Routes registered on this router require a valid session token.
+// This method is called once per feature that needs protected routes (e.g., calculators, billing).
+func (s *Server) Authenticated(validator TokenValidator) chi.Router {
+	var r chi.Router
+	s.privateGroup.Group(func(g chi.Router) {
+		g.Use(RequireAuth(validator))
+		r = g
+	})
+	return r
+}

@@ -68,6 +68,16 @@ func (s *stubSessionDeleter) DeleteSession(_ context.Context, _ string) error {
 	return s.err
 }
 
+// stubSessionReader is a reusable test double for SessionReader.
+type stubSessionReader struct {
+	session *Session
+	err     error
+}
+
+func (s *stubSessionReader) GetSession(_ context.Context, _ string) (*Session, error) {
+	return s.session, s.err
+}
+
 // errorReader is an io.Reader that always returns an error.
 type errorReader struct{ err error }
 

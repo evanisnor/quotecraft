@@ -362,3 +362,108 @@ func TestCreateSession_QueryError(t *testing.T) {
 		t.Errorf("unfulfilled expectations: %v", err)
 	}
 }
+
+// TestGetSession_Success verifies that GetSession executes the SELECT and
+// scans the result columns into a Session.
+func TestGetSession_Success(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("creating sqlmock: %v", err)
+	}
+
+	now := time.Now().UTC().Truncate(time.Second)
+	expiresAt := now.Add(24 * time.Hour)
+
+	rows := sqlmock.NewRows([]string{"id", "user_id", "token_hash", "created_at", "expires_at"}).
+		AddRow("sess-id", "user-id", "hash-abc", now, expiresAt)
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, user_id, token_hash, created_at, expires_at FROM sessions WHERE token_hash = $1")).
+		WithArgs("hash-abc").
+		WillReturnRows(rows)
+	mock.ExpectClose()
+
+	repo := NewPostgresSessionRepository(db)
+	sess, err := repo.GetSession(context.Background(), "hash-abc")
+	if err != nil {
+		t.Fatalf("GetSession() returned unexpected error: %v", err)
+	}
+	if sess.ID != "sess-id" {
+		t.Errorf("expected ID sess-id, got %q", sess.ID)
+	}
+	if sess.UserID != "user-id" {
+		t.Errorf("expected UserID user-id, got %q", sess.UserID)
+	}
+	if sess.TokenHash != "hash-abc" {
+		t.Errorf("expected TokenHash hash-abc, got %q", sess.TokenHash)
+	}
+	if !sess.ExpiresAt.Equal(expiresAt) {
+		t.Errorf("expected ExpiresAt %v, got %v", expiresAt, sess.ExpiresAt)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Errorf("closing mock db: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestGetSession_NotFound verifies that sql.ErrNoRows is translated to
+// ErrSessionNotFound by the repository.
+func TestGetSession_NotFound(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("creating sqlmock: %v", err)
+	}
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, user_id, token_hash, created_at, expires_at FROM sessions WHERE token_hash = $1")).
+		WithArgs("nonexistent-hash").
+		WillReturnError(sql.ErrNoRows)
+	mock.ExpectClose()
+
+	repo := NewPostgresSessionRepository(db)
+	_, err = repo.GetSession(context.Background(), "nonexistent-hash")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrSessionNotFound) {
+		t.Errorf("expected ErrSessionNotFound, got: %v", err)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Errorf("closing mock db: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestGetSession_QueryError verifies that arbitrary query errors are wrapped and propagated.
+func TestGetSession_QueryError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("creating sqlmock: %v", err)
+	}
+
+	wantErr := errors.New("conn reset")
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, user_id, token_hash, created_at, expires_at FROM sessions WHERE token_hash = $1")).
+		WithArgs("some-hash").
+		WillReturnError(wantErr)
+	mock.ExpectClose()
+
+	repo := NewPostgresSessionRepository(db)
+	_, err = repo.GetSession(context.Background(), "some-hash")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Errorf("closing mock db: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}

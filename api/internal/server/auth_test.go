@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -408,5 +409,180 @@ func TestMountAuth_RegistersLogoutRoute(t *testing.T) {
 
 	if rec.Code != http.StatusNoContent {
 		t.Errorf("expected 204 from mounted route, got %d", rec.Code)
+	}
+}
+
+// TestRequireAuth_ValidToken verifies that a valid token results in the user ID
+// being placed in the request context and the next handler being called.
+func TestRequireAuth_ValidToken(t *testing.T) {
+	svc := &stubAuthService{userID: "user-abc"}
+	h := RequireAuth(svc)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, ok := UserIDFromContext(r.Context())
+		if !ok || id != "user-abc" {
+			t.Errorf("expected userID %q in context, got %q (ok=%v)", "user-abc", id, ok)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+	req.Header.Set("Authorization", "Bearer valid-token")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
+	}
+}
+
+// TestRequireAuth_MissingToken verifies that an absent Authorization header results in 401.
+func TestRequireAuth_MissingToken(t *testing.T) {
+	svc := &stubAuthService{userID: "user-abc"}
+	h := RequireAuth(svc)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", rec.Code)
+	}
+
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeUnauthorized {
+		t.Errorf("expected error code %q, got %q", ErrCodeUnauthorized, env.Error.Code)
+	}
+}
+
+// TestRequireAuth_InvalidSession verifies that ErrInvalidSession from the validator
+// results in 401 Unauthorized.
+func TestRequireAuth_InvalidSession(t *testing.T) {
+	svc := &stubAuthService{err: auth.ErrInvalidSession}
+	h := RequireAuth(svc)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+	req.Header.Set("Authorization", "Bearer expired-token")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", rec.Code)
+	}
+
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeUnauthorized {
+		t.Errorf("expected error code %q, got %q", ErrCodeUnauthorized, env.Error.Code)
+	}
+}
+
+// TestRequireAuth_InternalError verifies that unexpected validator errors result in 500.
+func TestRequireAuth_InternalError(t *testing.T) {
+	svc := &stubAuthService{err: errors.New("db failure")}
+	h := RequireAuth(svc)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+	req.Header.Set("Authorization", "Bearer some-token")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", rec.Code)
+	}
+
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeInternal {
+		t.Errorf("expected error code %q, got %q", ErrCodeInternal, env.Error.Code)
+	}
+}
+
+// TestUserIDFromContext_Set verifies that UserIDFromContext returns the user ID
+// and true when the context was populated by RequireAuth middleware.
+func TestUserIDFromContext_Set(t *testing.T) {
+	ctx := context.WithValue(context.Background(), authUserKey{}, "uid-123")
+	id, ok := UserIDFromContext(ctx)
+	if !ok {
+		t.Fatal("expected ok=true, got false")
+	}
+	if id != "uid-123" {
+		t.Errorf("expected %q, got %q", "uid-123", id)
+	}
+}
+
+// TestUserIDFromContext_NotSet verifies that UserIDFromContext returns ("", false)
+// when the context has no user ID.
+func TestUserIDFromContext_NotSet(t *testing.T) {
+	id, ok := UserIDFromContext(context.Background())
+	if ok {
+		t.Error("expected ok=false for empty context, got true")
+	}
+	if id != "" {
+		t.Errorf("expected empty string, got %q", id)
+	}
+}
+
+// TestUserIDFromContext_EmptyString verifies that UserIDFromContext returns ("", false)
+// when the context key is set to an empty string.
+func TestUserIDFromContext_EmptyString(t *testing.T) {
+	ctx := context.WithValue(context.Background(), authUserKey{}, "")
+	id, ok := UserIDFromContext(ctx)
+	if ok {
+		t.Error("expected ok=false for empty string user ID, got true")
+	}
+	if id != "" {
+		t.Errorf("expected empty string, got %q", id)
+	}
+}
+
+// TestAuthenticated_RequiresAuth verifies that routes mounted via Authenticated()
+// return 401 without a valid token and 200 with one.
+func TestAuthenticated_RequiresAuth(t *testing.T) {
+	s := testServer(t)
+	svc := &stubAuthService{userID: "user-abc"}
+	s.MountAuth(svc)
+
+	// Register a dummy protected route via Authenticated().
+	protected := s.Authenticated(svc)
+	protected.Get("/me", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	// Without auth header -> 401.
+	req := httptest.NewRequest(http.MethodGet, "/v1/me", nil)
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401 without auth, got %d", rec.Code)
+	}
+
+	// With valid auth header -> 200.
+	req = httptest.NewRequest(http.MethodGet, "/v1/me", nil)
+	req.Header.Set("Authorization", "Bearer some-token")
+	rec = httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200 with auth, got %d", rec.Code)
 	}
 }
