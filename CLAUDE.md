@@ -103,7 +103,10 @@ Each completed task gets its own commit. Every commit must include the updated `
    - If the failure is caused by your commit, fix it in a follow-up commit (use the relevant task ID), push, and re-confirm CI passes. Do not force push!
    - Wait for the fix to pass on CI using `gh run watch` again. Keep making fix commits and pushing and watching until CI passes before moving on.
 
-### 6. When a Story is Complete
+### 6. When a Task is Complete
+- Proactively compact session context at this natural boundary between tasks. Completed task details can be safely summarized, freeing context window space for the next task. This prevents auto-compact from firing mid-task when in-flight context is most needed.
+
+### 7. When a Story is Complete
 
 When all tasks in a user story are done, verify the acceptance criteria from `PROJECT_PLAN.md` are met before moving on. If everything is complete, update `PROJECT_STATUS.md` and commit.
 
