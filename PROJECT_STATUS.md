@@ -44,7 +44,7 @@ Last updated: 2026-02-21
 
 [Epic in PROJECT_PLAN.md](./PROJECT_PLAN.md#infr--infrastructure--backend-foundation)
 
-### [INFR-US1: Project Scaffolding & Developer Experience](./PROJECT_PLAN.md#infr-us1-project-scaffolding--developer-experience-p0) (P0)
+### ✅ [INFR-US1: Project Scaffolding & Developer Experience](./PROJECT_PLAN.md#infr-us1-project-scaffolding--developer-experience-p0) (P0)
 
 **Requirements:** Infrastructure prerequisite — no direct functional requirement
 
