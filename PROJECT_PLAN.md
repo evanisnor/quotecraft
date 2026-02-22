@@ -311,6 +311,7 @@ The API server, database, authentication, and deployment pipeline. Every other e
 | INFR-US6-A005 | Implement dev-mode static file handler (`/static/*` route) for serving widget bundle and assets locally | 0 |
 | INFR-US6-A006 | Implement image upload endpoint with type/size validation using the `Storage` interface | 1 |
 | INFR-US6-A007 | Set up widget bundle build pipeline that outputs content-hashed filename to local build directory | 0 |
+| INFR-US6-A008 | Update developer documentation and ensure Makefiles support a complete development experience | 0 |
 
 ---
 
