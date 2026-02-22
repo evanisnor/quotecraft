@@ -63,7 +63,7 @@ Last updated: 2026-02-21
 | ✅ | INFR-US1-A011 | Add root Makefile target for full-stack dev-watch mode | 0 | 2026-02-21 |
 | ✅ | INFR-US1-A012 | Set up CI pipeline with GitHub Actions | 0 | 2026-02-21 |
 
-### [INFR-US2: Database & Migrations](./PROJECT_PLAN.md#infr-us2-database--migrations-p0) (P0)
+### ✅ [INFR-US2: Database & Migrations](./PROJECT_PLAN.md#infr-us2-database--migrations-p0) (P0)
 
 **Requirements:** [1.9.2](./REQUIREMENTS.md#19-backend-api--data-storage), [1.9.8](./REQUIREMENTS.md#19-backend-api--data-storage)
 
