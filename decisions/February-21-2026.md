@@ -374,3 +374,25 @@ Initial approach tested `NewFileMigrator` only with an invalid URL (hitting the 
 ### Technical challenges
 
 **Missing `updated_at` trigger (caught in code review):** Initial implementation omitted the `BEFORE UPDATE` trigger. Requirement 1.2.7 specifies "last modified date" — without the trigger, `updated_at` would never advance past its insert-time value. Fixed by adding the `set_updated_at()` function and trigger before commit.
+
+---
+
+## Task: INFR-US2-A004 — Write initial migration: sessions table
+
+**Requirements:** 1.9.2, 1.9.8; supports 1.1.3 (session token), 1.1.4 (logout/invalidation)
+
+### Decisions
+
+**`token_hash TEXT NOT NULL UNIQUE`:** The bearer token is never stored in plaintext. Only the SHA-256 hex digest is persisted. A database breach does not expose live session tokens. The UNIQUE constraint creates an index for fast O(log n) lookup by hash on every authenticated request.
+
+**`expires_at TIMESTAMPTZ NOT NULL` with no DEFAULT:** The application must supply an explicit expiry on every session insert. No default prevents sessions from being accidentally created with a nonsensical or missing expiry. The auth implementation (INFR-US4) determines the expiry duration (likely configurable via config.yaml).
+
+**`invalidated_at TIMESTAMPTZ` (nullable):** NULL = active session. Set to `NOW()` on logout. Querying `WHERE invalidated_at IS NULL AND expires_at > NOW()` covers both expiry enforcement and logout invalidation in a single predicate.
+
+**No `updated_at` column or trigger:** Session state transitions are fully described by `invalidated_at`. A generic `updated_at` would be redundant. The `set_updated_at()` trigger function from migration 000002 is not applied here.
+
+**Partial index on `(user_id) WHERE invalidated_at IS NULL`:** Supports "invalidate all sessions for user" (password change, account suspension). Avoids indexing dead sessions, keeping the index lean. Consistent with the soft-delete partial index pattern in migration 000002.
+
+**`ON DELETE CASCADE` for `user_id` FK:** Deleting a user atomically removes all sessions — no orphaned active tokens.
+
+### No technical challenges
