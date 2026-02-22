@@ -101,6 +101,7 @@ Each completed task gets its own commit. Every commit must include the updated `
 8. Wait for CI to pass using `gh run watch` to monitor the latest workflow run. If CI fails:
    - If the failure is unrelated to your commit (e.g., a pre-existing broken test or infra flake), fix it as an independent change, commit it separately with a descriptive message (no task ID required), push, and confirm CI passes before moving on.
    - If the failure is caused by your commit, fix it in a follow-up commit (use the relevant task ID), push, and re-confirm CI passes. Do not force push!
+   - Wait for the fix to pass on CI using `gh run watch` again. Keep making fix commits and pushing and watching until CI passes before moving on.
 
 ### 6. When a Story is Complete
 
