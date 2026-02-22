@@ -414,3 +414,40 @@ Initial approach tested `NewFileMigrator` only with an invalid URL (hitting the 
 **`migrate up` as the test:** The migrate CLI exits non-zero on any SQL error. Successful completion of `migrate up` against a fresh database is sufficient proof that the migrations are valid SQL and apply cleanly in sequence. No additional schema verification (psql) was added — it would require installing the PostgreSQL client and adds complexity for marginal benefit.
 
 ### No technical challenges
+
+---
+
+## Task: INFR-US3-A001 — Set up API server with router and middleware stack
+
+**Requirements:** 1.9.1, 1.9.7, 1.9.9
+
+### Decisions
+
+**`gopkg.in/yaml.v3` for YAML parsing:** The standard library has no YAML parser. `gopkg.in/yaml.v3` is the idiomatic Go choice — mature, widely used, and no indirect dependency footprint in this module. The alternative (`sigs.k8s.io/yaml`) is heavier and brings in Kubernetes-specific concerns that are unnecessary here.
+
+**Config resolution order:** CONFIG_PATH env var → `../config.yaml` → built-in defaults. This supports three usage contexts: (1) CI/production with a known path via env var, (2) local development with `air` from `api/`, (3) test environments with no config file present. The fallback to defaults is logged as a warning so it is visible but non-fatal.
+
+**`loadConfig` extracted from `main()`:** All config-loading logic is moved into a named function to enable unit testing without spawning a real server. This follows the Go convention of keeping `main()` minimal and pushing testable logic into named functions.
+
+**`unwrapOSError` helper:** `config.Load` returns a wrapped `*os.PathError` when a file is not found. The helper unwraps it so `os.IsNotExist` can inspect the underlying OS error. This is needed because `%w`-wrapped PathErrors lose the direct `errors.Is(err, os.ErrNotExist)` match in some Go versions; unwrapping to the `Err` field is explicit and portable.
+
+**chi v5 for routing:** chi is the task-specified router. It provides a lightweight, stdlib-compatible `http.Handler`-based mux with composable middleware. No alternative was evaluated since chi was explicitly required.
+
+**Middleware order rationale:**
+1. `RealIP` first — must run before any middleware that reads the client IP (logging, rate limiting).
+2. `RequestID` second — must run before the logger so the trace_id is available in the log middleware.
+3. `RequestLogger` third — logs after the full response is written (deferred logging pattern); placed before Recoverer so panics are still logged with status 500.
+4. `Recoverer` fourth — catches panics from all inner middleware and handlers.
+5. `StripSlashes` last — path normalization happens closest to routing.
+
+**RequestLogger sets X-Request-Id response header:** chi's `RequestID` middleware only puts the ID into the request context; it does not propagate it to the response. The `RequestLogger` middleware sets `X-Request-Id` on the response so clients can correlate their request with server-side log entries. This is the conventional approach for request tracing.
+
+**CORS omitted:** Per task scope — CORS is INFR-US3-A005. Placeholder comment documents where it will be inserted in the middleware stack.
+
+**`main()` not unit tested:** `main()` is a thin orchestration function that calls `http.ListenAndServe` (blocking, requires a real network socket). Its constituent logic — `loadConfig`, `configCandidates`, `unwrapOSError` — is extracted and tested individually at 100% coverage. The `main()` function itself cannot be unit tested without either spawning a subprocess or using a server that listens and immediately terminates; neither adds value here. This is the standard Go convention for entrypoints.
+
+### Technical Challenges
+
+**chi's `RequestID` middleware does not set a response header:** Initial test `TestHandler_RequestIDHeaderSet` checked `resp.Header.Get("X-Request-Id")` on the response from a real `httptest.Server`. This failed because chi's middleware only injects the ID into the request context (`r.Context()`) — it does not call `w.Header().Set(...)`. Resolution: moved response header propagation into `RequestLogger`, which has access to both the context (for the ID) and the response writer.
+
+**`Recoverer` prints pretty panic stack to stderr:** chi's `Recoverer` middleware calls `PrintPrettyStack` when it catches a panic, writing a formatted stack trace to `os.Stderr`. This produces noisy but harmless output during `TestHandler_RecovererCatchesPanic`. The test still passes because `Recoverer` correctly writes a 500 status code. The output is chi's intended behavior for developer-mode panic reporting and does not indicate a test failure.

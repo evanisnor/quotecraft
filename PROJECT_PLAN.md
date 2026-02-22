@@ -220,6 +220,8 @@ The API server, database, authentication, and deployment pipeline. Every other e
 - All responses follow a consistent JSON envelope (data, error, meta)
 - Structured logging (JSON) with fields from SYSTEM_DESIGN.md
 
+**Coverage note:** `main()` in `cmd/api/main.go` is excluded from coverage measurement — it is a thin blocking entrypoint (`http.ListenAndServe`) that cannot be unit tested. All constituent logic (`loadConfig`, `configCandidates`) is extracted into named functions and tested at 100% coverage.
+
 | ID | Task | P |
 |----|------|---|
 | INFR-US3-A001 | Set up API server with router and middleware stack | 0 |

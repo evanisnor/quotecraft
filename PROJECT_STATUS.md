@@ -2,7 +2,7 @@
 
 Cross-reference: [PROJECT_PLAN.md](./PROJECT_PLAN.md) · [REQUIREMENTS.md](./REQUIREMENTS.md)
 
-Last updated: 2026-02-21
+Last updated: 2026-02-22
 
 ---
 
@@ -81,7 +81,7 @@ Last updated: 2026-02-21
 
 | Status | ID            | Task                                                                    | P   | Completed |
 | ------ | ------------- | ----------------------------------------------------------------------- | --- | --------- |
-|        | INFR-US3-A001 | Set up API server with router and middleware stack                      | 0   |           |
+| ✅ | INFR-US3-A001 | Set up API server with router and middleware stack                      | 0   | 2026-02-22 |
 |        | INFR-US3-A002 | Implement structured JSON logging with trace_id propagation             | 0   |           |
 |        | INFR-US3-A003 | Implement consistent error response format                              | 0   |           |
 |        | INFR-US3-A004 | Implement `GET /healthz` with DB connectivity check                     | 0   |           |
