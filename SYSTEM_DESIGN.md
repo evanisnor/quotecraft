@@ -461,6 +461,58 @@ graph LR
 
 The short TTL on calculator config means a builder's changes propagate to all embedded widgets within 5 minutes. This is acceptable for the use case — nobody is editing a calculator and expecting instant updates on their live site. If instant propagation becomes a requirement, the API can issue a CDN purge on save.
 
+### Object Storage Abstraction
+
+The API server accesses object storage through a `Storage` interface with `Upload`, `GetURL`, and `Delete` operations. Two implementations exist behind this interface:
+
+| Provider | Backend | When Used |
+|----------|---------|-----------|
+| **S3-compatible** | AWS S3 or MinIO | Production and local development (MinIO) |
+| **Filesystem** | Local disk (`./uploads/`) | CI, unit/integration tests |
+
+In production, the S3-compatible provider writes to an AWS S3 bucket and returns CDN-prefixed URLs. In local development, it writes to a MinIO container (S3-compatible API at `localhost:9000`) and returns URLs pointing to the local MinIO endpoint. The filesystem provider is reserved for CI and test environments where no external dependencies should be required — it writes to a local directory and returns URLs served by the API's static file handler.
+
+The provider is selected via the `storage.provider` field in `config.yaml`. All application code depends on the `Storage` interface — no code outside the adapter layer is aware of which provider is active.
+
+### Local Development Environment
+
+In local development, real CDN and cloud object storage infrastructure are replaced by local equivalents. The goal is to exercise the same code paths as production with zero cloud dependencies.
+
+**Object Storage → MinIO in Docker Compose**
+
+A MinIO container is included in `compose.yaml` alongside PostgreSQL. MinIO exposes an S3-compatible API on `localhost:9000` and a web console on `localhost:9001`. The API server's S3-compatible storage adapter connects to MinIO using the same SDK and code paths as it would for production S3. This ensures that presigned URLs, content-addressing, and bucket operations are tested against a real S3-compatible API, not a mock.
+
+**CDN → API Static File Handler + Local Dev Servers**
+
+There is no CDN in local development. Instead, a configurable `cdn_base_url` in `config.yaml` controls where clients resolve static assets and widget bundles:
+
+- **Widget bundle**: In dev mode, the widget is built locally and served by the API server's static file handler (from the widget build output directory). The `cdn_base_url` defaults to `http://localhost:8080/static`, so the widget loader fetches the bundle from the API process. Alternatively, the widget can be served from its own dev server during active widget development.
+- **Dashboard / Marketing Site**: Served by the Next.js dev server on `localhost:3000`. No CDN simulation needed.
+- **User-uploaded assets**: Served directly from MinIO at `localhost:9000`. The storage adapter returns MinIO-prefixed URLs in dev mode instead of CDN-prefixed URLs.
+
+In dev mode, the API server registers a `/static/*` route that serves files from a configurable local directory. This route does not exist in production builds — in production, all static assets are served by the CDN.
+
+**Configuration**
+
+```yaml
+# config.yaml — local development defaults
+storage:
+  provider: s3  # "s3" for MinIO/S3, "filesystem" for CI/tests
+  s3:
+    endpoint: "http://localhost:9000"
+    bucket: "quotecraft-assets"
+    access_key: "minioadmin"
+    secret_key: "minioadmin"
+    use_path_style: true  # required for MinIO
+  filesystem:
+    base_dir: "./uploads"
+
+cdn:
+  base_url: "http://localhost:8080/static"  # production: "https://cdn.quotecraft.io"
+  widget_dir: "../widget/dist"  # local path to built widget files
+  serve_local: true  # enables the /static/* route in dev mode
+```
+
 ### Cost Implications
 
 With long-lived caches on static assets and a CDN-cacheable config endpoint, the API server only handles:

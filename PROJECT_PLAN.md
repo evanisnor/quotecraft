@@ -286,22 +286,31 @@ The API server, database, authentication, and deployment pipeline. Every other e
 
 ### INFR-US6: Object Storage & CDN (P0)
 
-**As a** developer, **I need** object storage for user-uploaded assets (logos, images) and a CDN to serve the widget bundle and static assets so that the system performs well at scale.
+**As a** developer, **I need** an abstracted object storage layer with local development support (MinIO), a configurable CDN base URL, and a dev-mode static file handler so that the system supports local development without cloud dependencies and performs well at scale in production.
 
 **Depends on:** INFR-US1
 **Requirements:** 1.8.5, 1.3.7 (image upload for Image Select fields)
 **Acceptance Criteria:**
-- Object storage bucket is provisioned with content-addressed filenames
-- Upload endpoint accepts images, validates type/size, stores in object storage, returns CDN URL
-- CDN is configured with caching rules per SYSTEM_DESIGN.md (long cache for assets, short for config)
-- Widget bundle is served from CDN with content-hashed filename
+- A `Storage` interface exists in Go with `Upload`, `GetURL`, and `Delete` operations
+- An S3-compatible adapter implements the `Storage` interface and works with both AWS S3 (production) and MinIO (local dev)
+- A filesystem adapter implements the `Storage` interface for CI and test environments
+- MinIO is added to Docker Compose with health check, persistent volume, web console access, and a default bucket
+- `config.yaml` has `storage` and `cdn` sections with provider selection and local dev defaults
+- Upload endpoint accepts images, validates type/size, stores via the `Storage` interface, and returns a URL appropriate to the active environment (CDN URL in prod, MinIO URL in dev)
+- In dev mode, the API server serves the widget bundle and static assets via a `/static/*` route from a configurable local directory
+- `cdn_base_url` is configurable — defaults to `http://localhost:8080/static` in dev, CDN URL in production
+- Widget bundle build pipeline outputs a content-hashed filename to the local build output directory (CDN deployment is a production concern, not a dev task)
+- CDN caching rules are documented in SYSTEM_DESIGN.md but configured at deploy time, not in application code
 
 | ID | Task | P |
 |----|------|---|
-| INFR-US6-A001 | Provision object storage for user assets | 0 |
-| INFR-US6-A002 | Implement image upload endpoint with type/size validation | 1 |
-| INFR-US6-A003 | Configure CDN with caching rules for widget bundle, static assets, and user assets | 0 |
-| INFR-US6-A004 | Set up widget bundle build pipeline that outputs content-hashed filename to CDN | 0 |
+| INFR-US6-A001 | Define `Storage` interface and implement S3-compatible adapter (works with MinIO and AWS S3) | 0 |
+| INFR-US6-A002 | Implement filesystem storage adapter for CI/test environments | 0 |
+| INFR-US6-A003 | Add MinIO to Docker Compose with health check, persistent volume, and default bucket creation | 0 |
+| INFR-US6-A004 | Add `storage` and `cdn` configuration sections to `config.yaml` with local dev defaults | 0 |
+| INFR-US6-A005 | Implement dev-mode static file handler (`/static/*` route) for serving widget bundle and assets locally | 0 |
+| INFR-US6-A006 | Implement image upload endpoint with type/size validation using the `Storage` interface | 1 |
+| INFR-US6-A007 | Set up widget bundle build pipeline that outputs content-hashed filename to local build directory | 0 |
 
 ---
 
@@ -560,11 +569,11 @@ The vanilla JS bundle that renders calculators on third-party sites. This is the
 
 **As a** builder, **I need** a single `<script>` tag that renders my calculator on any website so that I can embed it without technical help.
 
-**Depends on:** CALC-US1, BLDR-US2 (shared renderers), STYL-US2, INFR-US5 (config endpoint), INFR-US6 (CDN)
+**Depends on:** CALC-US1, BLDR-US2 (shared renderers), STYL-US2, INFR-US5 (config endpoint), INFR-US6 (storage + static serving)
 **Requirements:** 1.8.1, 1.8.2, 1.8.3, 1.8.4, 1.8.5, 1.8.6, 1.8.7, 1.8.8, 1.8.9, 1.8.10, 1.8.12, 1.8.13, 1.8.14
 **Acceptance Criteria:**
-- Widget is embedded via `<script src="cdn/widget-loader.js" data-calculator-id="UUID" async>`
-- Loader is < 2KB, fetches the full widget bundle from CDN
+- Widget is embedded via `<script src="cdn/widget-loader.js" data-calculator-id="UUID" async>` (in dev, `cdn` resolves to `localhost:8080/static`)
+- Loader is < 2KB, fetches the full widget bundle from the configured `cdn_base_url`
 - Widget bundle is < 50KB gzipped, vanilla JS, zero external dependencies
 - Widget fetches calculator config from the public API endpoint
 - Widget renders inside a Shadow DOM (no CSS conflicts with host page)
