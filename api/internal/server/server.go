@@ -24,16 +24,18 @@ type Server struct {
 // subsequent tasks.
 //
 // Middleware order (outermost first):
-//  1. RealIP       — extract real client IP from X-Forwarded-For
-//  2. RequestID    — generate/propagate X-Request-ID (used as trace_id)
-//  3. RequestLogger — structured JSON access log per request
-//  4. Recoverer    — catch panics, return 500
-//  5. StripSlashes — normalize trailing slashes
+//  1. RealIP        — extract real client IP from X-Forwarded-For
+//  2. RequestID     — generate/propagate X-Request-ID (used as trace_id)
+//  3. InjectLogger  — bind trace_id into a request-scoped logger; store in context
+//  4. RequestLogger — structured JSON access log per request
+//  5. Recoverer     — catch panics, return 500
+//  6. StripSlashes  — normalize trailing slashes
 func New(cfg *config.APIConfig, logger *slog.Logger) *Server {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RealIP)
 	r.Use(middleware.RequestID)
+	r.Use(InjectLogger(logger))
 	r.Use(RequestLogger(logger))
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.StripSlashes)
