@@ -97,6 +97,24 @@ func (r *PostgresCalculatorRepository) UpdateCalculator(ctx context.Context, id 
 	return &c, nil
 }
 
+// DeleteCalculator soft-deletes the calculator identified by id.
+// Returns ErrNotFound if no matching, non-deleted row exists.
+func (r *PostgresCalculatorRepository) DeleteCalculator(ctx context.Context, id string) error {
+	const query = `UPDATE calculators SET is_deleted = TRUE WHERE id = $1 AND is_deleted = FALSE`
+	result, err := r.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("deleting calculator: %w", err)
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking rows affected: %w", err)
+	}
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 // CreateCalculator inserts a new calculator row and returns the created Calculator.
 // The config defaults to '{}' and config_version to 1 per the table definition.
 func (r *PostgresCalculatorRepository) CreateCalculator(ctx context.Context, userID string) (*Calculator, error) {

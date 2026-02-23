@@ -660,6 +660,110 @@ func TestUpdateCalculatorHandler_InternalError(t *testing.T) {
 	}
 }
 
+func TestDeleteCalculatorHandler_Success(t *testing.T) {
+	svc := &stubCalculatorService{}
+	h := deleteCalculatorHandler(svc)
+
+	req := newChiRequest(http.MethodDelete, "/v1/calculators/calc-abc", "id", "calc-abc")
+	ctx := context.WithValue(req.Context(), authUserKey{}, "user-xyz")
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNoContent {
+		t.Errorf("expected 204, got %d", rec.Code)
+	}
+}
+
+func TestDeleteCalculatorHandler_MissingAuth(t *testing.T) {
+	svc := &stubCalculatorService{}
+	h := deleteCalculatorHandler(svc)
+
+	req := newChiRequest(http.MethodDelete, "/v1/calculators/calc-abc", "id", "calc-abc")
+	// No user ID in context
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestDeleteCalculatorHandler_NotFound(t *testing.T) {
+	svc := &stubCalculatorService{err: calculator.ErrNotFound}
+	h := deleteCalculatorHandler(svc)
+
+	req := newChiRequest(http.MethodDelete, "/v1/calculators/calc-missing", "id", "calc-missing")
+	ctx := context.WithValue(req.Context(), authUserKey{}, "user-xyz")
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", rec.Code)
+	}
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeNotFound {
+		t.Errorf("expected error code %q, got %q", ErrCodeNotFound, env.Error.Code)
+	}
+}
+
+func TestDeleteCalculatorHandler_Forbidden(t *testing.T) {
+	svc := &stubCalculatorService{err: calculator.ErrForbidden}
+	h := deleteCalculatorHandler(svc)
+
+	req := newChiRequest(http.MethodDelete, "/v1/calculators/calc-abc", "id", "calc-abc")
+	ctx := context.WithValue(req.Context(), authUserKey{}, "other-user")
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("expected 403, got %d", rec.Code)
+	}
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeForbidden {
+		t.Errorf("expected error code %q, got %q", ErrCodeForbidden, env.Error.Code)
+	}
+}
+
+func TestDeleteCalculatorHandler_InternalError(t *testing.T) {
+	svc := &stubCalculatorService{err: errors.New("db failure")}
+	h := deleteCalculatorHandler(svc)
+
+	req := newChiRequest(http.MethodDelete, "/v1/calculators/calc-abc", "id", "calc-abc")
+	ctx := context.WithValue(req.Context(), authUserKey{}, "user-xyz")
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", rec.Code)
+	}
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeInternal {
+		t.Errorf("expected error code %q, got %q", ErrCodeInternal, env.Error.Code)
+	}
+}
+
 func TestMountCalculators_RegistersPutRoute(t *testing.T) {
 	s := testServer(t)
 	authSvc := &stubAuthService{userID: "user-xyz"}
@@ -691,5 +795,21 @@ func TestMountCalculators_RegistersPutRoute(t *testing.T) {
 	id, ok := env.Data["id"].(string)
 	if !ok || id != "some-id" {
 		t.Errorf("expected id %q, got %v", "some-id", env.Data["id"])
+	}
+}
+
+func TestMountCalculators_RegistersDeleteRoute(t *testing.T) {
+	s := testServer(t)
+	authSvc := &stubAuthService{userID: "user-xyz"}
+	s.MountAuth(authSvc)
+	s.MountCalculators(authSvc, &stubCalculatorService{})
+
+	req := httptest.NewRequest(http.MethodDelete, "/v1/calculators/some-id", nil)
+	req.Header.Set("Authorization", "Bearer valid-token")
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNoContent {
+		t.Errorf("expected 204 from mounted delete route, got %d", rec.Code)
 	}
 }

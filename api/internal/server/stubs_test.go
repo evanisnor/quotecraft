@@ -61,3 +61,7 @@ func (s *stubCalculatorService) Get(_ context.Context, _, _ string) (*calculator
 func (s *stubCalculatorService) Update(_ context.Context, _, _ string, _ []byte) (*calculator.Calculator, error) {
 	return s.calc, s.err
 }
+
+func (s *stubCalculatorService) Delete(_ context.Context, _, _ string) error {
+	return s.err
+}

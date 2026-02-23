@@ -448,3 +448,109 @@ func TestUpdateCalculator_QueryError(t *testing.T) {
 		t.Errorf("unmet expectations: %v", err)
 	}
 }
+
+func TestDeleteCalculator_Success(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock.New() failed: %v", err)
+	}
+
+	mock.ExpectExec(`UPDATE calculators`).
+		WithArgs("calc-id").
+		WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectClose()
+
+	repo := NewPostgresCalculatorRepository(db)
+	if err := repo.DeleteCalculator(context.Background(), "calc-id"); err != nil {
+		t.Fatalf("DeleteCalculator() returned unexpected error: %v", err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatalf("Close() failed: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unmet expectations: %v", err)
+	}
+}
+
+func TestDeleteCalculator_NotFound(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock.New() failed: %v", err)
+	}
+
+	mock.ExpectExec(`UPDATE calculators`).
+		WithArgs("calc-missing").
+		WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectClose()
+
+	repo := NewPostgresCalculatorRepository(db)
+	err = repo.DeleteCalculator(context.Background(), "calc-missing")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrNotFound) {
+		t.Errorf("expected ErrNotFound, got: %v", err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatalf("Close() failed: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unmet expectations: %v", err)
+	}
+}
+
+func TestDeleteCalculator_QueryError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock.New() failed: %v", err)
+	}
+
+	wantErr := errors.New("connection reset")
+	mock.ExpectExec(`UPDATE calculators`).
+		WithArgs("calc-id").
+		WillReturnError(wantErr)
+	mock.ExpectClose()
+
+	repo := NewPostgresCalculatorRepository(db)
+	err = repo.DeleteCalculator(context.Background(), "calc-id")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatalf("Close() failed: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unmet expectations: %v", err)
+	}
+}
+
+func TestDeleteCalculator_RowsAffectedError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock.New() failed: %v", err)
+	}
+
+	wantErr := errors.New("rows affected not supported")
+	mock.ExpectExec(`UPDATE calculators`).
+		WithArgs("calc-id").
+		WillReturnResult(sqlmock.NewErrorResult(wantErr))
+	mock.ExpectClose()
+
+	repo := NewPostgresCalculatorRepository(db)
+	err = repo.DeleteCalculator(context.Background(), "calc-id")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatalf("Close() failed: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unmet expectations: %v", err)
+	}
+}

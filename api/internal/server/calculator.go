@@ -34,13 +34,18 @@ type CalculatorUpdater interface {
 	Update(ctx context.Context, id, userID string, config []byte) (*calculator.Calculator, error)
 }
 
+// CalculatorDeleter soft-deletes an existing calculator.
+type CalculatorDeleter interface {
+	Delete(ctx context.Context, id, userID string) error
+}
+
 // CalculatorService is the full set of calculator capabilities consumed by the server.
-// Grows as additional INFR-US5 tasks are implemented.
 type CalculatorService interface {
 	CalculatorCreator
 	CalculatorLister
 	CalculatorGetter
 	CalculatorUpdater
+	CalculatorDeleter
 }
 
 // createCalculatorResponse is the data payload returned on successful calculator creation.
@@ -201,6 +206,32 @@ func updateCalculatorHandler(svc CalculatorUpdater) http.HandlerFunc {
 	}
 }
 
+// deleteCalculatorHandler returns an http.HandlerFunc for DELETE /v1/calculators/{id}.
+func deleteCalculatorHandler(svc CalculatorDeleter) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, ok := UserIDFromContext(r.Context())
+		if !ok {
+			WriteError(w, http.StatusUnauthorized, ErrCodeUnauthorized, "missing authentication")
+			return
+		}
+		id := chi.URLParam(r, "id")
+		if err := svc.Delete(r.Context(), id, userID); err != nil {
+			if errors.Is(err, calculator.ErrNotFound) {
+				WriteError(w, http.StatusNotFound, ErrCodeNotFound, "calculator not found")
+				return
+			}
+			if errors.Is(err, calculator.ErrForbidden) {
+				WriteError(w, http.StatusForbidden, ErrCodeForbidden, "access forbidden")
+				return
+			}
+			LoggerFrom(r.Context()).Error("deleting calculator", "error", err)
+			WriteError(w, http.StatusInternalServerError, ErrCodeInternal, "internal error")
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
 // MountCalculators registers calculator routes on the server's private authenticated group.
 func (s *Server) MountCalculators(validator TokenValidator, svc CalculatorService) {
 	protected := s.Authenticated(validator)
@@ -208,4 +239,5 @@ func (s *Server) MountCalculators(validator TokenValidator, svc CalculatorServic
 	protected.Get("/calculators", listCalculatorsHandler(svc))
 	protected.Get("/calculators/{id}", getCalculatorHandler(svc))
 	protected.Put("/calculators/{id}", updateCalculatorHandler(svc))
+	protected.Delete("/calculators/{id}", deleteCalculatorHandler(svc))
 }

@@ -45,17 +45,23 @@ type Updater interface {
 	UpdateCalculator(ctx context.Context, id string, config []byte) (*Calculator, error)
 }
 
+// Deleter soft-deletes a calculator record.
+type Deleter interface {
+	DeleteCalculator(ctx context.Context, id string) error
+}
+
 // Service handles calculator business logic.
 type Service struct {
 	creator Creator
 	lister  Lister
 	getter  Getter
 	updater Updater
+	deleter Deleter
 }
 
-// NewService creates a calculator Service with the given creator, lister, getter, and updater.
-func NewService(creator Creator, lister Lister, getter Getter, updater Updater) *Service {
-	return &Service{creator: creator, lister: lister, getter: getter, updater: updater}
+// NewService creates a calculator Service with the given creator, lister, getter, updater, and deleter.
+func NewService(creator Creator, lister Lister, getter Getter, updater Updater, deleter Deleter) *Service {
+	return &Service{creator: creator, lister: lister, getter: getter, updater: updater, deleter: deleter}
 }
 
 // Create creates a new empty calculator owned by the given user.
@@ -99,4 +105,17 @@ func (s *Service) Update(ctx context.Context, id, userID string, config []byte) 
 		return nil, fmt.Errorf("updating calculator: %w", err)
 	}
 	return calc, nil
+}
+
+// Delete verifies ownership of the calculator then soft-deletes it.
+// Returns ErrNotFound if the calculator does not exist or is soft-deleted.
+// Returns ErrForbidden if the calculator exists but is owned by a different user.
+func (s *Service) Delete(ctx context.Context, id, userID string) error {
+	if _, err := s.getter.GetCalculator(ctx, id, userID); err != nil {
+		return fmt.Errorf("verifying calculator ownership: %w", err)
+	}
+	if err := s.deleter.DeleteCalculator(ctx, id); err != nil {
+		return fmt.Errorf("deleting calculator: %w", err)
+	}
+	return nil
 }

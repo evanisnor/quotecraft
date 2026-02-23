@@ -2,7 +2,7 @@
 
 Cross-reference: [PROJECT_PLAN.md](./PROJECT_PLAN.md) · [REQUIREMENTS.md](./REQUIREMENTS.md)
 
-Last updated: 2026-02-22
+Last updated: 2026-02-23
 
 ---
 
@@ -111,7 +111,7 @@ Last updated: 2026-02-22
 | ✅ | INFR-US5-A002 | Implement list calculators endpoint (scoped to authenticated user) | 0   | 2026-02-23 |
 | ✅ | INFR-US5-A003 | Implement get single calculator endpoint (ownership-gated)         | 0   | 2026-02-23 |
 | ✅ | INFR-US5-A004 | Implement update calculator endpoint with config schema validation | 0   | 2026-02-23 |
-|        | INFR-US5-A005 | Implement soft-delete calculator endpoint                          | 0   |           |
+| ✅ | INFR-US5-A005 | Implement soft-delete calculator endpoint                          | 0   | 2026-02-23 |
 |        | INFR-US5-A006 | Implement duplicate calculator endpoint                            | 1   |           |
 |        | INFR-US5-A007 | Implement public config endpoint with cache headers                | 0   |           |
 |        | INFR-US5-A008 | Add rate limiting on public config endpoint                        | 1   |           |
