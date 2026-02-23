@@ -3,3 +3,19 @@ api:
   dashboard_origins:
     - "http://localhost:3000"
   database_url: "postgres://quotecraft:quotecraft@localhost:5432/quotecraft?sslmode=disable"
+
+storage:
+  provider: s3
+  s3:
+    endpoint: "http://localhost:9000"
+    bucket: "quotecraft-assets"
+    access_key: "minioadmin"
+    secret_key: "minioadmin"
+    use_path_style: true
+  filesystem:
+    base_dir: "./uploads"
+
+cdn:
+  base_url: "http://localhost:8080/static"
+  widget_dir: "../widget/dist"
+  serve_local: true

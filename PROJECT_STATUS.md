@@ -125,7 +125,7 @@ Last updated: 2026-02-23
 |        | INFR-US6-A001 | Define `Storage` interface and implement S3-compatible adapter (works with MinIO and AWS S3)               | 0   |           |
 |        | INFR-US6-A002 | Implement filesystem storage adapter for CI/test environments                                             | 0   |           |
 |        | INFR-US6-A003 | Add MinIO to Docker Compose with health check, persistent volume, and default bucket creation             | 0   |           |
-|        | INFR-US6-A004 | Add `storage` and `cdn` configuration sections to `config.yaml` with local dev defaults                   | 0   |           |
+| ✅ | INFR-US6-A004 | Add `storage` and `cdn` configuration sections to `config.yaml` with local dev defaults                   | 0   | 2026-02-23 |
 |        | INFR-US6-A005 | Implement dev-mode static file handler (`/static/*` route) for serving widget bundle and assets locally   | 0   |           |
 |        | INFR-US6-A006 | Implement image upload endpoint with type/size validation using the `Storage` interface                   | 1   |           |
 |        | INFR-US6-A007 | Set up widget bundle build pipeline that outputs content-hashed filename to local build directory          | 0   |           |
