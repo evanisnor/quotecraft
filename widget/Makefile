@@ -11,7 +11,7 @@ help:
 	@echo "Targets:"
 	@grep -E '^## ' $(MAKEFILE_LIST) | sed 's/^## /  /'
 
-## build: Bundle the widget for production (outputs dist/widget.js)
+## build: Bundle the widget for production (outputs content-hashed file to dist/)
 build:
 	pnpm run build
 
