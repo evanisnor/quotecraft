@@ -41,10 +41,15 @@ func (s *stubAuthService) ValidateToken(_ context.Context, _ string) (string, er
 
 // stubCalculatorService is a reusable test implementation of CalculatorService.
 type stubCalculatorService struct {
-	calc *calculator.Calculator
-	err  error
+	calc  *calculator.Calculator
+	calcs []*calculator.Calculator
+	err   error
 }
 
 func (s *stubCalculatorService) Create(_ context.Context, _ string) (*calculator.Calculator, error) {
 	return s.calc, s.err
+}
+
+func (s *stubCalculatorService) List(_ context.Context, _ string) ([]*calculator.Calculator, error) {
+	return s.calcs, s.err
 }

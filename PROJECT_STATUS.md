@@ -108,7 +108,7 @@ Last updated: 2026-02-22
 | Status | ID            | Task                                                               | P   | Completed |
 | ------ | ------------- | ------------------------------------------------------------------ | --- | --------- |
 | ✅ | INFR-US5-A001 | Implement create calculator endpoint                               | 0   | 2026-02-22 |
-|        | INFR-US5-A002 | Implement list calculators endpoint (scoped to authenticated user) | 0   |           |
+| ✅ | INFR-US5-A002 | Implement list calculators endpoint (scoped to authenticated user) | 0   | 2026-02-23 |
 |        | INFR-US5-A003 | Implement get single calculator endpoint (ownership-gated)         | 0   |           |
 |        | INFR-US5-A004 | Implement update calculator endpoint with config schema validation | 0   |           |
 |        | INFR-US5-A005 | Implement soft-delete calculator endpoint                          | 0   |           |

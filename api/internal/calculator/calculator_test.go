@@ -16,9 +16,18 @@ func (s *stubCreator) CreateCalculator(_ context.Context, _ string) (*Calculator
 	return s.calc, s.err
 }
 
+type stubLister struct {
+	calcs []*Calculator
+	err   error
+}
+
+func (s *stubLister) ListCalculators(_ context.Context, _ string) ([]*Calculator, error) {
+	return s.calcs, s.err
+}
+
 func TestCreate_Success(t *testing.T) {
 	want := &Calculator{ID: "calc-abc", UserID: "user-xyz", CreatedAt: time.Now()}
-	svc := NewService(&stubCreator{calc: want})
+	svc := NewService(&stubCreator{calc: want}, &stubLister{})
 	got, err := svc.Create(context.Background(), "user-xyz")
 	if err != nil {
 		t.Fatalf("Create() returned unexpected error: %v", err)
@@ -30,8 +39,56 @@ func TestCreate_Success(t *testing.T) {
 
 func TestCreate_RepositoryError(t *testing.T) {
 	wantErr := errors.New("db failure")
-	svc := NewService(&stubCreator{err: wantErr})
+	svc := NewService(&stubCreator{err: wantErr}, &stubLister{})
 	_, err := svc.Create(context.Background(), "user-xyz")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
+	}
+}
+
+func TestList_Success(t *testing.T) {
+	now := time.Now()
+	want := []*Calculator{
+		{ID: "calc-1", UserID: "user-xyz", CreatedAt: now, UpdatedAt: now},
+		{ID: "calc-2", UserID: "user-xyz", CreatedAt: now, UpdatedAt: now},
+	}
+	svc := NewService(&stubCreator{}, &stubLister{calcs: want})
+	got, err := svc.List(context.Background(), "user-xyz")
+	if err != nil {
+		t.Fatalf("List() returned unexpected error: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("expected 2 calculators, got %d", len(got))
+	}
+	if got[0].ID != "calc-1" {
+		t.Errorf("expected first ID %q, got %q", "calc-1", got[0].ID)
+	}
+	if got[1].ID != "calc-2" {
+		t.Errorf("expected second ID %q, got %q", "calc-2", got[1].ID)
+	}
+}
+
+func TestList_Empty(t *testing.T) {
+	svc := NewService(&stubCreator{}, &stubLister{calcs: []*Calculator{}})
+	got, err := svc.List(context.Background(), "user-xyz")
+	if err != nil {
+		t.Fatalf("List() returned unexpected error: %v", err)
+	}
+	if got == nil {
+		t.Fatal("expected empty slice, got nil")
+	}
+	if len(got) != 0 {
+		t.Errorf("expected 0 calculators, got %d", len(got))
+	}
+}
+
+func TestList_RepositoryError(t *testing.T) {
+	wantErr := errors.New("db failure")
+	svc := NewService(&stubCreator{}, &stubLister{err: wantErr})
+	_, err := svc.List(context.Background(), "user-xyz")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
