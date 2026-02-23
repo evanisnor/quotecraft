@@ -102,11 +102,19 @@ Each completed task gets its own commit. Every commit must include the updated `
    - Wait for the fix to pass on CI using `gh run watch` again. Keep making fix commits and pushing and watching until CI passes before moving on.
 
 ### 6. When a Task is Complete
-- Proactively compact session context at this natural boundary between tasks. Completed task details can be safely summarized, freeing context window space for the next task. This prevents auto-compact from firing mid-task when in-flight context is most needed.
+- Proactively compact session manually context at this natural boundary between tasks. Completed task details can be safely summarized, freeing context window space for the next task. This prevents auto-compact from firing mid-task when in-flight context is most needed. When manual compacting is complete, echo an acknowledgement that this has been done.
 
 ### 7. When a Story is Complete
 
 When all tasks in a user story are done, verify the acceptance criteria from `PROJECT_PLAN.md` are met before moving on. If everything is complete, update `PROJECT_STATUS.md` and commit.
+
+### 8. When an Epic is Complete
+
+Make sure tasks of all priorities within an epic are complete before moving on to the next epic. Perform an additional code review to make sure everything was built according to standards.
+
+### 9. When a Phase is Complete
+
+Once all tasks in a phase are complete, Once all tasks in the current phase are complete, review the implementation for adherence to the REQUIREMENTS.md, PROJECT_PLAN.md, and SYSTEM_DESIGN.md documents. Stop all work and exit cleanly. Do not proceed to the next phase. Wait for human intervention.
 
 ## Tech Stack
 

@@ -1,3 +1,2 @@
 You are building Phase 1 of the QuoteCraft project. Follow the workflow defined in CLAUDE.md
 Continue until you run out of tasks for the current phase. Stay focused — one task at a time.
-Do not proceed to the next phase of the project without human intervention. Once all tasks in the current phase are complete, review the implementation for adherence to the REQUIREMENTS.md, PROJECT_PLAN.md, and SYSTEM_DESIGN.md documents. Once the current phase is finally complete and implemented according to completeness and quality standards, stop all work gracefully and wait for human intervention.
