@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/evanisnor/quotecraft/api/internal/calculator"
 )
 
@@ -254,5 +256,175 @@ func TestMountCalculators_RegistersListRoute(t *testing.T) {
 	id, ok := env.Data[0]["id"].(string)
 	if !ok || id != "calc-abc" {
 		t.Errorf("expected id %q, got %v", "calc-abc", env.Data[0]["id"])
+	}
+}
+
+// newChiRequest builds an httptest.Request with a chi route context so that
+// chi.URLParam works correctly in unit tests.
+func newChiRequest(method, path, paramKey, paramVal string) *http.Request {
+	req := httptest.NewRequest(method, path, nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add(paramKey, paramVal)
+	return req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+}
+
+func TestGetCalculatorHandler_Success(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+	calc := &calculator.Calculator{
+		ID:            "calc-abc",
+		UserID:        "user-xyz",
+		Config:        []byte(`{"field":"value"}`),
+		ConfigVersion: 1,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}
+	svc := &stubCalculatorService{calc: calc}
+	h := getCalculatorHandler(svc)
+
+	req := newChiRequest(http.MethodGet, "/v1/calculators/calc-abc", "id", "calc-abc")
+	ctx := context.WithValue(req.Context(), authUserKey{}, "user-xyz")
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
+	}
+	var env Envelope[map[string]any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error != nil {
+		t.Errorf("expected no error in response, got: %+v", env.Error)
+	}
+	id, ok := env.Data["id"].(string)
+	if !ok || id != "calc-abc" {
+		t.Errorf("expected id %q, got %v", "calc-abc", env.Data["id"])
+	}
+	if env.Data["config"] == nil {
+		t.Error("expected config to be non-null in response")
+	}
+}
+
+func TestGetCalculatorHandler_NotFound(t *testing.T) {
+	svc := &stubCalculatorService{err: calculator.ErrNotFound}
+	h := getCalculatorHandler(svc)
+
+	req := newChiRequest(http.MethodGet, "/v1/calculators/calc-missing", "id", "calc-missing")
+	ctx := context.WithValue(req.Context(), authUserKey{}, "user-xyz")
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", rec.Code)
+	}
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeNotFound {
+		t.Errorf("expected error code %q, got %q", ErrCodeNotFound, env.Error.Code)
+	}
+}
+
+func TestGetCalculatorHandler_Forbidden(t *testing.T) {
+	svc := &stubCalculatorService{err: calculator.ErrForbidden}
+	h := getCalculatorHandler(svc)
+
+	req := newChiRequest(http.MethodGet, "/v1/calculators/calc-abc", "id", "calc-abc")
+	ctx := context.WithValue(req.Context(), authUserKey{}, "other-user")
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("expected 403, got %d", rec.Code)
+	}
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeForbidden {
+		t.Errorf("expected error code %q, got %q", ErrCodeForbidden, env.Error.Code)
+	}
+}
+
+func TestGetCalculatorHandler_MissingAuth(t *testing.T) {
+	svc := &stubCalculatorService{}
+	h := getCalculatorHandler(svc)
+
+	req := newChiRequest(http.MethodGet, "/v1/calculators/calc-abc", "id", "calc-abc")
+	// No user ID in context
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestGetCalculatorHandler_InternalError(t *testing.T) {
+	svc := &stubCalculatorService{err: errors.New("db failure")}
+	h := getCalculatorHandler(svc)
+
+	req := newChiRequest(http.MethodGet, "/v1/calculators/calc-abc", "id", "calc-abc")
+	ctx := context.WithValue(req.Context(), authUserKey{}, "user-xyz")
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", rec.Code)
+	}
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeInternal {
+		t.Errorf("expected error code %q, got %q", ErrCodeInternal, env.Error.Code)
+	}
+}
+
+func TestMountCalculators_RegistersGetRoute(t *testing.T) {
+	s := testServer(t)
+	authSvc := &stubAuthService{userID: "user-xyz"}
+	s.MountAuth(authSvc)
+
+	now := time.Now().UTC()
+	calcSvc := &stubCalculatorService{calc: &calculator.Calculator{
+		ID:            "some-id",
+		UserID:        "user-xyz",
+		Config:        []byte(`{}`),
+		ConfigVersion: 1,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}}
+	s.MountCalculators(authSvc, calcSvc)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/calculators/some-id", nil)
+	req.Header.Set("Authorization", "Bearer valid-token")
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200 from mounted get route, got %d", rec.Code)
+	}
+	var env Envelope[map[string]any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	id, ok := env.Data["id"].(string)
+	if !ok || id != "some-id" {
+		t.Errorf("expected id %q, got %v", "some-id", env.Data["id"])
 	}
 }

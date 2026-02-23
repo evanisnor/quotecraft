@@ -235,3 +235,123 @@ func TestCreateCalculator_QueryError(t *testing.T) {
 		t.Errorf("unmet expectations: %v", err)
 	}
 }
+
+func TestGetCalculator_Success(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock.New() failed: %v", err)
+	}
+
+	now := time.Now().UTC().Truncate(time.Second)
+	rows := sqlmock.NewRows(listColumns).
+		AddRow("calc-id", "user-id", []byte(`{"field":"value"}`), 1, false, now, now)
+	mock.ExpectQuery(`SELECT id, user_id`).
+		WithArgs("calc-id").
+		WillReturnRows(rows)
+	mock.ExpectClose()
+
+	repo := NewPostgresCalculatorRepository(db)
+	calc, err := repo.GetCalculator(context.Background(), "calc-id", "user-id")
+	if err != nil {
+		t.Fatalf("GetCalculator() returned unexpected error: %v", err)
+	}
+	if calc.ID != "calc-id" {
+		t.Errorf("expected ID %q, got %q", "calc-id", calc.ID)
+	}
+	if calc.UserID != "user-id" {
+		t.Errorf("expected UserID %q, got %q", "user-id", calc.UserID)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatalf("Close() failed: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unmet expectations: %v", err)
+	}
+}
+
+func TestGetCalculator_NotFound(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock.New() failed: %v", err)
+	}
+
+	rows := sqlmock.NewRows(listColumns)
+	mock.ExpectQuery(`SELECT id, user_id`).
+		WithArgs("calc-missing").
+		WillReturnRows(rows)
+	mock.ExpectClose()
+
+	repo := NewPostgresCalculatorRepository(db)
+	_, err = repo.GetCalculator(context.Background(), "calc-missing", "user-id")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrNotFound) {
+		t.Errorf("expected ErrNotFound, got: %v", err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatalf("Close() failed: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unmet expectations: %v", err)
+	}
+}
+
+func TestGetCalculator_Forbidden(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock.New() failed: %v", err)
+	}
+
+	now := time.Now().UTC().Truncate(time.Second)
+	// Row belongs to "other-user", not "user-id"
+	rows := sqlmock.NewRows(listColumns).
+		AddRow("calc-id", "other-user", []byte(`{}`), 1, false, now, now)
+	mock.ExpectQuery(`SELECT id, user_id`).
+		WithArgs("calc-id").
+		WillReturnRows(rows)
+	mock.ExpectClose()
+
+	repo := NewPostgresCalculatorRepository(db)
+	_, err = repo.GetCalculator(context.Background(), "calc-id", "user-id")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrForbidden) {
+		t.Errorf("expected ErrForbidden, got: %v", err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatalf("Close() failed: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unmet expectations: %v", err)
+	}
+}
+
+func TestGetCalculator_QueryError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock.New() failed: %v", err)
+	}
+
+	wantErr := errors.New("connection reset")
+	mock.ExpectQuery(`SELECT id, user_id`).
+		WithArgs("calc-id").
+		WillReturnError(wantErr)
+	mock.ExpectClose()
+
+	repo := NewPostgresCalculatorRepository(db)
+	_, err = repo.GetCalculator(context.Background(), "calc-id", "user-id")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatalf("Close() failed: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unmet expectations: %v", err)
+	}
+}
