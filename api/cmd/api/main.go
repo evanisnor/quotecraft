@@ -35,11 +35,12 @@ func main() {
 	authService := auth.NewService(userRepo, userRepo, sessionRepo, sessionRepo, sessionRepo)
 
 	calcRepo := calculator.NewPostgresCalculatorRepository(dbConn.DB())
-	calcService := calculator.NewService(calcRepo, calcRepo, calcRepo, calcRepo, calcRepo)
+	calcService := calculator.NewService(calcRepo, calcRepo, calcRepo, calcRepo, calcRepo, calcRepo)
 
 	srv := server.New(&cfg.API, logger, dbConn)
 	srv.MountAuth(authService)
 	srv.MountCalculators(authService, calcService)
+	srv.MountPublicCalculators(calcService)
 
 	addr := fmt.Sprintf(":%d", cfg.API.Port)
 	logger.Info("QuoteCraft API starting", "addr", addr)

@@ -813,3 +813,120 @@ func TestMountCalculators_RegistersDeleteRoute(t *testing.T) {
 		t.Errorf("expected 204 from mounted delete route, got %d", rec.Code)
 	}
 }
+
+func TestPublicConfigHandler_Success(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+	calc := &calculator.Calculator{
+		ID:            "calc-abc",
+		UserID:        "user-xyz",
+		Config:        []byte(`{"field":"value"}`),
+		ConfigVersion: 1,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}
+	svc := &stubCalculatorService{calc: calc}
+	h := publicConfigHandler(svc)
+
+	req := newChiRequest(http.MethodGet, "/v1/calculators/calc-abc/config", "id", "calc-abc")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
+	}
+	cacheControl := rec.Header().Get("Cache-Control")
+	if cacheControl != "public, max-age=300" {
+		t.Errorf("expected Cache-Control %q, got %q", "public, max-age=300", cacheControl)
+	}
+	var env Envelope[map[string]any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error != nil {
+		t.Errorf("expected no error in response, got: %+v", env.Error)
+	}
+	id, ok := env.Data["id"].(string)
+	if !ok || id != "calc-abc" {
+		t.Errorf("expected id %q, got %v", "calc-abc", env.Data["id"])
+	}
+	if env.Data["config"] == nil {
+		t.Error("expected config to be non-null in response")
+	}
+	cv, ok := env.Data["config_version"].(float64)
+	if !ok || int(cv) != 1 {
+		t.Errorf("expected config_version 1, got %v", env.Data["config_version"])
+	}
+}
+
+func TestPublicConfigHandler_NotFound(t *testing.T) {
+	svc := &stubCalculatorService{err: calculator.ErrNotFound}
+	h := publicConfigHandler(svc)
+
+	req := newChiRequest(http.MethodGet, "/v1/calculators/calc-missing/config", "id", "calc-missing")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", rec.Code)
+	}
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeNotFound {
+		t.Errorf("expected error code %q, got %q", ErrCodeNotFound, env.Error.Code)
+	}
+}
+
+func TestPublicConfigHandler_InternalError(t *testing.T) {
+	svc := &stubCalculatorService{err: errors.New("db failure")}
+	h := publicConfigHandler(svc)
+
+	req := newChiRequest(http.MethodGet, "/v1/calculators/calc-abc/config", "id", "calc-abc")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", rec.Code)
+	}
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeInternal {
+		t.Errorf("expected error code %q, got %q", ErrCodeInternal, env.Error.Code)
+	}
+}
+
+func TestMountPublicCalculators_RegistersRoute(t *testing.T) {
+	s := testServer(t)
+	now := time.Now().UTC()
+	calcSvc := &stubCalculatorService{calc: &calculator.Calculator{
+		ID:            "calc-abc",
+		UserID:        "user-xyz",
+		Config:        []byte(`{}`),
+		ConfigVersion: 1,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}}
+	s.MountPublicCalculators(calcSvc)
+
+	// No Authorization header — this is a public route.
+	req := httptest.NewRequest(http.MethodGet, "/v1/calculators/calc-abc/config", nil)
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200 from mounted public config route, got %d", rec.Code)
+	}
+	cacheControl := rec.Header().Get("Cache-Control")
+	if cacheControl != "public, max-age=300" {
+		t.Errorf("expected Cache-Control %q, got %q", "public, max-age=300", cacheControl)
+	}
+}

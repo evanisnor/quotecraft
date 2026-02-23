@@ -65,3 +65,7 @@ func (s *stubCalculatorService) Update(_ context.Context, _, _ string, _ []byte)
 func (s *stubCalculatorService) Delete(_ context.Context, _, _ string) error {
 	return s.err
 }
+
+func (s *stubCalculatorService) GetPublicConfig(_ context.Context, _ string) (*calculator.Calculator, error) {
+	return s.calc, s.err
+}

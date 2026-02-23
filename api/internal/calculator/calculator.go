@@ -50,18 +50,24 @@ type Deleter interface {
 	DeleteCalculator(ctx context.Context, id string) error
 }
 
-// Service handles calculator business logic.
-type Service struct {
-	creator Creator
-	lister  Lister
-	getter  Getter
-	updater Updater
-	deleter Deleter
+// PublicConfigGetter fetches calculator config without ownership checks, for public widget rendering.
+type PublicConfigGetter interface {
+	GetPublicCalculatorConfig(ctx context.Context, id string) (*Calculator, error)
 }
 
-// NewService creates a calculator Service with the given creator, lister, getter, updater, and deleter.
-func NewService(creator Creator, lister Lister, getter Getter, updater Updater, deleter Deleter) *Service {
-	return &Service{creator: creator, lister: lister, getter: getter, updater: updater, deleter: deleter}
+// Service handles calculator business logic.
+type Service struct {
+	creator            Creator
+	lister             Lister
+	getter             Getter
+	updater            Updater
+	deleter            Deleter
+	publicConfigGetter PublicConfigGetter
+}
+
+// NewService creates a calculator Service with the given creator, lister, getter, updater, deleter, and publicConfigGetter.
+func NewService(creator Creator, lister Lister, getter Getter, updater Updater, deleter Deleter, publicConfigGetter PublicConfigGetter) *Service {
+	return &Service{creator: creator, lister: lister, getter: getter, updater: updater, deleter: deleter, publicConfigGetter: publicConfigGetter}
 }
 
 // Create creates a new empty calculator owned by the given user.
@@ -103,6 +109,17 @@ func (s *Service) Update(ctx context.Context, id, userID string, config []byte) 
 	calc, err := s.updater.UpdateCalculator(ctx, id, config)
 	if err != nil {
 		return nil, fmt.Errorf("updating calculator: %w", err)
+	}
+	return calc, nil
+}
+
+// GetPublicConfig returns the calculator config for public widget rendering.
+// No ownership check is performed — any non-deleted calculator is accessible.
+// Returns ErrNotFound if the calculator does not exist or is soft-deleted.
+func (s *Service) GetPublicConfig(ctx context.Context, id string) (*Calculator, error) {
+	calc, err := s.publicConfigGetter.GetPublicCalculatorConfig(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("getting public calculator config: %w", err)
 	}
 	return calc, nil
 }

@@ -75,6 +75,27 @@ func (r *PostgresCalculatorRepository) GetCalculator(ctx context.Context, id, us
 	return &c, nil
 }
 
+// GetPublicCalculatorConfig fetches the calculator by id without an ownership check.
+// Returns ErrNotFound if no matching, non-deleted row exists.
+func (r *PostgresCalculatorRepository) GetPublicCalculatorConfig(ctx context.Context, id string) (*Calculator, error) {
+	const query = `
+		SELECT id, user_id, config, config_version, is_deleted, created_at, updated_at
+		FROM calculators
+		WHERE id = $1 AND is_deleted = FALSE
+	`
+	var c Calculator
+	err := r.db.QueryRowContext(ctx, query, id).Scan(
+		&c.ID, &c.UserID, &c.Config, &c.ConfigVersion, &c.IsDeleted, &c.CreatedAt, &c.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("querying calculator config: %w", err)
+	}
+	return &c, nil
+}
+
 // UpdateCalculator updates the config of the calculator identified by id and increments config_version.
 // Returns ErrNotFound if no matching, non-deleted row exists.
 func (r *PostgresCalculatorRepository) UpdateCalculator(ctx context.Context, id string, config []byte) (*Calculator, error) {

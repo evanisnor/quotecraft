@@ -241,3 +241,44 @@ func (s *Server) MountCalculators(validator TokenValidator, svc CalculatorServic
 	protected.Put("/calculators/{id}", updateCalculatorHandler(svc))
 	protected.Delete("/calculators/{id}", deleteCalculatorHandler(svc))
 }
+
+// CalculatorPublicConfigGetter retrieves calculator config for public widget rendering.
+type CalculatorPublicConfigGetter interface {
+	GetPublicConfig(ctx context.Context, id string) (*calculator.Calculator, error)
+}
+
+// publicConfigResponse is the data payload returned on successful public config fetch.
+type publicConfigResponse struct {
+	ID            string          `json:"id"`
+	Config        json.RawMessage `json:"config"`
+	ConfigVersion int             `json:"config_version"`
+}
+
+// publicConfigHandler returns an http.HandlerFunc for GET /v1/calculators/{id}/config.
+// No authentication is required — this endpoint is public for widget rendering.
+func publicConfigHandler(svc CalculatorPublicConfigGetter) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		calc, err := svc.GetPublicConfig(r.Context(), id)
+		if err != nil {
+			if errors.Is(err, calculator.ErrNotFound) {
+				WriteError(w, http.StatusNotFound, ErrCodeNotFound, "calculator not found")
+				return
+			}
+			LoggerFrom(r.Context()).Error("getting public calculator config", "error", err)
+			WriteError(w, http.StatusInternalServerError, ErrCodeInternal, "internal error")
+			return
+		}
+		w.Header().Set("Cache-Control", "public, max-age=300")
+		WriteJSON(w, http.StatusOK, publicConfigResponse{
+			ID:            calc.ID,
+			Config:        json.RawMessage(calc.Config),
+			ConfigVersion: calc.ConfigVersion,
+		})
+	}
+}
+
+// MountPublicCalculators registers public (no auth) calculator routes on the server's public group.
+func (s *Server) MountPublicCalculators(svc CalculatorPublicConfigGetter) {
+	s.publicGroup.Get("/calculators/{id}/config", publicConfigHandler(svc))
+}

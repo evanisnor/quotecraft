@@ -113,7 +113,7 @@ Last updated: 2026-02-23
 | ✅ | INFR-US5-A004 | Implement update calculator endpoint with config schema validation | 0   | 2026-02-23 |
 | ✅ | INFR-US5-A005 | Implement soft-delete calculator endpoint                          | 0   | 2026-02-23 |
 |        | INFR-US5-A006 | Implement duplicate calculator endpoint                            | 1   |           |
-|        | INFR-US5-A007 | Implement public config endpoint with cache headers                | 0   |           |
+| ✅ | INFR-US5-A007 | Implement public config endpoint with cache headers                | 0   | 2026-02-23 |
 |        | INFR-US5-A008 | Add rate limiting on public config endpoint                        | 1   |           |
 
 ### [INFR-US6: Object Storage & CDN](./PROJECT_PLAN.md#infr-us6-object-storage--cdn-p0) (P0)
