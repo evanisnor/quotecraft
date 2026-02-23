@@ -57,3 +57,7 @@ func (s *stubCalculatorService) List(_ context.Context, _ string) ([]*calculator
 func (s *stubCalculatorService) Get(_ context.Context, _, _ string) (*calculator.Calculator, error) {
 	return s.calc, s.err
 }
+
+func (s *stubCalculatorService) Update(_ context.Context, _, _ string, _ []byte) (*calculator.Calculator, error) {
+	return s.calc, s.err
+}

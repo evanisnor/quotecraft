@@ -40,16 +40,22 @@ type Getter interface {
 	GetCalculator(ctx context.Context, id, userID string) (*Calculator, error)
 }
 
+// Updater updates the config of an existing calculator record.
+type Updater interface {
+	UpdateCalculator(ctx context.Context, id string, config []byte) (*Calculator, error)
+}
+
 // Service handles calculator business logic.
 type Service struct {
 	creator Creator
 	lister  Lister
 	getter  Getter
+	updater Updater
 }
 
-// NewService creates a calculator Service with the given creator, lister, and getter.
-func NewService(creator Creator, lister Lister, getter Getter) *Service {
-	return &Service{creator: creator, lister: lister, getter: getter}
+// NewService creates a calculator Service with the given creator, lister, getter, and updater.
+func NewService(creator Creator, lister Lister, getter Getter, updater Updater) *Service {
+	return &Service{creator: creator, lister: lister, getter: getter, updater: updater}
 }
 
 // Create creates a new empty calculator owned by the given user.
@@ -77,6 +83,20 @@ func (s *Service) Get(ctx context.Context, id, userID string) (*Calculator, erro
 	calc, err := s.getter.GetCalculator(ctx, id, userID)
 	if err != nil {
 		return nil, fmt.Errorf("getting calculator: %w", err)
+	}
+	return calc, nil
+}
+
+// Update verifies ownership of the calculator then applies the new config.
+// Returns ErrNotFound if the calculator does not exist or is soft-deleted.
+// Returns ErrForbidden if the calculator exists but is owned by a different user.
+func (s *Service) Update(ctx context.Context, id, userID string, config []byte) (*Calculator, error) {
+	if _, err := s.getter.GetCalculator(ctx, id, userID); err != nil {
+		return nil, fmt.Errorf("verifying calculator ownership: %w", err)
+	}
+	calc, err := s.updater.UpdateCalculator(ctx, id, config)
+	if err != nil {
+		return nil, fmt.Errorf("updating calculator: %w", err)
 	}
 	return calc, nil
 }

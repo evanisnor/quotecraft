@@ -29,12 +29,18 @@ type CalculatorGetter interface {
 	Get(ctx context.Context, id, userID string) (*calculator.Calculator, error)
 }
 
+// CalculatorUpdater updates the config of an existing calculator.
+type CalculatorUpdater interface {
+	Update(ctx context.Context, id, userID string, config []byte) (*calculator.Calculator, error)
+}
+
 // CalculatorService is the full set of calculator capabilities consumed by the server.
 // Grows as additional INFR-US5 tasks are implemented.
 type CalculatorService interface {
 	CalculatorCreator
 	CalculatorLister
 	CalculatorGetter
+	CalculatorUpdater
 }
 
 // createCalculatorResponse is the data payload returned on successful calculator creation.
@@ -141,10 +147,65 @@ func getCalculatorHandler(svc CalculatorGetter) http.HandlerFunc {
 	}
 }
 
+// updateCalculatorRequest is the request body for PUT /v1/calculators/{id}.
+type updateCalculatorRequest struct {
+	Config json.RawMessage `json:"config"`
+}
+
+// updateCalculatorHandler returns an http.HandlerFunc for PUT /v1/calculators/{id}.
+func updateCalculatorHandler(svc CalculatorUpdater) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, ok := UserIDFromContext(r.Context())
+		if !ok {
+			WriteError(w, http.StatusUnauthorized, ErrCodeUnauthorized, "missing authentication")
+			return
+		}
+
+		var req updateCalculatorRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			WriteError(w, http.StatusBadRequest, ErrCodeBadRequest, "invalid request body")
+			return
+		}
+
+		// Validate: config must be a JSON object (not array, null, or primitive).
+		// json.Unmarshal([]byte("null"), &obj) succeeds with a nil map, so an
+		// explicit nil-check is required in addition to the error check.
+		var obj map[string]json.RawMessage
+		if err := json.Unmarshal(req.Config, &obj); err != nil || obj == nil {
+			WriteError(w, http.StatusBadRequest, ErrCodeBadRequest, "config must be a JSON object")
+			return
+		}
+
+		id := chi.URLParam(r, "id")
+		calc, err := svc.Update(r.Context(), id, userID, req.Config)
+		if err != nil {
+			if errors.Is(err, calculator.ErrNotFound) {
+				WriteError(w, http.StatusNotFound, ErrCodeNotFound, "calculator not found")
+				return
+			}
+			if errors.Is(err, calculator.ErrForbidden) {
+				WriteError(w, http.StatusForbidden, ErrCodeForbidden, "access forbidden")
+				return
+			}
+			LoggerFrom(r.Context()).Error("updating calculator", "error", err)
+			WriteError(w, http.StatusInternalServerError, ErrCodeInternal, "internal error")
+			return
+		}
+		WriteJSON(w, http.StatusOK, calculatorResponse{
+			ID:            calc.ID,
+			Config:        json.RawMessage(calc.Config),
+			ConfigVersion: calc.ConfigVersion,
+			CreatedAt:     calc.CreatedAt,
+			UpdatedAt:     calc.UpdatedAt,
+		})
+	}
+}
+
 // MountCalculators registers calculator routes on the server's private authenticated group.
 func (s *Server) MountCalculators(validator TokenValidator, svc CalculatorService) {
 	protected := s.Authenticated(validator)
 	protected.Post("/calculators", createCalculatorHandler(svc))
 	protected.Get("/calculators", listCalculatorsHandler(svc))
 	protected.Get("/calculators/{id}", getCalculatorHandler(svc))
+	protected.Put("/calculators/{id}", updateCalculatorHandler(svc))
 }
