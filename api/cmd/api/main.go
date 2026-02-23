@@ -41,6 +41,9 @@ func main() {
 	srv.MountAuth(authService)
 	srv.MountCalculators(authService, calcService)
 	srv.MountPublicCalculators(calcService)
+	if cfg.CDN.ServeLocal {
+		srv.MountStaticFiles(cfg.CDN.WidgetDir)
+	}
 
 	addr := fmt.Sprintf(":%d", cfg.API.Port)
 	logger.Info("QuoteCraft API starting", "addr", addr)
