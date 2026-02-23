@@ -10,8 +10,6 @@ QuoteCraft is a free, no-code, embeddable quote/pricing calculator builder (SaaS
 
 ## Project Documents
 
-Read these before starting any work:
-
 - **[PRODUCT_SPEC.md](./PRODUCT_SPEC.md)** — Product vision, user personas, feature descriptions, pricing tiers, competitive analysis
 - **[REQUIREMENTS.md](./REQUIREMENTS.md)** — 144 functional requirements across 17 areas, organized by phase. Each requirement has a unique ID (e.g., `1.3.2`, `3.2.5`). This is the source of truth for what to build.
 - **[SYSTEM_DESIGN.md](./SYSTEM_DESIGN.md)** — Architecture, data model, API design, security model, deployment strategy. Follow the design principles: stability > security > low cost > low maintenance > observability.
