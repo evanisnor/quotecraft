@@ -122,7 +122,7 @@ Last updated: 2026-02-23
 
 | Status | ID            | Task                                                                                                      | P   | Completed |
 | ------ | ------------- | --------------------------------------------------------------------------------------------------------- | --- | --------- |
-|        | INFR-US6-A001 | Define `Storage` interface and implement S3-compatible adapter (works with MinIO and AWS S3)               | 0   |           |
+| ✅ | INFR-US6-A001 | Define `Storage` interface and implement S3-compatible adapter (works with MinIO and AWS S3)               | 0   | 2026-02-23 |
 |        | INFR-US6-A002 | Implement filesystem storage adapter for CI/test environments                                             | 0   |           |
 |        | INFR-US6-A003 | Add MinIO to Docker Compose with health check, persistent volume, and default bucket creation             | 0   |           |
 | ✅ | INFR-US6-A004 | Add `storage` and `cdn` configuration sections to `config.yaml` with local dev defaults                   | 0   | 2026-02-23 |
