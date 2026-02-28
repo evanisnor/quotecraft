@@ -102,7 +102,10 @@ Each completed task gets its own commit. Every commit must include the updated `
    - Wait for the fix to pass on CI using `gh run watch` again. Keep making fix commits and pushing and watching until CI passes before moving on.
 
 ### 6. When a Task is Complete
-- Proactively compact session manually context at this natural boundary between tasks. Completed task details can be safely summarized, freeing context window space for the next task. This prevents auto-compact from firing mid-task when in-flight context is most needed. When manual compacting is complete, echo an acknowledgement that this has been done.
+
+Run `/compact` to summarize the session context before starting the next task. This keeps the context window available for the next task and prevents auto-compact from firing mid-task when in-flight context is most needed.
+
+A hook injects a reminder whenever a task is marked completed — act on it immediately by running `/compact`.
 
 ### 7. When a Story is Complete
 

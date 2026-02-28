@@ -1,4 +1,18 @@
 {
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "TaskUpdate",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/compact-on-task-complete.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  },
   "sandbox": {
     "enabled": false,
     "network": {
