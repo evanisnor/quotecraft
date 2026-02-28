@@ -10,22 +10,36 @@ QuoteCraft is a free, no-code, embeddable quote/pricing calculator builder (SaaS
 
 ## Project Documents
 
-- **[PRODUCT_SPEC.md](./PRODUCT_SPEC.md)** — Product vision, user personas, feature descriptions, pricing tiers, competitive analysis
-- **[REQUIREMENTS.md](./REQUIREMENTS.md)** — 144 functional requirements across 17 areas, organized by phase. Each requirement has a unique ID (e.g., `1.3.2`, `3.2.5`). This is the source of truth for what to build.
-- **[SYSTEM_DESIGN.md](./SYSTEM_DESIGN.md)** — Architecture, data model, API design, security model, deployment strategy. Follow the design principles: stability > security > low cost > low maintenance > observability.
-- **[PROJECT_STATUS.md](./PROJECT_STATUS.md)** — Task-level status tracking. This is the working document you update as you complete work.
+These are large reference documents (338–1,346 lines). Load them surgically — grep for IDs or read specific sections. Never load an entire document to find a single piece of information.
 
-Reference this comprehensive project plan when it is referenced, or when you need more detail about a task:
+- **[PRODUCT_SPEC.md](./PRODUCT_SPEC.md)** — Product vision, user personas, feature descriptions, pricing tiers. Read only when making a product or UX decision that requires business context.
+- **[REQUIREMENTS.md](./REQUIREMENTS.md)** — 144 functional requirements across 17 areas. Grep for specific requirement IDs (e.g. `1.3.2`) or read only the relevant section (e.g. `### 1.3`). This is the source of truth for what to build.
+- **[SYSTEM_DESIGN.md](./SYSTEM_DESIGN.md)** — Architecture, data model, API design, security model, deployment strategy. Read only the section(s) relevant to the current task using the Section Reference below. Follow design principles: stability > security > low cost > low maintenance > observability.
+- **[PROJECT_STATUS.md](./PROJECT_STATUS.md)** — Task-level status tracking. Grep for incomplete tasks rather than reading the whole file. This is the working document you update as you complete work.
+- **[PROJECT_PLAN.md](./PROJECT_PLAN.md)** — Epics, user stories, acceptance criteria, and task breakdowns. Grep for a task ID to locate the relevant story, then read only that section. Organized into 4 phases with priority levels P0–P6.
 
-- **[PROJECT_PLAN.md](./PROJECT_PLAN.md)** — Epics, user stories, acceptance criteria, and task breakdowns. Every user story traces back to specific requirement IDs. Organized into 4 phases with priority levels P0–P6.
+### SYSTEM_DESIGN.md Section Reference
+
+| Working on... | Read section(s) |
+|---|---|
+| Any new feature | Design Principles, System Overview |
+| API endpoints, handlers, middleware | API Server Architecture, Security |
+| Database schema or migrations | Data Model |
+| Widget bundle, loader, or embed | Embeddable Widget Architecture, Content Delivery Architecture |
+| Dashboard React app | Builder Dashboard Architecture |
+| Authentication or authorization | API Server Architecture, Security |
+| Email or notifications | Email and Notification System |
+| Billing or subscriptions | Billing Integration |
+| Logging or metrics | Observability |
+| Deployment or infrastructure | Deployment and Release Strategy |
 
 ## Workflow: Picking and Completing Tasks
 
 ### 1. Choose the Next Task
 
-Open `PROJECT_STATUS.md` and find the next incomplete task. Work in order:
+Grep `PROJECT_STATUS.md` for the next incomplete task — search for rows without a `✅` status marker (`^| [^✅]`). Work in order:
 
-- **Resume**: If there are uncommitted changes, or if a task is marked as 'In Progress', finish the current task before proceeding.
+- **Resume**: If there are uncommitted changes, or if a task is marked as 'In Progress', grep for 'In Progress' and read only that story's section to resume.
 - **Priority first**: P0 before P1, P1 before P2, etc.
 - **Dependencies matter**: Check `PROJECT_PLAN.md` for dependency notes. Don't start a story if its dependencies aren't complete.
 - **Within a priority level**: Work top-to-bottom (task order within a story, story order within an epic).
@@ -33,9 +47,9 @@ Open `PROJECT_STATUS.md` and find the next incomplete task. Work in order:
 
 ### 2. Before Writing Code
 
-- Read the user story and acceptance criteria in `PROJECT_PLAN.md`.
-- Read the linked requirements in `REQUIREMENTS.md` to understand what's expected.
-- Read relevant sections of `SYSTEM_DESIGN.md` for architectural guidance.
+- Grep `PROJECT_PLAN.md` for the task ID to locate the user story. Read only that section for the acceptance criteria and task list.
+- Grep `REQUIREMENTS.md` for each requirement ID listed in the story. Read only those rows or the surrounding section.
+- Read only the `SYSTEM_DESIGN.md` section(s) that apply to the current work (see Section Reference above).
 - Understand existing code before modifying it.
 
 ### 3. Implement the Task
