@@ -23,6 +23,20 @@ describe('authReducer', () => {
 
       expect(result).toEqual({ status: 'unauthenticated' });
     });
+
+    it('transitions to authenticated from unauthenticated state when token is provided', () => {
+      const state: AuthState = { status: 'unauthenticated' };
+      const result = authReducer(state, { type: 'auth_initialized', token: 'abc123' });
+
+      expect(result).toEqual({ status: 'authenticated', token: 'abc123' });
+    });
+
+    it('transitions to unauthenticated from authenticated state when no token is provided', () => {
+      const state: AuthState = { status: 'authenticated', token: 'old-token' };
+      const result = authReducer(state, { type: 'auth_initialized' });
+
+      expect(result).toEqual({ status: 'unauthenticated' });
+    });
   });
 
   describe('login_succeeded', () => {
