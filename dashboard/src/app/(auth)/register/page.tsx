@@ -1,7 +1,6 @@
-export default function RegisterPage() {
-  return (
-    <main>
-      <h1>Register</h1>
-    </main>
-  );
+import { RegisterPage } from '@/pages/register';
+import { API_BASE_URL } from '@/shared/config/apiConfig';
+
+export default function Page() {
+  return <RegisterPage apiBaseUrl={API_BASE_URL} />;
 }

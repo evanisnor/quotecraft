@@ -1,7 +1,6 @@
-export default function LoginPage() {
-  return (
-    <main>
-      <h1>Login</h1>
-    </main>
-  );
+import { LoginPage } from '@/pages/login';
+import { API_BASE_URL } from '@/shared/config/apiConfig';
+
+export default function Page() {
+  return <LoginPage apiBaseUrl={API_BASE_URL} />;
 }
