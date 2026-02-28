@@ -5,7 +5,7 @@
 
 .DEFAULT_GOAL := help
 
-.PHONY: help bootstrap dev \
+.PHONY: help bootstrap dev widget-build \
         services-up services-down services-status services-logs \
         db-migrate db-seed db-reset
 
@@ -24,9 +24,13 @@ bootstrap:
 dev:
 	@bash scripts/dev.sh
 
+## widget-build: Build the widget bundle (outputs content-hashed file to widget/dist/)
+widget-build:
+	$(MAKE) -C widget build
+
 # ── Local Services ────────────────────────────────────────────────────────────
 
-## services-up: Start local Docker Compose services (PostgreSQL)
+## services-up: Start local Docker Compose services (PostgreSQL, MinIO)
 services-up:
 	docker compose up -d
 
