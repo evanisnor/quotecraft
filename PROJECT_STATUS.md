@@ -2,7 +2,7 @@
 
 Cross-reference: [PROJECT_PLAN.md](./PROJECT_PLAN.md) · [REQUIREMENTS.md](./REQUIREMENTS.md)
 
-Last updated: 2026-02-23
+Last updated: 2026-02-28
 
 ---
 
@@ -143,7 +143,7 @@ Last updated: 2026-02-23
 
 | Status | ID            | Task                                                             | P   | Completed |
 | ------ | ------------- | ---------------------------------------------------------------- | --- | --------- |
-|        | BLDR-US1-A001 | Set up React app with routing and auth state management          | 0   |           |
+| ✅ | BLDR-US1-A001 | Set up React app with routing and auth state management          | 0   | 2026-02-28 |
 |        | BLDR-US1-A002 | Build login and registration screens                             | 0   |           |
 |        | BLDR-US1-A003 | Build calculator list view with create, open, and delete actions | 0   |           |
 |        | BLDR-US1-A004 | Implement API client module for authenticated requests           | 0   |           |

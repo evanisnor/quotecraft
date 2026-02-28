@@ -2,19 +2,30 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import type { ReactNode } from 'react';
 import { useAuthState } from '@/entities/user';
 
-export default function RootPage() {
+interface DashboardLayoutProps {
+  children: ReactNode;
+}
+
+export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const authState = useAuthState();
   const router = useRouter();
 
   useEffect(() => {
     if (authState.status === 'unauthenticated') {
       router.replace('/login');
-    } else if (authState.status === 'authenticated') {
-      router.replace('/dashboard');
     }
   }, [authState.status, router]);
 
-  return null;
+  if (authState.status === 'loading') {
+    return null;
+  }
+
+  if (authState.status === 'unauthenticated') {
+    return null;
+  }
+
+  return <>{children}</>;
 }
