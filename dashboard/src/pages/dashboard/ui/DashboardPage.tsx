@@ -97,7 +97,6 @@ export function DashboardPage({ apiBaseUrl, token, fetcher }: DashboardPageProps
               />
               {deleteHook.confirmingId === calculator.id && (
                 <DeleteConfirmDialog
-                  calculatorId={calculator.id}
                   onConfirm={deleteHook.confirmDelete}
                   onCancel={deleteHook.cancelDelete}
                 />

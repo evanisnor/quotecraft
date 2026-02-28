@@ -14,12 +14,14 @@ const TOKEN = 'test-token';
 
 const CALC_1 = {
   id: 'aaaaaaaa-0000-0000-0000-000000000001',
+  name: 'Calculator Alpha',
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-02T00:00:00Z',
 };
 
 const CALC_2 = {
   id: 'bbbbbbbb-0000-0000-0000-000000000002',
+  name: 'Calculator Beta',
   created_at: '2024-02-01T00:00:00Z',
   updated_at: '2024-02-02T00:00:00Z',
 };
@@ -53,10 +55,10 @@ describe('DashboardPage', () => {
     render(<DashboardPage apiBaseUrl={API_BASE_URL} token={TOKEN} fetcher={stub.fetch} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Calculator aaaaaaaa')).toBeInTheDocument();
+      expect(screen.getByText('Calculator Alpha')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Calculator bbbbbbbb')).toBeInTheDocument();
+    expect(screen.getByText('Calculator Beta')).toBeInTheDocument();
   });
 
   it('shows empty state when no calculators exist', async () => {
@@ -105,7 +107,7 @@ describe('DashboardPage', () => {
     render(<DashboardPage apiBaseUrl={API_BASE_URL} token={TOKEN} fetcher={stub.fetch} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Calculator aaaaaaaa')).toBeInTheDocument();
+      expect(screen.getByText('Calculator Alpha')).toBeInTheDocument();
     });
 
     await user.click(screen.getByRole('button', { name: /open/i }));
@@ -120,7 +122,7 @@ describe('DashboardPage', () => {
     render(<DashboardPage apiBaseUrl={API_BASE_URL} token={TOKEN} fetcher={stub.fetch} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Calculator aaaaaaaa')).toBeInTheDocument();
+      expect(screen.getByText('Calculator Alpha')).toBeInTheDocument();
     });
 
     await user.click(screen.getByRole('button', { name: /delete/i }));
@@ -137,11 +139,11 @@ describe('DashboardPage', () => {
     render(<DashboardPage apiBaseUrl={API_BASE_URL} token={TOKEN} fetcher={stub.fetch} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Calculator aaaaaaaa')).toBeInTheDocument();
+      expect(screen.getByText('Calculator Alpha')).toBeInTheDocument();
     });
 
     // Click Delete on the first calculator card
-    const firstCard = screen.getByRole('article', { name: /calculator aaaaaaaa/i });
+    const firstCard = screen.getByRole('article', { name: /calculator alpha/i });
     await user.click(within(firstCard).getByRole('button', { name: /^delete$/i }));
 
     // Confirmation dialog appears — click "Delete" within the dialog
@@ -149,10 +151,32 @@ describe('DashboardPage', () => {
     await user.click(within(dialog).getByRole('button', { name: /^delete$/i }));
 
     await waitFor(() => {
-      expect(screen.queryByText('Calculator aaaaaaaa')).not.toBeInTheDocument();
+      expect(screen.queryByText('Calculator Alpha')).not.toBeInTheDocument();
     });
 
     // The second calculator should still be visible
-    expect(screen.getByText('Calculator bbbbbbbb')).toBeInTheDocument();
+    expect(screen.getByText('Calculator Beta')).toBeInTheDocument();
+  });
+
+  it('dismisses the confirmation dialog and keeps the calculator when Cancel is clicked', async () => {
+    const stub = stubFetchWith([listSuccessResponse([CALC_1])]);
+    const user = userEvent.setup();
+
+    render(<DashboardPage apiBaseUrl={API_BASE_URL} token={TOKEN} fetcher={stub.fetch} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Calculator Alpha')).toBeInTheDocument();
+    });
+
+    // Open the confirmation dialog
+    await user.click(screen.getByRole('button', { name: /^delete$/i }));
+    expect(screen.getByRole('dialog', { name: /confirm deletion/i })).toBeInTheDocument();
+
+    // Click Cancel — dialog should disappear, calculator should remain
+    const dialog = screen.getByRole('dialog', { name: /confirm deletion/i });
+    await user.click(within(dialog).getByRole('button', { name: /cancel/i }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByText('Calculator Alpha')).toBeInTheDocument();
   });
 });

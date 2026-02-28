@@ -18,6 +18,7 @@ var ErrForbidden = errors.New("access forbidden")
 type Calculator struct {
 	ID            string
 	UserID        string
+	Name          string
 	Config        []byte // raw JSONB stored as []byte
 	ConfigVersion int
 	IsDeleted     bool

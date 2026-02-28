@@ -51,6 +51,7 @@ type CalculatorService interface {
 // createCalculatorResponse is the data payload returned on successful calculator creation.
 type createCalculatorResponse struct {
 	ID        string    `json:"id"`
+	Name      string    `json:"name"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -58,6 +59,7 @@ type createCalculatorResponse struct {
 // calculatorSummary is the per-item shape in a list response.
 type calculatorSummary struct {
 	ID        string    `json:"id"`
+	Name      string    `json:"name"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -78,6 +80,7 @@ func createCalculatorHandler(svc CalculatorCreator) http.HandlerFunc {
 		}
 		WriteJSON(w, http.StatusCreated, createCalculatorResponse{
 			ID:        calc.ID,
+			Name:      calc.Name,
 			CreatedAt: calc.CreatedAt,
 			UpdatedAt: calc.UpdatedAt,
 		})
@@ -102,6 +105,7 @@ func listCalculatorsHandler(svc CalculatorLister) http.HandlerFunc {
 		for i, c := range calcs {
 			summaries[i] = calculatorSummary{
 				ID:        c.ID,
+				Name:      c.Name,
 				CreatedAt: c.CreatedAt,
 				UpdatedAt: c.UpdatedAt,
 			}

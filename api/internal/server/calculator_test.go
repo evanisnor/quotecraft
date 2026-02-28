@@ -20,6 +20,7 @@ func TestCreateCalculatorHandler_Success(t *testing.T) {
 	calc := &calculator.Calculator{
 		ID:        "calc-abc123",
 		UserID:    "user-xyz",
+		Name:      "My Calculator",
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
@@ -46,6 +47,10 @@ func TestCreateCalculatorHandler_Success(t *testing.T) {
 	id, ok := env.Data["id"].(string)
 	if !ok || id != "calc-abc123" {
 		t.Errorf("expected id %q, got %v", "calc-abc123", env.Data["id"])
+	}
+	name, ok := env.Data["name"].(string)
+	if !ok || name != "My Calculator" {
+		t.Errorf("expected name %q, got %v", "My Calculator", env.Data["name"])
 	}
 }
 
@@ -91,8 +96,8 @@ func TestCreateCalculatorHandler_InternalError(t *testing.T) {
 func TestListCalculatorsHandler_Success(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 	calcs := []*calculator.Calculator{
-		{ID: "calc-1", UserID: "user-xyz", CreatedAt: now, UpdatedAt: now},
-		{ID: "calc-2", UserID: "user-xyz", CreatedAt: now, UpdatedAt: now},
+		{ID: "calc-1", UserID: "user-xyz", Name: "First", CreatedAt: now, UpdatedAt: now},
+		{ID: "calc-2", UserID: "user-xyz", Name: "Second", CreatedAt: now, UpdatedAt: now},
 	}
 	svc := &stubCalculatorService{calcs: calcs}
 	h := listCalculatorsHandler(svc)
@@ -119,6 +124,10 @@ func TestListCalculatorsHandler_Success(t *testing.T) {
 	id, ok := env.Data[0]["id"].(string)
 	if !ok || id != "calc-1" {
 		t.Errorf("expected first id %q, got %v", "calc-1", env.Data[0]["id"])
+	}
+	name, ok := env.Data[0]["name"].(string)
+	if !ok || name != "First" {
+		t.Errorf("expected first name %q, got %v", "First", env.Data[0]["name"])
 	}
 }
 

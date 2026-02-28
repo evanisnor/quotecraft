@@ -1,18 +1,28 @@
 'use client';
 
+import { useEffect } from 'react';
+
 interface DeleteConfirmDialogProps {
-  calculatorId: string;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-export function DeleteConfirmDialog({
-  calculatorId: _calculatorId,
-  onConfirm,
-  onCancel,
-}: DeleteConfirmDialogProps) {
+export function DeleteConfirmDialog({ onConfirm, onCancel }: DeleteConfirmDialogProps) {
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        onCancel();
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onCancel]);
+
   return (
-    <div role="dialog" aria-label="Confirm deletion">
+    <div role="dialog" aria-label="Confirm deletion" aria-modal="true">
       <p>Delete this calculator? This cannot be undone.</p>
       <button type="button" onClick={onConfirm}>
         Delete

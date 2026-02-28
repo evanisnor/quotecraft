@@ -1,0 +1,1 @@
+ALTER TABLE calculators ADD COLUMN name TEXT NOT NULL DEFAULT '';

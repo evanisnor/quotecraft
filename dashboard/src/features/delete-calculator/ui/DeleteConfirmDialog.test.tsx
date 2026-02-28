@@ -4,9 +4,7 @@ import { DeleteConfirmDialog } from './DeleteConfirmDialog';
 
 describe('DeleteConfirmDialog', () => {
   it('renders the confirmation message', () => {
-    render(
-      <DeleteConfirmDialog calculatorId="calc-abc" onConfirm={jest.fn()} onCancel={jest.fn()} />,
-    );
+    render(<DeleteConfirmDialog onConfirm={jest.fn()} onCancel={jest.fn()} />);
 
     expect(screen.getByText('Delete this calculator? This cannot be undone.')).toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: /confirm deletion/i })).toBeInTheDocument();
@@ -16,9 +14,7 @@ describe('DeleteConfirmDialog', () => {
     const onConfirm = jest.fn();
     const user = userEvent.setup();
 
-    render(
-      <DeleteConfirmDialog calculatorId="calc-abc" onConfirm={onConfirm} onCancel={jest.fn()} />,
-    );
+    render(<DeleteConfirmDialog onConfirm={onConfirm} onCancel={jest.fn()} />);
 
     await user.click(screen.getByRole('button', { name: /^delete$/i }));
 
@@ -29,12 +25,30 @@ describe('DeleteConfirmDialog', () => {
     const onCancel = jest.fn();
     const user = userEvent.setup();
 
-    render(
-      <DeleteConfirmDialog calculatorId="calc-abc" onConfirm={jest.fn()} onCancel={onCancel} />,
-    );
+    render(<DeleteConfirmDialog onConfirm={jest.fn()} onCancel={onCancel} />);
 
     await user.click(screen.getByRole('button', { name: /cancel/i }));
 
     expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onCancel when Escape is pressed', async () => {
+    const onCancel = jest.fn();
+    const user = userEvent.setup();
+
+    render(<DeleteConfirmDialog onConfirm={jest.fn()} onCancel={onCancel} />);
+
+    await user.keyboard('{Escape}');
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('has aria-modal set to true', () => {
+    render(<DeleteConfirmDialog onConfirm={jest.fn()} onCancel={jest.fn()} />);
+
+    expect(screen.getByRole('dialog', { name: /confirm deletion/i })).toHaveAttribute(
+      'aria-modal',
+      'true',
+    );
   });
 });

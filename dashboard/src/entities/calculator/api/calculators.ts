@@ -8,6 +8,7 @@ interface ApiEnvelope<T> {
 
 interface CalculatorData {
   id: string;
+  name: string;
   created_at: string;
   updated_at: string;
 }
@@ -15,6 +16,7 @@ interface CalculatorData {
 function parseCalculatorSummary(data: CalculatorData): CalculatorSummary {
   return {
     id: data.id,
+    name: data.name,
     createdAt: new Date(data.created_at),
     updatedAt: new Date(data.updated_at),
   };

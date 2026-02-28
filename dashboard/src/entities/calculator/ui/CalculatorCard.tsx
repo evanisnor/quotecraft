@@ -10,8 +10,11 @@ export function CalculatorCard({ calculator, onOpen, onDelete }: CalculatorCardP
   const shortId = calculator.id.slice(0, 8);
 
   return (
-    <article aria-label={`Calculator ${shortId}`}>
-      <h2>Calculator {shortId}</h2>
+    <article aria-label={calculator.name}>
+      <h2>{calculator.name}</h2>
+      <p>
+        <small>{shortId}</small>
+      </p>
       <p>Last modified: {calculator.updatedAt.toLocaleDateString()}</p>
       <button type="button" onClick={() => onOpen(calculator.id)}>
         Open

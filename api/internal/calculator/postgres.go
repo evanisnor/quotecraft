@@ -20,7 +20,7 @@ func NewPostgresCalculatorRepository(db *sql.DB) *PostgresCalculatorRepository {
 // ListCalculators returns all non-deleted calculators owned by userID, ordered by updated_at DESC.
 func (r *PostgresCalculatorRepository) ListCalculators(ctx context.Context, userID string) ([]*Calculator, error) {
 	const query = `
-		SELECT id, user_id, config, config_version, is_deleted, created_at, updated_at
+		SELECT id, user_id, name, config, config_version, is_deleted, created_at, updated_at
 		FROM calculators
 		WHERE user_id = $1 AND is_deleted = FALSE
 		ORDER BY updated_at DESC
@@ -34,7 +34,7 @@ func (r *PostgresCalculatorRepository) ListCalculators(ctx context.Context, user
 	calcs := make([]*Calculator, 0)
 	for rows.Next() {
 		var c Calculator
-		if err := rows.Scan(&c.ID, &c.UserID, &c.Config, &c.ConfigVersion, &c.IsDeleted, &c.CreatedAt, &c.UpdatedAt); err != nil {
+		if err := rows.Scan(&c.ID, &c.UserID, &c.Name, &c.Config, &c.ConfigVersion, &c.IsDeleted, &c.CreatedAt, &c.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scanning calculator: %w", err)
 		}
 		calcs = append(calcs, &c)
@@ -55,13 +55,13 @@ func (r *PostgresCalculatorRepository) ListCalculators(ctx context.Context, user
 // the row is fetched.
 func (r *PostgresCalculatorRepository) GetCalculator(ctx context.Context, id, userID string) (*Calculator, error) {
 	const query = `
-		SELECT id, user_id, config, config_version, is_deleted, created_at, updated_at
+		SELECT id, user_id, name, config, config_version, is_deleted, created_at, updated_at
 		FROM calculators
 		WHERE id = $1 AND is_deleted = FALSE
 	`
 	var c Calculator
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&c.ID, &c.UserID, &c.Config, &c.ConfigVersion, &c.IsDeleted, &c.CreatedAt, &c.UpdatedAt,
+		&c.ID, &c.UserID, &c.Name, &c.Config, &c.ConfigVersion, &c.IsDeleted, &c.CreatedAt, &c.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -79,13 +79,13 @@ func (r *PostgresCalculatorRepository) GetCalculator(ctx context.Context, id, us
 // Returns ErrNotFound if no matching, non-deleted row exists.
 func (r *PostgresCalculatorRepository) GetPublicCalculatorConfig(ctx context.Context, id string) (*Calculator, error) {
 	const query = `
-		SELECT id, user_id, config, config_version, is_deleted, created_at, updated_at
+		SELECT id, user_id, name, config, config_version, is_deleted, created_at, updated_at
 		FROM calculators
 		WHERE id = $1 AND is_deleted = FALSE
 	`
 	var c Calculator
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&c.ID, &c.UserID, &c.Config, &c.ConfigVersion, &c.IsDeleted, &c.CreatedAt, &c.UpdatedAt,
+		&c.ID, &c.UserID, &c.Name, &c.Config, &c.ConfigVersion, &c.IsDeleted, &c.CreatedAt, &c.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -103,11 +103,11 @@ func (r *PostgresCalculatorRepository) UpdateCalculator(ctx context.Context, id 
 		UPDATE calculators
 		SET config = $2, config_version = config_version + 1
 		WHERE id = $1 AND is_deleted = FALSE
-		RETURNING id, user_id, config, config_version, is_deleted, created_at, updated_at
+		RETURNING id, user_id, name, config, config_version, is_deleted, created_at, updated_at
 	`
 	var c Calculator
 	err := r.db.QueryRowContext(ctx, query, id, config).Scan(
-		&c.ID, &c.UserID, &c.Config, &c.ConfigVersion, &c.IsDeleted, &c.CreatedAt, &c.UpdatedAt,
+		&c.ID, &c.UserID, &c.Name, &c.Config, &c.ConfigVersion, &c.IsDeleted, &c.CreatedAt, &c.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -137,17 +137,18 @@ func (r *PostgresCalculatorRepository) DeleteCalculator(ctx context.Context, id 
 }
 
 // CreateCalculator inserts a new calculator row and returns the created Calculator.
-// The config defaults to '{}' and config_version to 1 per the table definition.
+// The name defaults to ”, config defaults to '{}', and config_version to 1 per the table definition.
 func (r *PostgresCalculatorRepository) CreateCalculator(ctx context.Context, userID string) (*Calculator, error) {
 	const query = `
 		INSERT INTO calculators (user_id)
 		VALUES ($1)
-		RETURNING id, user_id, config, config_version, is_deleted, created_at, updated_at
+		RETURNING id, user_id, name, config, config_version, is_deleted, created_at, updated_at
 	`
 	var c Calculator
 	err := r.db.QueryRowContext(ctx, query, userID).Scan(
 		&c.ID,
 		&c.UserID,
+		&c.Name,
 		&c.Config,
 		&c.ConfigVersion,
 		&c.IsDeleted,

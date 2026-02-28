@@ -9,7 +9,7 @@ import (
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
 )
 
-var listColumns = []string{"id", "user_id", "config", "config_version", "is_deleted", "created_at", "updated_at"}
+var listColumns = []string{"id", "user_id", "name", "config", "config_version", "is_deleted", "created_at", "updated_at"}
 
 func TestListCalculators_Empty(t *testing.T) {
 	db, mock, err := sqlmock.New()
@@ -50,8 +50,8 @@ func TestListCalculators_Multiple(t *testing.T) {
 
 	now := time.Now().UTC().Truncate(time.Second)
 	rows := sqlmock.NewRows(listColumns).
-		AddRow("calc-1", "user-id", []byte(`{}`), 1, false, now, now).
-		AddRow("calc-2", "user-id", []byte(`{}`), 2, false, now, now)
+		AddRow("calc-1", "user-id", "", []byte(`{}`), 1, false, now, now).
+		AddRow("calc-2", "user-id", "", []byte(`{}`), 2, false, now, now)
 	mock.ExpectQuery(`SELECT id, user_id`).
 		WithArgs("user-id").
 		WillReturnRows(rows)
@@ -148,7 +148,7 @@ func TestListCalculators_RowsError(t *testing.T) {
 	wantErr := errors.New("rows iteration failure")
 	now := time.Now().UTC().Truncate(time.Second)
 	rows := sqlmock.NewRows(listColumns).
-		AddRow("calc-1", "user-id", []byte(`{}`), 1, false, now, now).
+		AddRow("calc-1", "user-id", "", []byte(`{}`), 1, false, now, now).
 		RowError(0, wantErr)
 	mock.ExpectQuery(`SELECT id, user_id`).
 		WithArgs("user-id").
@@ -179,8 +179,8 @@ func TestCreateCalculator_Success(t *testing.T) {
 
 	now := time.Now().UTC().Truncate(time.Second)
 	rows := sqlmock.NewRows([]string{
-		"id", "user_id", "config", "config_version", "is_deleted", "created_at", "updated_at",
-	}).AddRow("calc-id", "user-id", []byte("{}"), 1, false, now, now)
+		"id", "user_id", "name", "config", "config_version", "is_deleted", "created_at", "updated_at",
+	}).AddRow("calc-id", "user-id", "", []byte("{}"), 1, false, now, now)
 	mock.ExpectQuery(`INSERT INTO calculators`).
 		WithArgs("user-id").
 		WillReturnRows(rows)
@@ -244,7 +244,7 @@ func TestGetCalculator_Success(t *testing.T) {
 
 	now := time.Now().UTC().Truncate(time.Second)
 	rows := sqlmock.NewRows(listColumns).
-		AddRow("calc-id", "user-id", []byte(`{"field":"value"}`), 1, false, now, now)
+		AddRow("calc-id", "user-id", "", []byte(`{"field":"value"}`), 1, false, now, now)
 	mock.ExpectQuery(`SELECT id, user_id`).
 		WithArgs("calc-id").
 		WillReturnRows(rows)
@@ -306,7 +306,7 @@ func TestGetCalculator_Forbidden(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 	// Row belongs to "other-user", not "user-id"
 	rows := sqlmock.NewRows(listColumns).
-		AddRow("calc-id", "other-user", []byte(`{}`), 1, false, now, now)
+		AddRow("calc-id", "other-user", "", []byte(`{}`), 1, false, now, now)
 	mock.ExpectQuery(`SELECT id, user_id`).
 		WithArgs("calc-id").
 		WillReturnRows(rows)
@@ -365,7 +365,7 @@ func TestUpdateCalculator_Success(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 	newConfig := []byte(`{"key":"value"}`)
 	rows := sqlmock.NewRows(listColumns).
-		AddRow("calc-id", "user-id", newConfig, 2, false, now, now)
+		AddRow("calc-id", "user-id", "", newConfig, 2, false, now, now)
 	mock.ExpectQuery(`UPDATE calculators`).
 		WithArgs("calc-id", newConfig).
 		WillReturnRows(rows)
@@ -535,7 +535,7 @@ func TestGetPublicCalculatorConfig_Success(t *testing.T) {
 
 	now := time.Now().UTC().Truncate(time.Second)
 	rows := sqlmock.NewRows(listColumns).
-		AddRow("calc-id", "user-id", []byte(`{"field":"value"}`), 1, false, now, now)
+		AddRow("calc-id", "user-id", "", []byte(`{"field":"value"}`), 1, false, now, now)
 	mock.ExpectQuery(`SELECT id, user_id`).
 		WithArgs("calc-id").
 		WillReturnRows(rows)

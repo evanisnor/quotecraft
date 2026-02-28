@@ -5,16 +5,18 @@ import { CalculatorCard } from './CalculatorCard';
 
 const mockCalculator: CalculatorSummary = {
   id: 'abcdef12-1234-5678-abcd-ef1234567890',
+  name: 'My Calculator',
   createdAt: new Date('2024-01-01T00:00:00Z'),
   updatedAt: new Date('2024-06-15T00:00:00Z'),
 };
 
 describe('CalculatorCard', () => {
-  it('renders the calculator identifier and last modified date', () => {
+  it('renders the calculator name, short id, and last modified date', () => {
     render(<CalculatorCard calculator={mockCalculator} onOpen={jest.fn()} onDelete={jest.fn()} />);
 
+    expect(screen.getByRole('heading', { name: 'My Calculator' })).toBeInTheDocument();
     // shortId is first 8 chars: 'abcdef12'
-    expect(screen.getByText('Calculator abcdef12')).toBeInTheDocument();
+    expect(screen.getByText('abcdef12')).toBeInTheDocument();
     expect(
       screen.getByText(`Last modified: ${mockCalculator.updatedAt.toLocaleDateString()}`),
     ).toBeInTheDocument();
