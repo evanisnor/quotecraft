@@ -116,7 +116,7 @@ Last updated: 2026-02-23
 | ✅ | INFR-US5-A007 | Implement public config endpoint with cache headers                | 0   | 2026-02-23 |
 |        | INFR-US5-A008 | Add rate limiting on public config endpoint                        | 1   |           |
 
-### [INFR-US6: Object Storage & CDN](./PROJECT_PLAN.md#infr-us6-object-storage--cdn-p0) (P0)
+### ✅ [INFR-US6: Object Storage & CDN](./PROJECT_PLAN.md#infr-us6-object-storage--cdn-p0) (P0)
 
 **Requirements:** [1.8.5](./REQUIREMENTS.md#18-embeddable-widget), [1.3.7](./REQUIREMENTS.md#13-visual-builder--field-types)
 
