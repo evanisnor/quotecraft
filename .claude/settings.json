@@ -34,7 +34,8 @@
     "deny": [
       "Read(~/.ssh/**)",
       "Read(~/.aws/**)",
-      "Read(~/.config/gcloud/**)"
+      "Read(~/.config/gcloud/**)",
+      "Read(./.env.*)"
     ]
   }
 }
