@@ -57,6 +57,16 @@ func New(cfg *config.APIConfig, logger *slog.Logger, pinger Pinger) *Server {
 	// Mount the /v1 prefix with two sub-groups differentiated by CORS policy.
 	// References to the group routers are stored on the Server so that future
 	// tasks and tests can register routes in the correct CORS group.
+	//
+	// OPTIONS preflight routing: chi evaluates route method-matching before
+	// group middleware runs, so a plain OPTIONS request hits 405 before CORS
+	// middleware has a chance to respond. A single Options("/*") is registered
+	// at the /v1 level and dispatches through both CORS policies in order:
+	// private first (reflected origin when the request comes from an allowed
+	// dashboard origin), then public (wildcard fallback for all other origins).
+	// This ensures dashboard preflights get AllowCredentials: true responses
+	// and widget preflights get the wildcard response, using only path-level
+	// information available at preflight time.
 	var pubGroup, privGroup chi.Router
 	r.Route("/v1", func(r chi.Router) {
 		// Public sub-group: widget-accessible endpoints.
@@ -75,6 +85,26 @@ func New(cfg *config.APIConfig, logger *slog.Logger, pinger Pinger) *Server {
 		r.Group(func(r chi.Router) {
 			r.Use(privateCORS(cfg.DashboardOrigins))
 			privGroup = r
+		})
+
+		// Wildcard OPTIONS handler at the /v1 level gives chi a matching route
+		// for all OPTIONS requests so they are not rejected with 405 before any
+		// middleware runs. The handler applies privateCORS first (for dashboard
+		// origins that need AllowCredentials: true) and falls back to publicCORS
+		// (wildcard, for widget origins). go-chi/cors short-circuits preflights
+		// and writes the response headers itself; the empty inner body is never
+		// reached.
+		privatePreflightHandler := privateCORS(cfg.DashboardOrigins)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+		publicPreflightHandler := publicCORS()(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+		r.Options("/*", func(w http.ResponseWriter, r *http.Request) {
+			origin := r.Header.Get("Origin")
+			for _, allowed := range cfg.DashboardOrigins {
+				if origin == allowed {
+					privatePreflightHandler.ServeHTTP(w, r)
+					return
+				}
+			}
+			publicPreflightHandler.ServeHTTP(w, r)
 		})
 	})
 

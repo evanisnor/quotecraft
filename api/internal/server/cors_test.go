@@ -268,6 +268,55 @@ func TestServer_PrivateGroupCORSWiring_AllowedOrigin(t *testing.T) {
 	}
 }
 
+// TestServer_PublicGroupOptionsPreflightSucceeds verifies that an OPTIONS
+// preflight request to a route in the public group returns 200 with a wildcard
+// Access-Control-Allow-Origin header. This exercises the full chi routing stack
+// and confirms that OPTIONS is not rejected with 405 before CORS middleware runs.
+func TestServer_PublicGroupOptionsPreflightSucceeds(t *testing.T) {
+	s := testServer(t)
+	s.publicGroup.Get("/probe", dummyHandler)
+
+	req := httptest.NewRequest(http.MethodOptions, "/v1/probe", nil)
+	req.Header.Set("Origin", "https://any-site.example")
+	req.Header.Set("Access-Control-Request-Method", http.MethodGet)
+	req.Header.Set("Access-Control-Request-Headers", "Content-Type")
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200 for public group OPTIONS preflight, got %d", rec.Code)
+	}
+
+	origin := rec.Header().Get("Access-Control-Allow-Origin")
+	if origin != "*" {
+		t.Errorf("expected Access-Control-Allow-Origin: * on public preflight, got %q", origin)
+	}
+}
+
+// TestServer_PrivateGroupOptionsPreflightSucceeds verifies that an OPTIONS
+// preflight request to a route in the private group from an allowed origin
+// returns 200 with the reflected Access-Control-Allow-Origin header.
+func TestServer_PrivateGroupOptionsPreflightSucceeds(t *testing.T) {
+	s := testServer(t)
+	s.privateGroup.Get("/probe", dummyHandler)
+
+	req := httptest.NewRequest(http.MethodOptions, "/v1/probe", nil)
+	req.Header.Set("Origin", "http://localhost:3000") // matches config default
+	req.Header.Set("Access-Control-Request-Method", http.MethodPost)
+	req.Header.Set("Access-Control-Request-Headers", "Content-Type, Authorization")
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200 for private group OPTIONS preflight, got %d", rec.Code)
+	}
+
+	origin := rec.Header().Get("Access-Control-Allow-Origin")
+	if origin != "http://localhost:3000" {
+		t.Errorf("expected Access-Control-Allow-Origin: http://localhost:3000 on private preflight, got %q", origin)
+	}
+}
+
 // TestServer_PrivateGroupCORSWiring_DisallowedOrigin verifies that a request
 // from an origin not in DashboardOrigins receives no CORS header from the
 // private group.
