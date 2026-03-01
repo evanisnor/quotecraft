@@ -128,9 +128,9 @@ Each completed task gets its own commit. Every commit must include the updated `
 
 ### 7. When a Task is Complete
 
-Run `/compact` to summarize the session context before starting the next task. This keeps the context window available for the next task and prevents auto-compact from firing mid-task when in-flight context is most needed.
+Exit your current turn. A hook detects the completed todo and signals autoclaude to start a **new session** (not resume) so the next task begins with a full, clean context window.
 
-A hook injects a reminder whenever a task is marked completed — act on it immediately by running `/compact`.
+Do not run `/compact`. Do not continue to the next task in the same turn. Just stop — autoclaude handles the restart.
 
 ### 8. When a Story is Complete
 

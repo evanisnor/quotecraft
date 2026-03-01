@@ -3,7 +3,7 @@
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "TaskUpdate",
+        "matcher": "TodoWrite",
         "hooks": [
           {
             "type": "command",
