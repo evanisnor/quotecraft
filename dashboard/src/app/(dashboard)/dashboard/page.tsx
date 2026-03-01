@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useAuthState } from '@/entities/user';
-import { DashboardPage } from '@/pages/dashboard';
+import { DashboardPage } from '@/views/dashboard';
 import { createApiClient } from '@/shared/api';
 import { API_BASE_URL } from '@/shared/config/apiConfig';
 

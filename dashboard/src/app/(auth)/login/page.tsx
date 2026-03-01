@@ -1,4 +1,4 @@
-import { LoginPage } from '@/pages/login';
+import { LoginPage } from '@/views/login';
 import { API_BASE_URL } from '@/shared/config/apiConfig';
 
 export default function Page() {

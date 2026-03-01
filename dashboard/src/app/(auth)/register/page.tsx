@@ -1,4 +1,4 @@
-import { RegisterPage } from '@/pages/register';
+import { RegisterPage } from '@/views/register';
 import { API_BASE_URL } from '@/shared/config/apiConfig';
 
 export default function Page() {
