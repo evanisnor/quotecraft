@@ -41,10 +41,9 @@ dev:
 db-migrate:
 	migrate -path migrations -database "$(DATABASE_URL)" up
 
-## db-seed: Seed the database with initial data
+## db-seed: Seed the database with alice/bob/charlie dev users (see cmd/db-seed/main.go)
 db-seed:
-	@echo "db-seed: not yet implemented (see INFR-US2)"
-	@exit 1
+	go run ./cmd/db-seed
 
 ## db-reset: Drop, recreate, migrate, and seed the database
 db-reset:

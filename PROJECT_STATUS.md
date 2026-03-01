@@ -74,7 +74,7 @@ Last updated: 2026-02-28
 | ✅     | INFR-US2-A003 | Write initial migration: calculators table                                                   | 0   | 2026-02-21 |
 | ✅     | INFR-US2-A004 | Write initial migration: sessions table                                                      | 0   | 2026-02-21 |
 | ✅     | INFR-US2-A005 | Configure CI to run migrations against a test database                                       | 0   | 2026-02-21 |
-|        | INFR-US2-A006 | Implement `db-seed` make target that seeds the local database with three users               | 0   |            |
+| ✅     | INFR-US2-A006 | Implement `db-seed` make target that seeds the local database with three users               | 0   | 2026-03-01 |
 |        | INFR-US2-A007 | Implement `db-reset` make target that resets the local database                              | 0   |            |
 
 ### ✅ [INFR-US3: API Server Skeleton](./PROJECT_PLAN.md#infr-us3-api-server-skeleton-p0) (P0)
