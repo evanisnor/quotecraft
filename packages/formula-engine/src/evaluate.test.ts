@@ -144,8 +144,39 @@ describe('evaluate', () => {
       expect(evaluate('{price} * {qty}', context)).toEqual({ value: 29.97 });
     });
 
-    it('defaults an unknown variable to 0 without an error', () => {
-      expect(evaluate('{unknown}', {})).toEqual({ value: 0 });
+    it('resolves a known variable whose value is 0', () => {
+      // Field is defined in the calculator with value 0 — not an error
+      expect(evaluate('{qty}', { qty: 0 })).toEqual({ value: 0 });
+    });
+
+    it('resolves a known variable whose value is 0 in arithmetic', () => {
+      expect(evaluate('{qty} * 10', { qty: 0 })).toEqual({ value: 0 });
+    });
+
+    it('returns an error for a variable name not present in the context', () => {
+      const result = evaluate('{unknown}', {});
+      expect(result.value).toBe(0);
+      expect(result.error).toBeDefined();
+      expect(result.error).toContain('{unknown}');
+    });
+
+    it('error message includes the unknown variable name in braces', () => {
+      const result = evaluate('{numbathrooms}', {});
+      expect(result.error).toBeDefined();
+      expect(result.error).toContain('{numbathrooms}');
+    });
+
+    it('returns an error when one of several variables is unknown', () => {
+      // {a} is known; {typo} is not — evaluation fails with the unknown name
+      const result = evaluate('{a} + {typo}', { a: 5 });
+      expect(result.value).toBe(0);
+      expect(result.error).toBeDefined();
+      expect(result.error).toContain('{typo}');
+    });
+
+    it('resolves multiple variables from a full context', () => {
+      const context: FormulaContext = { rooms: 3, rate: 200, discount: 50 };
+      expect(evaluate('{rooms} * {rate} - {discount}', context)).toEqual({ value: 550 });
     });
   });
 

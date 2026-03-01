@@ -18,22 +18,28 @@ export class EvaluateError extends Error {
  * Recursively evaluates an AST node against a formula context.
  *
  * - NumberLiteralNode → returns the literal value
- * - VariableNode      → returns context[name], defaulting to 0 for unknown fields
+ * - VariableNode      → returns context[name]; throws EvaluateError if the name
+ *                       is not present in the context (unknown field reference)
  * - UnaryOpNode (-)   → negates the operand
  * - BinaryOpNode      → arithmetic (+, -, *, /, %) or comparison (=, !=, >, <, >=, <=)
  *                       Comparisons return 1 (true) or 0 (false).
  *                       Division by zero follows JS semantics: n/0 → Infinity, 0/0 → NaN.
  * - FunctionCallNode  → throws EvaluateError (functions are implemented in later tasks)
  *
- * @throws {EvaluateError} when an unsupported function call is encountered.
+ * @throws {EvaluateError} when a variable name is not present in the context,
+ *   or when an unsupported function call is encountered.
  */
 function evalNode(node: ASTNode, context: FormulaContext): number {
   switch (node.kind) {
     case 'NumberLiteral':
       return node.value;
 
-    case 'Variable':
-      return context[node.name] ?? 0;
+    case 'Variable': {
+      if (!(node.name in context)) {
+        throw new EvaluateError(`Unknown variable: {${node.name}}`);
+      }
+      return context[node.name];
+    }
 
     case 'UnaryOp':
       return -evalNode(node.operand, context);
