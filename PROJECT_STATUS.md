@@ -102,7 +102,7 @@ Last updated: 2026-02-28
 |        | INFR-US4-A005 | Implement password reset flow (forgot + reset endpoints)                    | 1   |           |
 |        | INFR-US4-A006 | Implement Google OAuth with PKCE                                            | 1   |           |
 |        | INFR-US4-A007 | Add rate limiting on auth endpoints                                         | 1   |           |
-|        | INFR-US4-A008 | Implement `create-admin-user.sh` script that prompts for admin credentials and seeds the database; integrate into `bootstrap` | 0 | |
+| ✅ | INFR-US4-A008 | Implement `create-admin-user.sh` script that prompts for admin credentials and seeds the database; integrate into `bootstrap` | 0 | 2026-03-01 |
 
 ### [INFR-US5: Calculator CRUD API](./PROJECT_PLAN.md#infr-us5-calculator-crud-api-p0) (P0)
 

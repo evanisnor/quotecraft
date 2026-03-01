@@ -18,5 +18,8 @@ echo "==> Installing root Node.js dependencies..."
 cd "${REPO_ROOT}"
 pnpm install
 
+echo "==> Creating admin user..."
+bash "${REPO_ROOT}/scripts/create-admin-user.sh"
+
 echo ""
 echo "Bootstrap complete. Run 'make dev' to start the full stack."
