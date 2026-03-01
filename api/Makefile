@@ -2,6 +2,7 @@
 
 .DEFAULT_GOAL := help
 
+GOBIN ?= $(shell go env GOPATH)/bin
 DATABASE_URL ?= postgres://quotecraft:quotecraft@localhost:5432/quotecraft?sslmode=disable
 
 .PHONY: help build test lint dev db-migrate db-seed db-reset
@@ -32,7 +33,7 @@ lint:
 
 ## dev: Start API server with hot-reload (requires air)
 dev:
-	air
+	$(GOBIN)/air
 
 # ── Database ───────────────────────────────────────────────────────────────────
 
