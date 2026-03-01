@@ -8,4 +8,5 @@ export type {
   CheckboxFieldConfig,
   NumberFieldConfig,
   SliderFieldConfig,
+  TextFieldConfig,
 } from './calculatorConfig';

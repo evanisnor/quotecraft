@@ -46,3 +46,8 @@ export interface SliderFieldConfig extends BaseFieldConfig {
   step?: number;
   defaultValue?: number;
 }
+
+export interface TextFieldConfig extends BaseFieldConfig {
+  type: 'text';
+  placeholder?: string;
+}
