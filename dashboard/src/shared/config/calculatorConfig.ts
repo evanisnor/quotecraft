@@ -29,3 +29,12 @@ export interface CheckboxFieldConfig extends BaseFieldConfig {
   type: 'checkbox';
   options: FieldOption[];
 }
+
+export interface NumberFieldConfig extends BaseFieldConfig {
+  type: 'number';
+  min?: number;
+  max?: number;
+  step?: number;
+  defaultValue?: number;
+  placeholder?: string;
+}
