@@ -154,7 +154,7 @@ Last updated: 2026-02-28
 
 | Status | ID            | Task                                                                                   | P   | Completed |
 | ------ | ------------- | -------------------------------------------------------------------------------------- | --- | --------- |
-|        | BLDR-US2-A001 | Build field type palette component                                                     | 0   |           |
+| ✅ | BLDR-US2-A001 | Build field type palette component                                                     | 0   | 2026-02-28 |
 |        | BLDR-US2-A002 | Implement shared field configuration panel (label, help text, required, variable name) | 0   |           |
 |        | BLDR-US2-A003 | Implement Dropdown field type with option list editor                                  | 0   |           |
 |        | BLDR-US2-A004 | Implement Radio Button field type with option list editor                              | 0   |           |
