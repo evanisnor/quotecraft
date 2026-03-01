@@ -24,3 +24,8 @@ export interface RadioFieldConfig extends BaseFieldConfig {
   type: 'radio';
   options: FieldOption[];
 }
+
+export interface CheckboxFieldConfig extends BaseFieldConfig {
+  type: 'checkbox';
+  options: FieldOption[];
+}

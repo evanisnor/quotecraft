@@ -5,4 +5,5 @@ export type {
   FieldOption,
   DropdownFieldConfig,
   RadioFieldConfig,
+  CheckboxFieldConfig,
 } from './calculatorConfig';

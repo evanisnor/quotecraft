@@ -158,7 +158,7 @@ Last updated: 2026-02-28
 | ✅ | BLDR-US2-A002 | Implement shared field configuration panel (label, help text, required, variable name) | 0   | 2026-02-28 |
 | ✅ | BLDR-US2-A003 | Implement Dropdown field type with option list editor                                  | 0   | 2026-03-01 |
 | ✅ | BLDR-US2-A004 | Implement Radio Button field type with option list editor                              | 0   | 2026-03-01 |
-|        | BLDR-US2-A005 | Implement Checkbox field type with option list editor                                  | 0   |           |
+| ✅ | BLDR-US2-A005 | Implement Checkbox field type with option list editor                                  | 0   | 2026-03-01 |
 |        | BLDR-US2-A006 | Implement Number Input field type with min/max/step/default config                     | 0   |           |
 |        | BLDR-US2-A007 | Implement Slider/Range field type with min/max/step/default config                     | 0   |           |
 |        | BLDR-US2-A008 | Implement Text Input field type                                                        | 1   |           |
