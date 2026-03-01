@@ -41,8 +41,9 @@ function evalNode(node: ASTNode, context: FormulaContext): number {
     case 'BinaryOp': {
       const left = evalNode(node.left, context);
       const right = evalNode(node.right, context);
+      const op = node.op;
 
-      switch (node.op) {
+      switch (op) {
         case '+':  return left + right;
         case '-':  return left - right;
         case '*':  return left * right;
@@ -54,6 +55,11 @@ function evalNode(node: ASTNode, context: FormulaContext): number {
         case '<':  return left < right   ? 1 : 0;
         case '>=': return left >= right  ? 1 : 0;
         case '<=': return left <= right  ? 1 : 0;
+        default: {
+          // TypeScript exhaustiveness guard — BinaryOperator is a closed union.
+          const _: never = op;
+          throw new EvaluateError(`Unhandled operator: ${String(_)}`);
+        }
       }
     }
 
