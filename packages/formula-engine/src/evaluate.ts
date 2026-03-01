@@ -63,8 +63,21 @@ function evalNode(node: ASTNode, context: FormulaContext): number {
       }
     }
 
-    case 'FunctionCall':
-      throw new EvaluateError(`Function '${node.name}' is not yet supported`);
+    case 'FunctionCall': {
+      const { name, args } = node;
+
+      if (name === 'IF') {
+        if (args.length !== 3) {
+          throw new EvaluateError(
+            `IF requires exactly 3 arguments (condition, then, else), got ${args.length}`,
+          );
+        }
+        const condition = evalNode(args[0], context);
+        return condition !== 0 ? evalNode(args[1], context) : evalNode(args[2], context);
+      }
+
+      throw new EvaluateError(`Function '${name}' is not yet supported`);
+    }
   }
 }
 

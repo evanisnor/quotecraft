@@ -174,18 +174,112 @@ describe('evaluate', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // Errors — unsupported function calls
+  // Errors — unsupported function calls (MIN, MAX, ABS, ROUND not yet implemented)
   // ---------------------------------------------------------------------------
 
   describe('unsupported function calls', () => {
-    it('returns an error for IF()', () => {
-      const result = evaluate('IF(1, 2, 3)', {});
+    it('returns an error for MIN()', () => {
+      const result = evaluate('MIN(1, 2)', {});
       expect(result.value).toBe(0);
       expect(result.error).toBeDefined();
     });
 
-    it('returns an error for MIN()', () => {
-      const result = evaluate('MIN(1, 2)', {});
+    it('returns an error for MAX()', () => {
+      const result = evaluate('MAX(1, 2)', {});
+      expect(result.value).toBe(0);
+      expect(result.error).toBeDefined();
+    });
+
+    it('returns an error for ABS()', () => {
+      const result = evaluate('ABS(-5)', {});
+      expect(result.value).toBe(0);
+      expect(result.error).toBeDefined();
+    });
+
+    it('returns an error for ROUND()', () => {
+      const result = evaluate('ROUND(3.7)', {});
+      expect(result.value).toBe(0);
+      expect(result.error).toBeDefined();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // IF conditional expression
+  // ---------------------------------------------------------------------------
+
+  describe('IF conditional expression', () => {
+    it('returns then_value when condition is non-zero (truthy)', () => {
+      expect(evaluate('IF(1, 10, 20)', {})).toEqual({ value: 10 });
+    });
+
+    it('returns else_value when condition is zero (falsy)', () => {
+      expect(evaluate('IF(0, 10, 20)', {})).toEqual({ value: 20 });
+    });
+
+    it('evaluates condition as an expression: true branch', () => {
+      expect(evaluate('IF(5 > 3, 100, 0)', {})).toEqual({ value: 100 });
+    });
+
+    it('evaluates condition as an expression: false branch', () => {
+      expect(evaluate('IF(5 > 10, 100, 0)', {})).toEqual({ value: 0 });
+    });
+
+    it('evaluates then_value as an expression', () => {
+      expect(evaluate('IF(1, 2 + 3, 99)', {})).toEqual({ value: 5 });
+    });
+
+    it('evaluates else_value as an expression', () => {
+      expect(evaluate('IF(0, 99, 4 * 5)', {})).toEqual({ value: 20 });
+    });
+
+    it('supports variable references in condition', () => {
+      expect(evaluate('IF({qty} > 0, {qty} * 10, 0)', { qty: 5 })).toEqual({ value: 50 });
+    });
+
+    it('uses else_value when variable condition is falsy', () => {
+      expect(evaluate('IF({qty} > 0, {qty} * 10, 0)', { qty: 0 })).toEqual({ value: 0 });
+    });
+
+    it('supports nested IF in then branch', () => {
+      // IF(x > 10, IF(x > 20, 3, 2), 1)
+      // x=25: outer true → inner true → 3
+      expect(evaluate('IF({x} > 10, IF({x} > 20, 3, 2), 1)', { x: 25 })).toEqual({ value: 3 });
+    });
+
+    it('supports nested IF in then branch (middle tier)', () => {
+      // x=15: outer true → inner false → 2
+      expect(evaluate('IF({x} > 10, IF({x} > 20, 3, 2), 1)', { x: 15 })).toEqual({ value: 2 });
+    });
+
+    it('supports nested IF in else branch', () => {
+      // x=5: outer false → inner: 1
+      expect(evaluate('IF({x} > 10, IF({x} > 20, 3, 2), 1)', { x: 5 })).toEqual({ value: 1 });
+    });
+
+    it('supports nested IF in else branch expression', () => {
+      expect(evaluate('IF(0, 99, IF(1, 42, 0))', {})).toEqual({ value: 42 });
+    });
+
+    it('supports equality check in condition', () => {
+      expect(evaluate('IF({plan} = 1, 50, 100)', { plan: 1 })).toEqual({ value: 50 });
+    });
+
+    it('uses else_value when equality check is false', () => {
+      expect(evaluate('IF({plan} = 1, 50, 100)', { plan: 2 })).toEqual({ value: 100 });
+    });
+
+    it('treats a negative condition as truthy', () => {
+      expect(evaluate('IF(-1, 10, 20)', {})).toEqual({ value: 10 });
+    });
+
+    it('returns an error when IF receives fewer than 3 arguments', () => {
+      const result = evaluate('IF(1, 2)', {});
+      expect(result.value).toBe(0);
+      expect(result.error).toBeDefined();
+    });
+
+    it('returns an error when IF receives more than 3 arguments', () => {
+      const result = evaluate('IF(1, 2, 3, 4)', {});
       expect(result.value).toBe(0);
       expect(result.error).toBeDefined();
     });

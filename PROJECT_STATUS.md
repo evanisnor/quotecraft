@@ -218,7 +218,7 @@ Last updated: 2026-02-28
 | ✅ | CALC-US1-A001 | Implement tokenizer/lexer for formula expressions                     | 0   | 2026-03-01 |
 | ✅ | CALC-US1-A002 | Implement parser that produces a restricted AST                       | 0   | 2026-03-01 |
 | ✅ | CALC-US1-A003 | Implement AST evaluator with arithmetic, comparisons, and parentheses | 0   | 2026-03-01 |
-|        | CALC-US1-A004 | Add IF/THEN/ELSE conditional expression support                       | 0   |           |
+| ✅ | CALC-US1-A004 | Add IF/THEN/ELSE conditional expression support                       | 0   | 2026-03-01 |
 |        | CALC-US1-A005 | Add variable reference resolution against field value map             | 0   |           |
 |        | CALC-US1-A006 | Add MIN, MAX, ABS, ROUND function support                             | 1   |           |
 |        | CALC-US1-A007 | Implement execution timeout (100ms abort)                             | 1   |           |
