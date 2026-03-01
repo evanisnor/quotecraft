@@ -19,3 +19,8 @@ export interface DropdownFieldConfig extends BaseFieldConfig {
   type: 'dropdown';
   options: FieldOption[];
 }
+
+export interface RadioFieldConfig extends BaseFieldConfig {
+  type: 'radio';
+  options: FieldOption[];
+}
