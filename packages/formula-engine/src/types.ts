@@ -9,4 +9,9 @@ export type FormulaContext = Record<string, number>;
 export interface FormulaResult {
   /** The computed numeric value. */
   value: number;
+  /**
+   * When evaluation fails (tokenize error, parse error, or evaluate error),
+   * this field contains a human-readable error message. The `value` will be 0.
+   */
+  error?: string;
 }
