@@ -1,13 +1,10 @@
-interface EditorPageProps {
+import { EditorPage } from '@/views/editor';
+
+interface EditorPageRouteProps {
   params: Promise<{ id: string }>;
 }
 
-export default async function EditorPage({ params }: EditorPageProps) {
+export default async function EditorPageRoute({ params }: EditorPageRouteProps) {
   const { id } = await params;
-
-  return (
-    <main>
-      <h1>Editor: {id}</h1>
-    </main>
-  );
+  return <EditorPage calculatorId={id} />;
 }
