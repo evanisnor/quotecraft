@@ -166,7 +166,7 @@ Last updated: 2026-02-28
 | ✅ | BLDR-US2-A007 | Implement Slider/Range field type with min/max/step/default config                     | 0   | 2026-03-01 |
 | ✅ | BLDR-US2-A008 | Implement Text Input field type                                                        | 1   | 2026-03-01 |
 |        | BLDR-US2-A009 | Implement Image Select field type with image upload                                    | 2   |           |
-|  | BLDR-US2-A010 | Implement drag-and-drop field reordering                                               | 1   |           |
+| ✅ | BLDR-US2-A010 | Implement drag-and-drop field reordering                                               | 1   | 2026-03-01 |
 | ✅ | BLDR-US2-A011 | Implement field deletion                                                               | 0   | 2026-03-01 |
 
 ### [BLDR-US3: Layout & Conditional Flow](./PROJECT_PLAN.md#bldr-us3-layout--conditional-flow-p1) (P1)
