@@ -10,8 +10,9 @@ read -rp "Admin email: " ADMIN_EMAIL
 read -rsp "Admin password (min 8 chars): " ADMIN_PASSWORD
 echo ""
 
+cd "${API_DIR}"
 DATABASE_URL="${DATABASE_URL:-postgres://quotecraft:quotecraft@localhost:5432/quotecraft?sslmode=disable}" \
-  go run "${API_DIR}/cmd/create-admin-user" \
+  go run ./cmd/create-admin-user/. \
     -email "${ADMIN_EMAIL}" \
     -password "${ADMIN_PASSWORD}"
 
