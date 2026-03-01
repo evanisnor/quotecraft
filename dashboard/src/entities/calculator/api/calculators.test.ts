@@ -1,34 +1,25 @@
 import { listCalculators, createCalculator, deleteCalculator } from './calculators';
-import { stubFetchWith } from './testing';
-
-const BASE_URL = 'http://localhost:8080';
-const TOKEN = 'test-token';
+import { StubApiClient } from '@/shared/api/testing';
 
 describe('listCalculators', () => {
   it('returns an array of CalculatorSummary on success', async () => {
-    const stub = stubFetchWith([
+    const client = new StubApiClient();
+    client.enqueueSuccess([
       {
-        status: 200,
-        body: {
-          data: [
-            {
-              id: 'abc-123',
-              created_at: '2024-01-01T00:00:00Z',
-              updated_at: '2024-01-02T00:00:00Z',
-            },
-            {
-              id: 'def-456',
-              created_at: '2024-02-01T00:00:00Z',
-              updated_at: '2024-02-02T00:00:00Z',
-            },
-          ],
-          error: null,
-          meta: {},
-        },
+        id: 'abc-123',
+        name: 'Test Calculator',
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-02T00:00:00Z',
+      },
+      {
+        id: 'def-456',
+        name: 'Test Calculator',
+        created_at: '2024-02-01T00:00:00Z',
+        updated_at: '2024-02-02T00:00:00Z',
       },
     ]);
 
-    const result = await listCalculators(BASE_URL, TOKEN, stub.fetch);
+    const result = await listCalculators(client);
 
     expect(result).toHaveLength(2);
     expect(result[0].id).toBe('abc-123');
@@ -38,54 +29,33 @@ describe('listCalculators', () => {
   });
 
   it('returns an empty array when the list is empty', async () => {
-    const stub = stubFetchWith([
-      {
-        status: 200,
-        body: { data: [], error: null, meta: {} },
-      },
-    ]);
+    const client = new StubApiClient();
+    client.enqueueSuccess([]);
 
-    const result = await listCalculators(BASE_URL, TOKEN, stub.fetch);
+    const result = await listCalculators(client);
 
     expect(result).toEqual([]);
   });
 
   it('throws with the API error message on non-ok response', async () => {
-    const stub = stubFetchWith([
-      {
-        status: 401,
-        body: {
-          data: null,
-          error: { code: 'UNAUTHORIZED', message: 'missing auth token' },
-          meta: {},
-        },
-      },
-    ]);
+    const client = new StubApiClient();
+    client.enqueueError('missing auth token');
 
-    await expect(listCalculators(BASE_URL, TOKEN, stub.fetch)).rejects.toThrow(
-      'missing auth token',
-    );
+    await expect(listCalculators(client)).rejects.toThrow('missing auth token');
   });
 });
 
 describe('createCalculator', () => {
   it('returns a CalculatorSummary with parsed dates on success', async () => {
-    const stub = stubFetchWith([
-      {
-        status: 201,
-        body: {
-          data: {
-            id: 'new-calc-id',
-            created_at: '2024-03-01T12:00:00Z',
-            updated_at: '2024-03-01T12:00:00Z',
-          },
-          error: null,
-          meta: {},
-        },
-      },
-    ]);
+    const client = new StubApiClient();
+    client.enqueueSuccess({
+      id: 'new-calc-id',
+      name: 'Test Calculator',
+      created_at: '2024-03-01T12:00:00Z',
+      updated_at: '2024-03-01T12:00:00Z',
+    });
 
-    const result = await createCalculator(BASE_URL, TOKEN, stub.fetch);
+    const result = await createCalculator(client);
 
     expect(result.id).toBe('new-calc-id');
     expect(result.createdAt).toEqual(new Date('2024-03-01T12:00:00Z'));
@@ -93,49 +63,25 @@ describe('createCalculator', () => {
   });
 
   it('throws with the API error message on non-ok response', async () => {
-    const stub = stubFetchWith([
-      {
-        status: 403,
-        body: {
-          data: null,
-          error: { code: 'FORBIDDEN', message: 'plan limit reached' },
-          meta: {},
-        },
-      },
-    ]);
+    const client = new StubApiClient();
+    client.enqueueError('plan limit reached');
 
-    await expect(createCalculator(BASE_URL, TOKEN, stub.fetch)).rejects.toThrow(
-      'plan limit reached',
-    );
+    await expect(createCalculator(client)).rejects.toThrow('plan limit reached');
   });
 });
 
 describe('deleteCalculator', () => {
   it('resolves without error on 204 success', async () => {
-    const stub = stubFetchWith([
-      {
-        status: 204,
-        body: null,
-      },
-    ]);
+    const client = new StubApiClient();
+    client.enqueueSuccess(undefined);
 
-    await expect(deleteCalculator(BASE_URL, 'calc-id', TOKEN, stub.fetch)).resolves.toBeUndefined();
+    await expect(deleteCalculator(client, 'calc-id')).resolves.toBeUndefined();
   });
 
   it('throws with the API error message on 404', async () => {
-    const stub = stubFetchWith([
-      {
-        status: 404,
-        body: {
-          data: null,
-          error: { code: 'NOT_FOUND', message: 'calculator not found' },
-          meta: {},
-        },
-      },
-    ]);
+    const client = new StubApiClient();
+    client.enqueueError('calculator not found');
 
-    await expect(deleteCalculator(BASE_URL, 'bad-id', TOKEN, stub.fetch)).rejects.toThrow(
-      'calculator not found',
-    );
+    await expect(deleteCalculator(client, 'bad-id')).rejects.toThrow('calculator not found');
   });
 });

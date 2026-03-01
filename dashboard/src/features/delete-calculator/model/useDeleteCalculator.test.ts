@@ -1,18 +1,13 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useDeleteCalculator } from './useDeleteCalculator';
-import { stubFetchWith } from '@/entities/calculator/api/testing';
-
-const BASE_URL = 'http://localhost:8080';
-const TOKEN = 'test-token';
+import { StubApiClient } from '@/shared/api/testing';
 
 describe('useDeleteCalculator', () => {
   it('requestDelete sets confirmingId', () => {
-    const stub = stubFetchWith([]);
+    const client = new StubApiClient();
     const onDeleted = jest.fn();
 
-    const { result } = renderHook(() =>
-      useDeleteCalculator(BASE_URL, TOKEN, onDeleted, stub.fetch),
-    );
+    const { result } = renderHook(() => useDeleteCalculator(client, onDeleted));
 
     expect(result.current.confirmingId).toBeNull();
 
@@ -24,12 +19,10 @@ describe('useDeleteCalculator', () => {
   });
 
   it('cancelDelete clears confirmingId', () => {
-    const stub = stubFetchWith([]);
+    const client = new StubApiClient();
     const onDeleted = jest.fn();
 
-    const { result } = renderHook(() =>
-      useDeleteCalculator(BASE_URL, TOKEN, onDeleted, stub.fetch),
-    );
+    const { result } = renderHook(() => useDeleteCalculator(client, onDeleted));
 
     act(() => {
       result.current.requestDelete('calc-abc');
@@ -45,12 +38,11 @@ describe('useDeleteCalculator', () => {
   });
 
   it('confirmDelete calls the API and calls onDeleted with the id on success', async () => {
-    const stub = stubFetchWith([{ status: 204, body: null }]);
+    const client = new StubApiClient();
+    client.enqueueSuccess(undefined);
     const onDeleted = jest.fn();
 
-    const { result } = renderHook(() =>
-      useDeleteCalculator(BASE_URL, TOKEN, onDeleted, stub.fetch),
-    );
+    const { result } = renderHook(() => useDeleteCalculator(client, onDeleted));
 
     act(() => {
       result.current.requestDelete('calc-to-delete');
@@ -64,28 +56,19 @@ describe('useDeleteCalculator', () => {
       expect(onDeleted).toHaveBeenCalledWith('calc-to-delete');
     });
 
-    expect(stub.calls).toBe(1);
+    expect(client.calls).toHaveLength(1);
+    expect(client.calls[0]).toEqual({ method: 'DELETE', path: '/v1/calculators/calc-to-delete' });
     expect(result.current.confirmingId).toBeNull();
     expect(result.current.deletingId).toBeNull();
     expect(result.current.errorMessage).toBeNull();
   });
 
   it('confirmDelete sets error state on failure', async () => {
-    const stub = stubFetchWith([
-      {
-        status: 404,
-        body: {
-          data: null,
-          error: { code: 'NOT_FOUND', message: 'calculator not found' },
-          meta: {},
-        },
-      },
-    ]);
+    const client = new StubApiClient();
+    client.enqueueError('calculator not found');
     const onDeleted = jest.fn();
 
-    const { result } = renderHook(() =>
-      useDeleteCalculator(BASE_URL, TOKEN, onDeleted, stub.fetch),
-    );
+    const { result } = renderHook(() => useDeleteCalculator(client, onDeleted));
 
     act(() => {
       result.current.requestDelete('bad-id');
@@ -101,5 +84,21 @@ describe('useDeleteCalculator', () => {
 
     expect(onDeleted).not.toHaveBeenCalled();
     expect(result.current.deletingId).toBeNull();
+  });
+
+  it('confirmDelete does nothing when confirmingId is null', () => {
+    const client = new StubApiClient();
+    const onDeleted = jest.fn();
+
+    const { result } = renderHook(() => useDeleteCalculator(client, onDeleted));
+
+    // confirmDelete without prior requestDelete — confirmingId is null
+    act(() => {
+      result.current.confirmDelete();
+    });
+
+    expect(client.calls).toHaveLength(0);
+    expect(onDeleted).not.toHaveBeenCalled();
+    expect(result.current.errorMessage).toBeNull();
   });
 });

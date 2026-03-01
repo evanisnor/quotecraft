@@ -1,6 +1,6 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useCreateCalculator } from './useCreateCalculator';
-import { stubFetchWith } from '@/entities/calculator/api/testing';
+import { StubApiClient } from '@/shared/api/testing';
 
 const mockPush = jest.fn();
 
@@ -8,40 +8,30 @@ jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
-const BASE_URL = 'http://localhost:8080';
-const TOKEN = 'test-token';
-
 describe('useCreateCalculator', () => {
   beforeEach(() => {
     mockPush.mockReset();
   });
 
   it('starts in idle state', () => {
-    const stub = stubFetchWith([]);
+    const client = new StubApiClient();
 
-    const { result } = renderHook(() => useCreateCalculator(BASE_URL, TOKEN, stub.fetch));
+    const { result } = renderHook(() => useCreateCalculator(client));
 
     expect(result.current.status).toBe('idle');
     expect(result.current.errorMessage).toBeNull();
   });
 
   it('calls createCalculator and navigates to /editor/{id} on success', async () => {
-    const stub = stubFetchWith([
-      {
-        status: 201,
-        body: {
-          data: {
-            id: 'new-calc-id',
-            created_at: '2024-03-01T00:00:00Z',
-            updated_at: '2024-03-01T00:00:00Z',
-          },
-          error: null,
-          meta: {},
-        },
-      },
-    ]);
+    const client = new StubApiClient();
+    client.enqueueSuccess({
+      id: 'new-calc-id',
+      name: 'Test',
+      created_at: '2024-03-01T00:00:00Z',
+      updated_at: '2024-03-01T00:00:00Z',
+    });
 
-    const { result } = renderHook(() => useCreateCalculator(BASE_URL, TOKEN, stub.fetch));
+    const { result } = renderHook(() => useCreateCalculator(client));
 
     act(() => {
       result.current.handleCreate();
@@ -51,22 +41,15 @@ describe('useCreateCalculator', () => {
       expect(mockPush).toHaveBeenCalledWith('/editor/new-calc-id');
     });
 
-    expect(stub.calls).toBe(1);
+    expect(client.calls).toHaveLength(1);
+    expect(client.calls[0]).toEqual({ method: 'POST', path: '/v1/calculators', body: undefined });
   });
 
   it('sets error state when the API call fails', async () => {
-    const stub = stubFetchWith([
-      {
-        status: 403,
-        body: {
-          data: null,
-          error: { code: 'FORBIDDEN', message: 'plan limit reached' },
-          meta: {},
-        },
-      },
-    ]);
+    const client = new StubApiClient();
+    client.enqueueError('plan limit reached');
 
-    const { result } = renderHook(() => useCreateCalculator(BASE_URL, TOKEN, stub.fetch));
+    const { result } = renderHook(() => useCreateCalculator(client));
 
     act(() => {
       result.current.handleCreate();

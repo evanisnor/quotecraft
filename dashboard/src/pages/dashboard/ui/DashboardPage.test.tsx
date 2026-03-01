@@ -1,16 +1,14 @@
 import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { stubFetchWith } from '@/entities/calculator/api/testing';
+import { StubApiClient } from '@/shared/api/testing';
 import { DashboardPage } from './DashboardPage';
+import type { ApiClient } from '@/shared/api';
 
 const mockPush = jest.fn();
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }));
-
-const API_BASE_URL = 'http://localhost:8080';
-const TOKEN = 'test-token';
 
 const CALC_1 = {
   id: 'aaaaaaaa-0000-0000-0000-000000000001',
@@ -26,12 +24,14 @@ const CALC_2 = {
   updated_at: '2024-02-02T00:00:00Z',
 };
 
-function listSuccessResponse(calculators: (typeof CALC_1)[]) {
-  return { status: 200, body: { data: calculators, error: null, meta: {} } };
-}
-
-function deleteSuccessResponse() {
-  return { status: 204, body: null };
+/** Creates a client whose get() never resolves (for observing loading state) */
+function neverResolvingClient(): ApiClient {
+  return {
+    get: () => new Promise(() => undefined),
+    post: () => new Promise(() => undefined),
+    put: () => new Promise(() => undefined),
+    delete: () => new Promise(() => undefined),
+  };
 }
 
 describe('DashboardPage', () => {
@@ -40,19 +40,17 @@ describe('DashboardPage', () => {
   });
 
   it('shows loading state initially', () => {
-    // Never resolves so we can observe the loading state
-    const neverResolving: typeof globalThis.fetch = () => new Promise<Response>(() => undefined);
-
-    render(<DashboardPage apiBaseUrl={API_BASE_URL} token={TOKEN} fetcher={neverResolving} />);
+    render(<DashboardPage client={neverResolvingClient()} />);
 
     expect(screen.getByText('Loading...')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /my calculators/i })).toBeInTheDocument();
   });
 
   it('shows calculator list after successful load', async () => {
-    const stub = stubFetchWith([listSuccessResponse([CALC_1, CALC_2])]);
+    const client = new StubApiClient();
+    client.enqueueSuccess([CALC_1, CALC_2]);
 
-    render(<DashboardPage apiBaseUrl={API_BASE_URL} token={TOKEN} fetcher={stub.fetch} />);
+    render(<DashboardPage client={client} />);
 
     await waitFor(() => {
       expect(screen.getByText('Calculator Alpha')).toBeInTheDocument();
@@ -62,9 +60,10 @@ describe('DashboardPage', () => {
   });
 
   it('shows empty state when no calculators exist', async () => {
-    const stub = stubFetchWith([listSuccessResponse([])]);
+    const client = new StubApiClient();
+    client.enqueueSuccess([]);
 
-    render(<DashboardPage apiBaseUrl={API_BASE_URL} token={TOKEN} fetcher={stub.fetch} />);
+    render(<DashboardPage client={client} />);
 
     await waitFor(() => {
       expect(screen.getByText('No calculators yet. Create your first one.')).toBeInTheDocument();
@@ -72,18 +71,10 @@ describe('DashboardPage', () => {
   });
 
   it('shows error when the API call fails', async () => {
-    const stub = stubFetchWith([
-      {
-        status: 500,
-        body: {
-          data: null,
-          error: { code: 'INTERNAL_ERROR', message: 'server unavailable' },
-          meta: {},
-        },
-      },
-    ]);
+    const client = new StubApiClient();
+    client.enqueueError('server unavailable');
 
-    render(<DashboardPage apiBaseUrl={API_BASE_URL} token={TOKEN} fetcher={stub.fetch} />);
+    render(<DashboardPage client={client} />);
 
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent('server unavailable');
@@ -91,9 +82,10 @@ describe('DashboardPage', () => {
   });
 
   it('renders the New Calculator button', async () => {
-    const stub = stubFetchWith([listSuccessResponse([])]);
+    const client = new StubApiClient();
+    client.enqueueSuccess([]);
 
-    render(<DashboardPage apiBaseUrl={API_BASE_URL} token={TOKEN} fetcher={stub.fetch} />);
+    render(<DashboardPage client={client} />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /new calculator/i })).toBeInTheDocument();
@@ -101,10 +93,11 @@ describe('DashboardPage', () => {
   });
 
   it('navigates to /editor/{id} when Open is clicked on a calculator card', async () => {
-    const stub = stubFetchWith([listSuccessResponse([CALC_1])]);
+    const client = new StubApiClient();
+    client.enqueueSuccess([CALC_1]);
     const user = userEvent.setup();
 
-    render(<DashboardPage apiBaseUrl={API_BASE_URL} token={TOKEN} fetcher={stub.fetch} />);
+    render(<DashboardPage client={client} />);
 
     await waitFor(() => {
       expect(screen.getByText('Calculator Alpha')).toBeInTheDocument();
@@ -116,10 +109,11 @@ describe('DashboardPage', () => {
   });
 
   it('shows confirmation dialog when Delete is clicked on a calculator card', async () => {
-    const stub = stubFetchWith([listSuccessResponse([CALC_1])]);
+    const client = new StubApiClient();
+    client.enqueueSuccess([CALC_1]);
     const user = userEvent.setup();
 
-    render(<DashboardPage apiBaseUrl={API_BASE_URL} token={TOKEN} fetcher={stub.fetch} />);
+    render(<DashboardPage client={client} />);
 
     await waitFor(() => {
       expect(screen.getByText('Calculator Alpha')).toBeInTheDocument();
@@ -132,11 +126,12 @@ describe('DashboardPage', () => {
   });
 
   it('removes the calculator from the list after confirming deletion', async () => {
-    // First call: list; second call: delete
-    const stub = stubFetchWith([listSuccessResponse([CALC_1, CALC_2]), deleteSuccessResponse()]);
+    const client = new StubApiClient();
+    client.enqueueSuccess([CALC_1, CALC_2]);
+    client.enqueueSuccess(undefined); // delete response
     const user = userEvent.setup();
 
-    render(<DashboardPage apiBaseUrl={API_BASE_URL} token={TOKEN} fetcher={stub.fetch} />);
+    render(<DashboardPage client={client} />);
 
     await waitFor(() => {
       expect(screen.getByText('Calculator Alpha')).toBeInTheDocument();
@@ -159,10 +154,11 @@ describe('DashboardPage', () => {
   });
 
   it('dismisses the confirmation dialog and keeps the calculator when Cancel is clicked', async () => {
-    const stub = stubFetchWith([listSuccessResponse([CALC_1])]);
+    const client = new StubApiClient();
+    client.enqueueSuccess([CALC_1]);
     const user = userEvent.setup();
 
-    render(<DashboardPage apiBaseUrl={API_BASE_URL} token={TOKEN} fetcher={stub.fetch} />);
+    render(<DashboardPage client={client} />);
 
     await waitFor(() => {
       expect(screen.getByText('Calculator Alpha')).toBeInTheDocument();

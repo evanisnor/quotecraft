@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import type { ApiClient } from '@/shared/api';
 import { createCalculator } from '@/entities/calculator';
 
 type CreateStatus = 'idle' | 'creating' | 'error';
@@ -12,11 +13,7 @@ interface UseCreateCalculatorResult {
   handleCreate: () => void;
 }
 
-export function useCreateCalculator(
-  baseUrl: string,
-  token: string,
-  fetcher: typeof globalThis.fetch = globalThis.fetch,
-): UseCreateCalculatorResult {
+export function useCreateCalculator(client: ApiClient): UseCreateCalculatorResult {
   const router = useRouter();
   const [status, setStatus] = useState<CreateStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -25,7 +22,7 @@ export function useCreateCalculator(
     setStatus('creating');
     setErrorMessage(null);
 
-    createCalculator(baseUrl, token, fetcher)
+    createCalculator(client)
       .then((calculator) => {
         router.push(`/editor/${calculator.id}`);
       })

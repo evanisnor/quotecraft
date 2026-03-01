@@ -1,11 +1,18 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useAuthState } from '@/entities/user';
 import { DashboardPage } from '@/pages/dashboard';
+import { createApiClient } from '@/shared/api';
 import { API_BASE_URL } from '@/shared/config/apiConfig';
 
 export default function Page() {
   const authState = useAuthState();
-  if (authState.status !== 'authenticated') return null;
-  return <DashboardPage apiBaseUrl={API_BASE_URL} token={authState.token} />;
+  const token = authState.status === 'authenticated' ? authState.token : undefined;
+  const client = useMemo(
+    () => (token !== undefined ? createApiClient(API_BASE_URL, token) : null),
+    [token],
+  );
+  if (!client) return null;
+  return <DashboardPage client={client} />;
 }

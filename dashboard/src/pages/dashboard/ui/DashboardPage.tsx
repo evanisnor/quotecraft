@@ -2,15 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import type { ApiClient } from '@/shared/api';
 import { listCalculators, CalculatorCard } from '@/entities/calculator';
 import type { CalculatorSummary } from '@/entities/calculator';
 import { CreateCalculatorButton } from '@/features/create-calculator';
 import { useDeleteCalculator, DeleteConfirmDialog } from '@/features/delete-calculator';
 
 interface DashboardPageProps {
-  apiBaseUrl: string;
-  token: string;
-  fetcher?: typeof globalThis.fetch;
+  client: ApiClient;
 }
 
 type LoadState =
@@ -18,14 +17,14 @@ type LoadState =
   | { status: 'error'; message: string }
   | { status: 'loaded'; calculators: CalculatorSummary[] };
 
-export function DashboardPage({ apiBaseUrl, token, fetcher }: DashboardPageProps) {
+export function DashboardPage({ client }: DashboardPageProps) {
   const router = useRouter();
   const [loadState, setLoadState] = useState<LoadState>({ status: 'loading' });
 
   useEffect(() => {
     let cancelled = false;
 
-    listCalculators(apiBaseUrl, token, fetcher)
+    listCalculators(client)
       .then((calculators) => {
         if (!cancelled) {
           setLoadState({ status: 'loaded', calculators });
@@ -41,7 +40,7 @@ export function DashboardPage({ apiBaseUrl, token, fetcher }: DashboardPageProps
     return () => {
       cancelled = true;
     };
-  }, [apiBaseUrl, token, fetcher]);
+  }, [client]);
 
   function handleOpen(id: string): void {
     router.push(`/editor/${id}`);
@@ -57,7 +56,7 @@ export function DashboardPage({ apiBaseUrl, token, fetcher }: DashboardPageProps
     });
   }
 
-  const deleteHook = useDeleteCalculator(apiBaseUrl, token, handleDeleted, fetcher);
+  const deleteHook = useDeleteCalculator(client, handleDeleted);
 
   if (loadState.status === 'loading') {
     return (
@@ -82,7 +81,7 @@ export function DashboardPage({ apiBaseUrl, token, fetcher }: DashboardPageProps
   return (
     <main>
       <h1>My Calculators</h1>
-      <CreateCalculatorButton baseUrl={apiBaseUrl} token={token} fetcher={fetcher} />
+      <CreateCalculatorButton client={client} />
       {deleteHook.errorMessage !== null && <p role="alert">{deleteHook.errorMessage}</p>}
       {calculators.length === 0 ? (
         <p>No calculators yet. Create your first one.</p>

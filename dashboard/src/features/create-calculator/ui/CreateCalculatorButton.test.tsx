@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { stubFetchWith } from '@/entities/calculator/api/testing';
+import { StubApiClient } from '@/shared/api/testing';
 import { CreateCalculatorButton } from './CreateCalculatorButton';
+import type { ApiClient } from '@/shared/api';
 
 const mockPush = jest.fn();
 
@@ -9,27 +10,30 @@ jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
-const BASE_URL = 'http://localhost:8080';
-const TOKEN = 'test-token';
-
 describe('CreateCalculatorButton', () => {
   beforeEach(() => {
     mockPush.mockReset();
   });
 
   it('renders the New Calculator button', () => {
-    const stub = stubFetchWith([]);
+    const client = new StubApiClient();
 
-    render(<CreateCalculatorButton baseUrl={BASE_URL} token={TOKEN} fetcher={stub.fetch} />);
+    render(<CreateCalculatorButton client={client} />);
 
     expect(screen.getByRole('button', { name: /new calculator/i })).toBeInTheDocument();
   });
 
   it('disables the button while creating', async () => {
-    const neverResolving: typeof globalThis.fetch = () => new Promise<Response>(() => undefined);
+    const neverResolvingPost: ApiClient = {
+      get: () => new Promise(() => undefined),
+      post: () => new Promise(() => undefined),
+      put: () => new Promise(() => undefined),
+      delete: () => new Promise(() => undefined),
+    };
+
     const user = userEvent.setup();
 
-    render(<CreateCalculatorButton baseUrl={BASE_URL} token={TOKEN} fetcher={neverResolving} />);
+    render(<CreateCalculatorButton client={neverResolvingPost} />);
 
     await user.click(screen.getByRole('button', { name: /new calculator/i }));
 
@@ -37,19 +41,11 @@ describe('CreateCalculatorButton', () => {
   });
 
   it('shows an error alert when creation fails', async () => {
-    const stub = stubFetchWith([
-      {
-        status: 403,
-        body: {
-          data: null,
-          error: { code: 'FORBIDDEN', message: 'plan limit reached' },
-          meta: {},
-        },
-      },
-    ]);
+    const client = new StubApiClient();
+    client.enqueueError('plan limit reached');
     const user = userEvent.setup();
 
-    render(<CreateCalculatorButton baseUrl={BASE_URL} token={TOKEN} fetcher={stub.fetch} />);
+    render(<CreateCalculatorButton client={client} />);
 
     await user.click(screen.getByRole('button', { name: /new calculator/i }));
 

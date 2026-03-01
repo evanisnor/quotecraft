@@ -1,15 +1,14 @@
 'use client';
 
+import type { ApiClient } from '@/shared/api';
 import { useCreateCalculator } from '../model/useCreateCalculator';
 
 interface CreateCalculatorButtonProps {
-  baseUrl: string;
-  token: string;
-  fetcher?: typeof globalThis.fetch;
+  client: ApiClient;
 }
 
-export function CreateCalculatorButton({ baseUrl, token, fetcher }: CreateCalculatorButtonProps) {
-  const { status, errorMessage, handleCreate } = useCreateCalculator(baseUrl, token, fetcher);
+export function CreateCalculatorButton({ client }: CreateCalculatorButtonProps) {
+  const { status, errorMessage, handleCreate } = useCreateCalculator(client);
 
   return (
     <div>

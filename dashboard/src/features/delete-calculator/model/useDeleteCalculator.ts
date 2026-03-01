@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import type { ApiClient } from '@/shared/api';
 import { deleteCalculator } from '@/entities/calculator';
 
 interface UseDeleteCalculatorResult {
@@ -13,10 +14,8 @@ interface UseDeleteCalculatorResult {
 }
 
 export function useDeleteCalculator(
-  baseUrl: string,
-  token: string,
+  client: ApiClient,
   onDeleted: (id: string) => void,
-  fetcher: typeof globalThis.fetch = globalThis.fetch,
 ): UseDeleteCalculatorResult {
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -38,7 +37,7 @@ export function useDeleteCalculator(
     setDeletingId(idToDelete);
     setConfirmingId(null);
 
-    deleteCalculator(baseUrl, idToDelete, token, fetcher)
+    deleteCalculator(client, idToDelete)
       .then(() => {
         setDeletingId(null);
         onDeleted(idToDelete);
