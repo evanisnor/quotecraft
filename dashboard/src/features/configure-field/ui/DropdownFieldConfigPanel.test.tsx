@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import type { DropdownFieldConfig, FieldOption } from '@/shared/config';
+import type { DropdownFieldConfig } from '@/shared/config';
 import { DropdownFieldConfigPanel } from './DropdownFieldConfigPanel';
 
 function makeField(overrides: Partial<DropdownFieldConfig> = {}): DropdownFieldConfig {
