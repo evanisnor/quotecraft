@@ -137,7 +137,7 @@ Last updated: 2026-02-28
 
 [Epic in PROJECT_PLAN.md](./PROJECT_PLAN.md#bldr--visual-calculator-builder)
 
-### [BLDR-US1: Dashboard Shell & Navigation](./PROJECT_PLAN.md#bldr-us1-dashboard-shell--navigation-p0) (P0)
+### [BLDR-US1: Dashboard Shell & Navigation](./PROJECT_PLAN.md#bldr-us1-dashboard-shell--navigation-p0) (P0) ✅ 2026-02-28
 
 **Requirements:** [1.1.3](./REQUIREMENTS.md#11-authentication--user-accounts), [1.2.2](./REQUIREMENTS.md#12-calculator-crud), [1.2.4](./REQUIREMENTS.md#12-calculator-crud)
 
