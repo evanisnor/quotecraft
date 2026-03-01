@@ -45,7 +45,8 @@ db-migrate:
 db-seed:
 	go run ./cmd/db-seed
 
-## db-reset: Drop, recreate, migrate, and seed the database
+## db-reset: Drop all tables, run migrations, and re-seed the database
 db-reset:
-	@echo "db-reset: not yet implemented (see INFR-US2)"
-	@exit 1
+	migrate -path migrations -database "$(DATABASE_URL)" down -all
+	migrate -path migrations -database "$(DATABASE_URL)" up
+	$(MAKE) db-seed
