@@ -76,11 +76,22 @@ After implementation is complete but **before committing**, invoke the **code-re
 
 - If the verdict is **FAIL**: fix all required changes, then re-run the review.
 - If the verdict is **PASS WITH COMMENTS**: address any required changes. Suggestions are optional.
-- If the verdict is **PASS**: proceed to commit.
+- If the verdict is **PASS**: proceed to E2E testing.
 
 **No code is committed without a passing review.**
 
-### 5. Commit the Task
+### 5. E2E Testing (Required for user-facing features)
+
+After a passing code review, invoke the **e2e-tester agent** with the task ID for any task that touches the dashboard UI, widget, authentication flows, or any user-facing behavior. The agent starts the dev environment, exercises the feature in a real browser, and validates behavioral outcomes against acceptance criteria.
+
+- If the verdict is **PASS**: proceed to commit.
+- If the verdict is **FAIL**: determine whether the failure is caused by the current task or is a pre-existing gap from before E2E testing was part of the workflow.
+  - **Failure caused by the current task**: fix the issues, re-run code review if code changed, then re-run E2E testing before committing.
+  - **Pre-existing failure unrelated to the current task**: commit the current task's changes (which passed code review) first, then fix the pre-existing E2E failures in one or more separate follow-up commits. Each fix commit should have a descriptive message with no task ID required.
+
+Skip this step for tasks with no user-facing surface (e.g., pure infrastructure, migrations with no UI impact).
+
+### 6. Commit the Task
 
 Each completed task gets its own commit. Every commit must include the updated `PROJECT_STATUS.md`.
 
@@ -115,21 +126,21 @@ Each completed task gets its own commit. Every commit must include the updated `
    - If the failure is caused by your commit, fix it in a follow-up commit (use the relevant task ID), push, and re-confirm CI passes. Do not force push!
    - Wait for the fix to pass on CI using `gh run watch` again. Keep making fix commits and pushing and watching until CI passes before moving on.
 
-### 6. When a Task is Complete
+### 7. When a Task is Complete
 
 Run `/compact` to summarize the session context before starting the next task. This keeps the context window available for the next task and prevents auto-compact from firing mid-task when in-flight context is most needed.
 
 A hook injects a reminder whenever a task is marked completed — act on it immediately by running `/compact`.
 
-### 7. When a Story is Complete
+### 8. When a Story is Complete
 
 When all tasks in a user story are done, verify the acceptance criteria from `PROJECT_PLAN.md` are met before moving on. If everything is complete, update `PROJECT_STATUS.md` and commit.
 
-### 8. When an Epic is Complete
+### 9. When an Epic is Complete
 
 Make sure tasks of all priorities within an epic are complete before moving on to the next epic. Perform an additional code review to make sure everything was built according to standards.
 
-### 9. When a Phase is Complete
+### 10. When a Phase is Complete
 
 Once all tasks in a phase are complete, Once all tasks in the current phase are complete, review the implementation for adherence to the REQUIREMENTS.md, PROJECT_PLAN.md, and SYSTEM_DESIGN.md documents. Stop all work and exit cleanly. Do not proceed to the next phase. Wait for human intervention.
 
@@ -174,6 +185,12 @@ Specialized agents are available for delegating implementation work. They carry 
 **Invoked when:** A task implementation is complete, before committing. This is a mandatory gate in the workflow (see step 4).
 **Agent definition:** [.claude/agents/code-reviewer.md](.claude/agents/code-reviewer.md)
 **Reviews:** Security, completeness, test quality, code conventions, and requirement compliance. Must return PASS before code is committed.
+
+### E2E Tester Agent
+
+**Invoked when:** A code review has passed and the task has user-facing behavior. This is a mandatory gate for UI and behavioral changes (see step 5).
+**Agent definition:** [.claude/agents/e2e-tester.md](.claude/agents/e2e-tester.md)
+**Validates:** Behavioral outcomes in a live browser — user flows, form interactions, authentication, widget rendering, responsive layout. Does not review code. Must return PASS before code is committed.
 
 ## Code Conventions
 
