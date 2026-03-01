@@ -215,7 +215,7 @@ Last updated: 2026-02-28
 
 | Status | ID            | Task                                                                  | P   | Completed |
 | ------ | ------------- | --------------------------------------------------------------------- | --- | --------- |
-|        | CALC-US1-A001 | Implement tokenizer/lexer for formula expressions                     | 0   |           |
+| ✅ | CALC-US1-A001 | Implement tokenizer/lexer for formula expressions                     | 0   | 2026-03-01 |
 |        | CALC-US1-A002 | Implement parser that produces a restricted AST                       | 0   |           |
 |        | CALC-US1-A003 | Implement AST evaluator with arithmetic, comparisons, and parentheses | 0   |           |
 |        | CALC-US1-A004 | Add IF/THEN/ELSE conditional expression support                       | 0   |           |
