@@ -7,4 +7,5 @@ export type {
   RadioFieldConfig,
   CheckboxFieldConfig,
   NumberFieldConfig,
+  SliderFieldConfig,
 } from './calculatorConfig';

@@ -160,7 +160,7 @@ Last updated: 2026-02-28
 | ✅ | BLDR-US2-A004 | Implement Radio Button field type with option list editor                              | 0   | 2026-03-01 |
 | ✅ | BLDR-US2-A005 | Implement Checkbox field type with option list editor                                  | 0   | 2026-03-01 |
 | ✅ | BLDR-US2-A006 | Implement Number Input field type with min/max/step/default config                     | 0   | 2026-03-01 |
-|        | BLDR-US2-A007 | Implement Slider/Range field type with min/max/step/default config                     | 0   |           |
+| ✅ | BLDR-US2-A007 | Implement Slider/Range field type with min/max/step/default config                     | 0   | 2026-03-01 |
 |        | BLDR-US2-A008 | Implement Text Input field type                                                        | 1   |           |
 |        | BLDR-US2-A009 | Implement Image Select field type with image upload                                    | 2   |           |
 |        | BLDR-US2-A010 | Implement drag-and-drop field reordering                                               | 1   |           |

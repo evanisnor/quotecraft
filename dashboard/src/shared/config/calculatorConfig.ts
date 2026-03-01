@@ -38,3 +38,11 @@ export interface NumberFieldConfig extends BaseFieldConfig {
   defaultValue?: number;
   placeholder?: string;
 }
+
+export interface SliderFieldConfig extends BaseFieldConfig {
+  type: 'slider';
+  min?: number;
+  max?: number;
+  step?: number;
+  defaultValue?: number;
+}
