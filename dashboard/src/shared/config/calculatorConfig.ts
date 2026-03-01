@@ -8,3 +8,14 @@ export interface BaseFieldConfig {
   required: boolean;
   variableName: string;
 }
+
+export interface FieldOption {
+  id: string;
+  label: string;
+  value: string;
+}
+
+export interface DropdownFieldConfig extends BaseFieldConfig {
+  type: 'dropdown';
+  options: FieldOption[];
+}
