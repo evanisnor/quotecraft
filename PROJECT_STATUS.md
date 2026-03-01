@@ -63,17 +63,19 @@ Last updated: 2026-02-28
 | ✅ | INFR-US1-A011 | Add root Makefile target for full-stack dev-watch mode | 0 | 2026-02-21 |
 | ✅ | INFR-US1-A012 | Set up CI pipeline with GitHub Actions | 0 | 2026-02-21 |
 
-### ✅ [INFR-US2: Database & Migrations](./PROJECT_PLAN.md#infr-us2-database--migrations-p0) (P0)
+### [INFR-US2: Database & Migrations](./PROJECT_PLAN.md#infr-us2-database--migrations-p0) (P0)
 
 **Requirements:** [1.9.2](./REQUIREMENTS.md#19-backend-api--data-storage), [1.9.8](./REQUIREMENTS.md#19-backend-api--data-storage)
 
-| Status | ID            | Task                                                   | P   | Completed |
-| ------ | ------------- | ------------------------------------------------------ | --- | --------- |
-| ✅ | INFR-US2-A001 | Choose and configure migration tool                    | 0   | 2026-02-21 |
-| ✅ | INFR-US2-A002 | Write initial migration: users table                   | 0   | 2026-02-21 |
-| ✅ | INFR-US2-A003 | Write initial migration: calculators table             | 0   | 2026-02-21 |
-| ✅ | INFR-US2-A004 | Write initial migration: sessions table                | 0   | 2026-02-21 |
-| ✅ | INFR-US2-A005 | Configure CI to run migrations against a test database | 0   | 2026-02-21 |
+| Status | ID            | Task                                                                                         | P   | Completed  |
+| ------ | ------------- | -------------------------------------------------------------------------------------------- | --- | ---------- |
+| ✅     | INFR-US2-A001 | Choose and configure migration tool                                                          | 0   | 2026-02-21 |
+| ✅     | INFR-US2-A002 | Write initial migration: users table                                                         | 0   | 2026-02-21 |
+| ✅     | INFR-US2-A003 | Write initial migration: calculators table                                                   | 0   | 2026-02-21 |
+| ✅     | INFR-US2-A004 | Write initial migration: sessions table                                                      | 0   | 2026-02-21 |
+| ✅     | INFR-US2-A005 | Configure CI to run migrations against a test database                                       | 0   | 2026-02-21 |
+|        | INFR-US2-A006 | Implement `db-seed` make target that seeds the local database with three users               | 0   |            |
+|        | INFR-US2-A007 | Implement `db-reset` make target that resets the local database                              | 0   |            |
 
 ### ✅ [INFR-US3: API Server Skeleton](./PROJECT_PLAN.md#infr-us3-api-server-skeleton-p0) (P0)
 
@@ -100,6 +102,7 @@ Last updated: 2026-02-28
 |        | INFR-US4-A005 | Implement password reset flow (forgot + reset endpoints)                    | 1   |           |
 |        | INFR-US4-A006 | Implement Google OAuth with PKCE                                            | 1   |           |
 |        | INFR-US4-A007 | Add rate limiting on auth endpoints                                         | 1   |           |
+|        | INFR-US4-A008 | Implement `create-admin-user.sh` script that prompts for admin credentials and seeds the database; integrate into `bootstrap` | 0 | |
 
 ### [INFR-US5: Calculator CRUD API](./PROJECT_PLAN.md#infr-us5-calculator-crud-api-p0) (P0)
 
@@ -163,7 +166,7 @@ Last updated: 2026-02-28
 | ✅ | BLDR-US2-A007 | Implement Slider/Range field type with min/max/step/default config                     | 0   | 2026-03-01 |
 | ✅ | BLDR-US2-A008 | Implement Text Input field type                                                        | 1   | 2026-03-01 |
 |        | BLDR-US2-A009 | Implement Image Select field type with image upload                                    | 2   |           |
-|        | BLDR-US2-A010 | Implement drag-and-drop field reordering                                               | 1   |           |
+|  | BLDR-US2-A010 | Implement drag-and-drop field reordering                                               | 1   |           |
 | ✅ | BLDR-US2-A011 | Implement field deletion                                                               | 0   | 2026-03-01 |
 
 ### [BLDR-US3: Layout & Conditional Flow](./PROJECT_PLAN.md#bldr-us3-layout--conditional-flow-p1) (P1)

@@ -197,6 +197,8 @@ The API server, database, authentication, and deployment pipeline. Every other e
 - Migration tool is configured and can run up/down migrations
 - Initial migration creates tables: users, calculators, sessions
 - Migrations run automatically in CI against a test database
+- Local dev database can be seeded with three users via `make db-seed`
+- Local dev database can be reset via `make db-reset`
 
 | ID | Task | P |
 |----|------|---|
@@ -205,6 +207,8 @@ The API server, database, authentication, and deployment pipeline. Every other e
 | INFR-US2-A003 | Write initial migration: calculators table (id, user_id, config jsonb, config_version, is_deleted, created_at, updated_at) | 0 |
 | INFR-US2-A004 | Write initial migration: sessions table | 0 |
 | INFR-US2-A005 | Configure CI to run migrations against a test database | 0 |
+| INFR-US2-A006 | Implement `db-seed` make target that seeds the local database with three users | 0 |
+| INFR-US2-A007 | Implement `db-reset` make target that resets the local database | 0 |
 
 ### INFR-US3: API Server Skeleton (P0)
 
@@ -245,6 +249,7 @@ The API server, database, authentication, and deployment pipeline. Every other e
 - `POST /v1/auth/google` handles Google OAuth flow with PKCE
 - Auth middleware extracts session token from Authorization header, rejects invalid/expired tokens with 401
 - Auth endpoints are rate-limited (10 attempts/min/IP)
+- Local development setup via `make bootstrap` prompts the developer for admin credentials, and seeds the database with this login information
 
 | ID | Task | P |
 |----|------|---|
@@ -255,6 +260,7 @@ The API server, database, authentication, and deployment pipeline. Every other e
 | INFR-US4-A005 | Implement password reset flow (forgot + reset endpoints) | 1 |
 | INFR-US4-A006 | Implement Google OAuth with PKCE | 1 |
 | INFR-US4-A007 | Add rate limiting on auth endpoints | 1 |
+| INFR-US4-A008 | Implement `create-admin-user.sh` script that prompts for admin credentials and seeds the database; integrate into `bootstrap` | 0 |
 
 ### INFR-US5: Calculator CRUD API (P0)
 
