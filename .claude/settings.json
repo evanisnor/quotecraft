@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/compact-on-task-complete.sh",
+            "command": ".claude/hooks/new-session-on-todos-complete.sh",
             "timeout": 5
           }
         ]
