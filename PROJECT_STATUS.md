@@ -48,91 +48,91 @@ Last updated: 2026-02-28
 
 **Requirements:** Infrastructure prerequisite — no direct functional requirement
 
-| Status | ID | Task | P | Completed |
-|--------|----|------|---|-----------|
-| ✅ | INFR-US1-A001 | Initialize monorepo with pnpm workspaces | 0 | 2026-02-21 |
-| ✅ | INFR-US1-A002 | Create root Makefile with `bootstrap` target (Homebrew Brewfile) | 0 | 2026-02-21 |
-| ✅ | INFR-US1-A003 | Create Docker Compose for local dev services (PostgreSQL) | 0 | 2026-02-21 |
-| ✅ | INFR-US1-A004 | Add root Makefile targets for service lifecycle | 0 | 2026-02-21 |
-| ✅ | INFR-US1-A005 | Initialize Go API server module with air hot-reload + Makefile | 0 | 2026-02-21 |
-| ✅ | INFR-US1-A006 | Scaffold dashboard Next.js app via create-next-app + Makefile | 0 | 2026-02-21 |
-| ✅ | INFR-US1-A007 | Create widget package stub with TypeScript bundler + Makefile | 0 | 2026-02-21 |
-| ✅ | INFR-US1-A008 | Create shared TypeScript package stubs + Makefile | 0 | 2026-02-21 |
-| ✅ | INFR-US1-A009 | Configure shared TypeScript, ESLint, and Prettier configs | 0 | 2026-02-21 |
-| ✅ | INFR-US1-A010 | Add root Makefile targets for database management | 0 | 2026-02-21 |
-| ✅ | INFR-US1-A011 | Add root Makefile target for full-stack dev-watch mode | 0 | 2026-02-21 |
-| ✅ | INFR-US1-A012 | Set up CI pipeline with GitHub Actions | 0 | 2026-02-21 |
+| Status | ID            | Task                                                             | P   | Completed  |
+| ------ | ------------- | ---------------------------------------------------------------- | --- | ---------- |
+| ✅     | INFR-US1-A001 | Initialize monorepo with pnpm workspaces                         | 0   | 2026-02-21 |
+| ✅     | INFR-US1-A002 | Create root Makefile with `bootstrap` target (Homebrew Brewfile) | 0   | 2026-02-21 |
+| ✅     | INFR-US1-A003 | Create Docker Compose for local dev services (PostgreSQL)        | 0   | 2026-02-21 |
+| ✅     | INFR-US1-A004 | Add root Makefile targets for service lifecycle                  | 0   | 2026-02-21 |
+| ✅     | INFR-US1-A005 | Initialize Go API server module with air hot-reload + Makefile   | 0   | 2026-02-21 |
+| ✅     | INFR-US1-A006 | Scaffold dashboard Next.js app via create-next-app + Makefile    | 0   | 2026-02-21 |
+| ✅     | INFR-US1-A007 | Create widget package stub with TypeScript bundler + Makefile    | 0   | 2026-02-21 |
+| ✅     | INFR-US1-A008 | Create shared TypeScript package stubs + Makefile                | 0   | 2026-02-21 |
+| ✅     | INFR-US1-A009 | Configure shared TypeScript, ESLint, and Prettier configs        | 0   | 2026-02-21 |
+| ✅     | INFR-US1-A010 | Add root Makefile targets for database management                | 0   | 2026-02-21 |
+| ✅     | INFR-US1-A011 | Add root Makefile target for full-stack dev-watch mode           | 0   | 2026-02-21 |
+| ✅     | INFR-US1-A012 | Set up CI pipeline with GitHub Actions                           | 0   | 2026-02-21 |
 
 ### [INFR-US2: Database & Migrations](./PROJECT_PLAN.md#infr-us2-database--migrations-p0) (P0)
 
 **Requirements:** [1.9.2](./REQUIREMENTS.md#19-backend-api--data-storage), [1.9.8](./REQUIREMENTS.md#19-backend-api--data-storage)
 
-| Status | ID            | Task                                                                                         | P   | Completed  |
-| ------ | ------------- | -------------------------------------------------------------------------------------------- | --- | ---------- |
-| ✅     | INFR-US2-A001 | Choose and configure migration tool                                                          | 0   | 2026-02-21 |
-| ✅     | INFR-US2-A002 | Write initial migration: users table                                                         | 0   | 2026-02-21 |
-| ✅     | INFR-US2-A003 | Write initial migration: calculators table                                                   | 0   | 2026-02-21 |
-| ✅     | INFR-US2-A004 | Write initial migration: sessions table                                                      | 0   | 2026-02-21 |
-| ✅     | INFR-US2-A005 | Configure CI to run migrations against a test database                                       | 0   | 2026-02-21 |
-| ✅     | INFR-US2-A006 | Implement `db-seed` make target that seeds the local database with three users               | 0   | 2026-03-01 |
-| ✅     | INFR-US2-A007 | Implement `db-reset` make target that resets the local database                              | 0   | 2026-03-01 |
+| Status | ID            | Task                                                                           | P   | Completed  |
+| ------ | ------------- | ------------------------------------------------------------------------------ | --- | ---------- |
+| ✅     | INFR-US2-A001 | Choose and configure migration tool                                            | 0   | 2026-02-21 |
+| ✅     | INFR-US2-A002 | Write initial migration: users table                                           | 0   | 2026-02-21 |
+| ✅     | INFR-US2-A003 | Write initial migration: calculators table                                     | 0   | 2026-02-21 |
+| ✅     | INFR-US2-A004 | Write initial migration: sessions table                                        | 0   | 2026-02-21 |
+| ✅     | INFR-US2-A005 | Configure CI to run migrations against a test database                         | 0   | 2026-02-21 |
+| ✅     | INFR-US2-A006 | Implement `db-seed` make target that seeds the local database with three users | 0   | 2026-03-01 |
+| ✅     | INFR-US2-A007 | Implement `db-reset` make target that resets the local database                | 0   | 2026-03-01 |
 
 ### ✅ [INFR-US3: API Server Skeleton](./PROJECT_PLAN.md#infr-us3-api-server-skeleton-p0) (P0)
 
 **Requirements:** [1.9.1](./REQUIREMENTS.md#19-backend-api--data-storage), [1.9.7](./REQUIREMENTS.md#19-backend-api--data-storage), [1.9.9](./REQUIREMENTS.md#19-backend-api--data-storage)
 
-| Status | ID            | Task                                                                    | P   | Completed |
-| ------ | ------------- | ----------------------------------------------------------------------- | --- | --------- |
-| ✅ | INFR-US3-A001 | Set up API server with router and middleware stack                      | 0   | 2026-02-22 |
-| ✅ | INFR-US3-A002 | Implement structured JSON logging with trace_id propagation             | 0   | 2026-02-22 |
-| ✅ | INFR-US3-A003 | Implement consistent error response format                              | 0   | 2026-02-22 |
-| ✅ | INFR-US3-A004 | Implement `GET /healthz` with DB connectivity check                     | 0   | 2026-02-22 |
-| ✅ | INFR-US3-A005 | Configure CORS: wildcard for public endpoints, restricted for dashboard | 0   | 2026-02-22 |
+| Status | ID            | Task                                                                    | P   | Completed  |
+| ------ | ------------- | ----------------------------------------------------------------------- | --- | ---------- |
+| ✅     | INFR-US3-A001 | Set up API server with router and middleware stack                      | 0   | 2026-02-22 |
+| ✅     | INFR-US3-A002 | Implement structured JSON logging with trace_id propagation             | 0   | 2026-02-22 |
+| ✅     | INFR-US3-A003 | Implement consistent error response format                              | 0   | 2026-02-22 |
+| ✅     | INFR-US3-A004 | Implement `GET /healthz` with DB connectivity check                     | 0   | 2026-02-22 |
+| ✅     | INFR-US3-A005 | Configure CORS: wildcard for public endpoints, restricted for dashboard | 0   | 2026-02-22 |
 
 ### [INFR-US4: Authentication](./PROJECT_PLAN.md#infr-us4-authentication-p0) (P0)
 
 **Requirements:** [1.1.1](./REQUIREMENTS.md#11-authentication--user-accounts), [1.1.2](./REQUIREMENTS.md#11-authentication--user-accounts), [1.1.3](./REQUIREMENTS.md#11-authentication--user-accounts), [1.1.4](./REQUIREMENTS.md#11-authentication--user-accounts), [1.1.5](./REQUIREMENTS.md#11-authentication--user-accounts), [1.1.6](./REQUIREMENTS.md#11-authentication--user-accounts), [1.1.7](./REQUIREMENTS.md#11-authentication--user-accounts)
 
-| Status | ID            | Task                                                                        | P   | Completed |
-| ------ | ------------- | --------------------------------------------------------------------------- | --- | --------- |
-| ✅ | INFR-US4-A001 | Implement email+password registration with password hashing                 | 0   | 2026-02-22 |
-| ✅ | INFR-US4-A002 | Implement login endpoint with session token issuance                        | 0   | 2026-02-22 |
-| ✅ | INFR-US4-A003 | Implement logout with server-side token invalidation                        | 0   | 2026-02-22 |
-| ✅ | INFR-US4-A004 | Implement auth middleware that validates session tokens on protected routes | 0   | 2026-02-22 |
-|        | INFR-US4-A005 | Implement password reset flow (forgot + reset endpoints)                    | 1   |           |
-|        | INFR-US4-A006 | Implement Google OAuth with PKCE                                            | 1   |           |
-|        | INFR-US4-A007 | Add rate limiting on auth endpoints                                         | 1   |           |
-| ✅ | INFR-US4-A008 | Implement `create-admin-user.sh` script that prompts for admin credentials and seeds the database; integrate into `bootstrap` | 0 | 2026-03-01 |
+| Status | ID            | Task                                                                                                                          | P   | Completed  |
+| ------ | ------------- | ----------------------------------------------------------------------------------------------------------------------------- | --- | ---------- |
+| ✅     | INFR-US4-A001 | Implement email+password registration with password hashing                                                                   | 0   | 2026-02-22 |
+| ✅     | INFR-US4-A002 | Implement login endpoint with session token issuance                                                                          | 0   | 2026-02-22 |
+| ✅     | INFR-US4-A003 | Implement logout with server-side token invalidation                                                                          | 0   | 2026-02-22 |
+| ✅     | INFR-US4-A004 | Implement auth middleware that validates session tokens on protected routes                                                   | 0   | 2026-02-22 |
+|        | INFR-US4-A005 | Implement password reset flow (forgot + reset endpoints)                                                                      | 1   |            |
+|        | INFR-US4-A006 | Implement Google OAuth with PKCE                                                                                              | 1   |            |
+|        | INFR-US4-A007 | Add rate limiting on auth endpoints                                                                                           | 1   |            |
+| ✅     | INFR-US4-A008 | Implement `create-admin-user.sh` script that prompts for admin credentials and seeds the database; integrate into `bootstrap` | 0   | 2026-03-01 |
 
 ### [INFR-US5: Calculator CRUD API](./PROJECT_PLAN.md#infr-us5-calculator-crud-api-p0) (P0)
 
 **Requirements:** [1.2.1–1.2.9](./REQUIREMENTS.md#12-calculator-crud), [1.9.3](./REQUIREMENTS.md#19-backend-api--data-storage), [1.9.4](./REQUIREMENTS.md#19-backend-api--data-storage), [1.9.5](./REQUIREMENTS.md#19-backend-api--data-storage), [1.9.6](./REQUIREMENTS.md#19-backend-api--data-storage)
 
-| Status | ID            | Task                                                               | P   | Completed |
-| ------ | ------------- | ------------------------------------------------------------------ | --- | --------- |
-| ✅ | INFR-US5-A001 | Implement create calculator endpoint                               | 0   | 2026-02-22 |
-| ✅ | INFR-US5-A002 | Implement list calculators endpoint (scoped to authenticated user) | 0   | 2026-02-23 |
-| ✅ | INFR-US5-A003 | Implement get single calculator endpoint (ownership-gated)         | 0   | 2026-02-23 |
-| ✅ | INFR-US5-A004 | Implement update calculator endpoint with config schema validation | 0   | 2026-02-23 |
-| ✅ | INFR-US5-A005 | Implement soft-delete calculator endpoint                          | 0   | 2026-02-23 |
-|        | INFR-US5-A006 | Implement duplicate calculator endpoint                            | 1   |           |
-| ✅ | INFR-US5-A007 | Implement public config endpoint with cache headers                | 0   | 2026-02-23 |
-|        | INFR-US5-A008 | Add rate limiting on public config endpoint                        | 1   |           |
+| Status | ID            | Task                                                               | P   | Completed  |
+| ------ | ------------- | ------------------------------------------------------------------ | --- | ---------- |
+| ✅     | INFR-US5-A001 | Implement create calculator endpoint                               | 0   | 2026-02-22 |
+| ✅     | INFR-US5-A002 | Implement list calculators endpoint (scoped to authenticated user) | 0   | 2026-02-23 |
+| ✅     | INFR-US5-A003 | Implement get single calculator endpoint (ownership-gated)         | 0   | 2026-02-23 |
+| ✅     | INFR-US5-A004 | Implement update calculator endpoint with config schema validation | 0   | 2026-02-23 |
+| ✅     | INFR-US5-A005 | Implement soft-delete calculator endpoint                          | 0   | 2026-02-23 |
+|        | INFR-US5-A006 | Implement duplicate calculator endpoint                            | 1   |            |
+| ✅     | INFR-US5-A007 | Implement public config endpoint with cache headers                | 0   | 2026-02-23 |
+|        | INFR-US5-A008 | Add rate limiting on public config endpoint                        | 1   |            |
 
 ### ✅ [INFR-US6: Object Storage & CDN](./PROJECT_PLAN.md#infr-us6-object-storage--cdn-p0) (P0)
 
 **Requirements:** [1.8.5](./REQUIREMENTS.md#18-embeddable-widget), [1.3.7](./REQUIREMENTS.md#13-visual-builder--field-types)
 
-| Status | ID            | Task                                                                                                      | P   | Completed |
-| ------ | ------------- | --------------------------------------------------------------------------------------------------------- | --- | --------- |
-| ✅ | INFR-US6-A001 | Define `Storage` interface and implement S3-compatible adapter (works with MinIO and AWS S3)               | 0   | 2026-02-23 |
-| ✅ | INFR-US6-A002 | Implement filesystem storage adapter for CI/test environments                                             | 0   | 2026-02-23 |
-| ✅ | INFR-US6-A003 | Add MinIO to Docker Compose with health check, persistent volume, and default bucket creation             | 0   | 2026-02-23 |
-| ✅ | INFR-US6-A004 | Add `storage` and `cdn` configuration sections to `config.yaml` with local dev defaults                   | 0   | 2026-02-23 |
-| ✅ | INFR-US6-A005 | Implement dev-mode static file handler (`/static/*` route) for serving widget bundle and assets locally   | 0   | 2026-02-23 |
-|        | INFR-US6-A006 | Implement image upload endpoint with type/size validation using the `Storage` interface                   | 1   |           |
-| ✅ | INFR-US6-A007 | Set up widget bundle build pipeline that outputs content-hashed filename to local build directory          | 0   | 2026-02-23 |
-| ✅ | INFR-US6-A008 | Update developer documentation and ensure Makefiles support a complete development experience              | 0   | 2026-02-28 |
+| Status | ID            | Task                                                                                                    | P   | Completed  |
+| ------ | ------------- | ------------------------------------------------------------------------------------------------------- | --- | ---------- |
+| ✅     | INFR-US6-A001 | Define `Storage` interface and implement S3-compatible adapter (works with MinIO and AWS S3)            | 0   | 2026-02-23 |
+| ✅     | INFR-US6-A002 | Implement filesystem storage adapter for CI/test environments                                           | 0   | 2026-02-23 |
+| ✅     | INFR-US6-A003 | Add MinIO to Docker Compose with health check, persistent volume, and default bucket creation           | 0   | 2026-02-23 |
+| ✅     | INFR-US6-A004 | Add `storage` and `cdn` configuration sections to `config.yaml` with local dev defaults                 | 0   | 2026-02-23 |
+| ✅     | INFR-US6-A005 | Implement dev-mode static file handler (`/static/*` route) for serving widget bundle and assets locally | 0   | 2026-02-23 |
+|        | INFR-US6-A006 | Implement image upload endpoint with type/size validation using the `Storage` interface                 | 1   |            |
+| ✅     | INFR-US6-A007 | Set up widget bundle build pipeline that outputs content-hashed filename to local build directory       | 0   | 2026-02-23 |
+| ✅     | INFR-US6-A008 | Update developer documentation and ensure Makefiles support a complete development experience           | 0   | 2026-02-28 |
 
 ---
 
@@ -144,30 +144,30 @@ Last updated: 2026-02-28
 
 **Requirements:** [1.1.3](./REQUIREMENTS.md#11-authentication--user-accounts), [1.2.2](./REQUIREMENTS.md#12-calculator-crud), [1.2.4](./REQUIREMENTS.md#12-calculator-crud)
 
-| Status | ID            | Task                                                             | P   | Completed |
-| ------ | ------------- | ---------------------------------------------------------------- | --- | --------- |
-| ✅ | BLDR-US1-A001 | Set up React app with routing and auth state management          | 0   | 2026-02-28 |
-| ✅ | BLDR-US1-A002 | Build login and registration screens                             | 0   | 2026-02-28 |
-| ✅ | BLDR-US1-A003 | Build calculator list view with create, open, and delete actions | 0   | 2026-02-28 |
-| ✅ | BLDR-US1-A004 | Implement API client module for authenticated requests           | 0   | 2026-02-28 |
+| Status | ID            | Task                                                             | P   | Completed  |
+| ------ | ------------- | ---------------------------------------------------------------- | --- | ---------- |
+| ✅     | BLDR-US1-A001 | Set up React app with routing and auth state management          | 0   | 2026-02-28 |
+| ✅     | BLDR-US1-A002 | Build login and registration screens                             | 0   | 2026-02-28 |
+| ✅     | BLDR-US1-A003 | Build calculator list view with create, open, and delete actions | 0   | 2026-02-28 |
+| ✅     | BLDR-US1-A004 | Implement API client module for authenticated requests           | 0   | 2026-02-28 |
 
 ### [BLDR-US2: Field Type Palette & Configuration](./PROJECT_PLAN.md#bldr-us2-field-type-palette--configuration-p0) (P0)
 
 **Requirements:** [1.3.1–1.3.11](./REQUIREMENTS.md#13-visual-builder--field-types)
 
-| Status | ID            | Task                                                                                   | P   | Completed |
-| ------ | ------------- | -------------------------------------------------------------------------------------- | --- | --------- |
-| ✅ | BLDR-US2-A001 | Build field type palette component                                                     | 0   | 2026-02-28 |
-| ✅ | BLDR-US2-A002 | Implement shared field configuration panel (label, help text, required, variable name) | 0   | 2026-02-28 |
-| ✅ | BLDR-US2-A003 | Implement Dropdown field type with option list editor                                  | 0   | 2026-03-01 |
-| ✅ | BLDR-US2-A004 | Implement Radio Button field type with option list editor                              | 0   | 2026-03-01 |
-| ✅ | BLDR-US2-A005 | Implement Checkbox field type with option list editor                                  | 0   | 2026-03-01 |
-| ✅ | BLDR-US2-A006 | Implement Number Input field type with min/max/step/default config                     | 0   | 2026-03-01 |
-| ✅ | BLDR-US2-A007 | Implement Slider/Range field type with min/max/step/default config                     | 0   | 2026-03-01 |
-| ✅ | BLDR-US2-A008 | Implement Text Input field type                                                        | 1   | 2026-03-01 |
-|        | BLDR-US2-A009 | Implement Image Select field type with image upload                                    | 2   |           |
-| ✅ | BLDR-US2-A010 | Implement drag-and-drop field reordering                                               | 1   | 2026-03-01 |
-| ✅ | BLDR-US2-A011 | Implement field deletion                                                               | 0   | 2026-03-01 |
+| Status | ID            | Task                                                                                   | P   | Completed  |
+| ------ | ------------- | -------------------------------------------------------------------------------------- | --- | ---------- |
+| ✅     | BLDR-US2-A001 | Build field type palette component                                                     | 0   | 2026-02-28 |
+| ✅     | BLDR-US2-A002 | Implement shared field configuration panel (label, help text, required, variable name) | 0   | 2026-02-28 |
+| ✅     | BLDR-US2-A003 | Implement Dropdown field type with option list editor                                  | 0   | 2026-03-01 |
+| ✅     | BLDR-US2-A004 | Implement Radio Button field type with option list editor                              | 0   | 2026-03-01 |
+| ✅     | BLDR-US2-A005 | Implement Checkbox field type with option list editor                                  | 0   | 2026-03-01 |
+| ✅     | BLDR-US2-A006 | Implement Number Input field type with min/max/step/default config                     | 0   | 2026-03-01 |
+| ✅     | BLDR-US2-A007 | Implement Slider/Range field type with min/max/step/default config                     | 0   | 2026-03-01 |
+| ✅     | BLDR-US2-A008 | Implement Text Input field type                                                        | 1   | 2026-03-01 |
+|        | BLDR-US2-A009 | Implement Image Select field type with image upload                                    | 2   |            |
+| ✅     | BLDR-US2-A010 | Implement drag-and-drop field reordering                                               | 1   | 2026-03-01 |
+| ✅     | BLDR-US2-A011 | Implement field deletion                                                               | 0   | 2026-03-01 |
 
 ### [BLDR-US3: Layout & Conditional Flow](./PROJECT_PLAN.md#bldr-us3-layout--conditional-flow-p1) (P1)
 
@@ -186,12 +186,12 @@ Last updated: 2026-02-28
 
 **Requirements:** [1.3.11](./REQUIREMENTS.md#13-visual-builder--field-types), [1.5.9](./REQUIREMENTS.md#15-formula-engine)
 
-| Status | ID            | Task                                                                            | P   | Completed |
-| ------ | ------------- | ------------------------------------------------------------------------------- | --- | --------- |
-| ✅ | BLDR-US4-A001 | Build preview pane container with style isolation                               | 0   | 2026-03-02 |
-| ✅ | BLDR-US4-A002 | Wire shared field renderers into the preview                                    | 0   | 2026-03-02 |
-|        | BLDR-US4-A003 | Wire shared formula engine into the preview                                     | 0   |           |
-|        | BLDR-US4-A004 | Implement real-time reactivity: config changes propagate to preview immediately | 0   |           |
+| Status | ID            | Task                                                                            | P   | Completed  |
+| ------ | ------------- | ------------------------------------------------------------------------------- | --- | ---------- |
+| ✅     | BLDR-US4-A001 | Build preview pane container with style isolation                               | 0   | 2026-03-02 |
+| ✅     | BLDR-US4-A002 | Wire shared field renderers into the preview                                    | 0   | 2026-03-02 |
+|        | BLDR-US4-A003 | Wire shared formula engine into the preview                                     | 0   |            |
+|        | BLDR-US4-A004 | Implement real-time reactivity: config changes propagate to preview immediately | 0   |            |
 
 ### [BLDR-US5: Save & Auto-Save](./PROJECT_PLAN.md#bldr-us5-save--auto-save-p0) (P0)
 
@@ -213,17 +213,17 @@ Last updated: 2026-02-28
 
 **Requirements:** [1.5.1–1.5.5](./REQUIREMENTS.md#15-formula-engine), [1.5.10–1.5.13](./REQUIREMENTS.md#15-formula-engine)
 
-| Status | ID            | Task                                                                  | P   | Completed |
-| ------ | ------------- | --------------------------------------------------------------------- | --- | --------- |
-| ✅ | CALC-US1-A001 | Implement tokenizer/lexer for formula expressions                     | 0   | 2026-03-01 |
-| ✅ | CALC-US1-A002 | Implement parser that produces a restricted AST                       | 0   | 2026-03-01 |
-| ✅ | CALC-US1-A003 | Implement AST evaluator with arithmetic, comparisons, and parentheses | 0   | 2026-03-01 |
-| ✅ | CALC-US1-A004 | Add IF/THEN/ELSE conditional expression support                       | 0   | 2026-03-01 |
-| ✅ | CALC-US1-A005 | Add variable reference resolution against field value map             | 0   | 2026-03-01 |
-|        | CALC-US1-A006 | Add MIN, MAX, ABS, ROUND function support                             | 1   |           |
-|        | CALC-US1-A007 | Implement execution timeout (100ms abort)                             | 1   |           |
-|        | CALC-US1-A008 | Implement error messages with "did you mean?" suggestions             | 1   |           |
-| ✅ | CALC-US1-A009 | Write comprehensive unit tests for edge cases                         | 0   | 2026-03-02 |
+| Status | ID            | Task                                                                  | P   | Completed  |
+| ------ | ------------- | --------------------------------------------------------------------- | --- | ---------- |
+| ✅     | CALC-US1-A001 | Implement tokenizer/lexer for formula expressions                     | 0   | 2026-03-01 |
+| ✅     | CALC-US1-A002 | Implement parser that produces a restricted AST                       | 0   | 2026-03-01 |
+| ✅     | CALC-US1-A003 | Implement AST evaluator with arithmetic, comparisons, and parentheses | 0   | 2026-03-01 |
+| ✅     | CALC-US1-A004 | Add IF/THEN/ELSE conditional expression support                       | 0   | 2026-03-01 |
+| ✅     | CALC-US1-A005 | Add variable reference resolution against field value map             | 0   | 2026-03-01 |
+|        | CALC-US1-A006 | Add MIN, MAX, ABS, ROUND function support                             | 1   |            |
+|        | CALC-US1-A007 | Implement execution timeout (100ms abort)                             | 1   |            |
+|        | CALC-US1-A008 | Implement error messages with "did you mean?" suggestions             | 1   |            |
+| ✅     | CALC-US1-A009 | Write comprehensive unit tests for edge cases                         | 0   | 2026-03-02 |
 
 ### [CALC-US2: Formula Editor UI](./PROJECT_PLAN.md#calc-us2-formula-editor-ui-p0) (P0)
 

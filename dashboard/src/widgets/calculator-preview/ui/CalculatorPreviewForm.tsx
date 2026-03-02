@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type {
   BaseFieldConfig,
   NumberFieldConfig,
@@ -8,7 +8,7 @@ import type {
   DropdownFieldConfig,
   RadioFieldConfig,
 } from '@/shared/config';
-import { FieldPreviewRenderer } from './FieldPreviewRenderer';
+import { FieldPreviewRenderer } from '@/shared/ui/field-renderers';
 
 export interface CalculatorPreviewFormProps {
   fields: BaseFieldConfig[];
@@ -41,19 +41,26 @@ function getInitialValue(field: BaseFieldConfig): number {
   }
 }
 
-function buildInitialValues(fields: BaseFieldConfig[]): Record<string, number> {
-  const values: Record<string, number> = {};
+function buildFieldDefaults(fields: BaseFieldConfig[]): Record<string, number> {
+  const defaults: Record<string, number> = {};
   for (const field of fields) {
-    values[field.variableName] = getInitialValue(field);
+    defaults[field.variableName] = getInitialValue(field);
   }
-  return values;
+  return defaults;
 }
 
 export function CalculatorPreviewForm({ fields }: CalculatorPreviewFormProps) {
-  const [values, setValues] = useState<Record<string, number>>(() => buildInitialValues(fields));
+  // Tracks values the user has explicitly changed; merged with field defaults so
+  // newly added fields appear with their defaults without resetting existing inputs.
+  const [userValues, setUserValues] = useState<Record<string, number>>({});
+
+  const values = useMemo(
+    () => ({ ...buildFieldDefaults(fields), ...userValues }),
+    [fields, userValues],
+  );
 
   function handleChange(variableName: string, value: number): void {
-    setValues((prev) => ({ ...prev, [variableName]: value }));
+    setUserValues((prev) => ({ ...prev, [variableName]: value }));
   }
 
   return (

@@ -89,6 +89,33 @@ describe('CalculatorPreviewForm', () => {
     expect(input).toHaveValue(99);
   });
 
+  it('renders a field added after initial mount', () => {
+    const initialFields: BaseFieldConfig[] = [makeNumberField()];
+    const newField = makeSliderField({ id: 'field-slider-new', variableName: 'budget_new' });
+
+    const { rerender } = render(<CalculatorPreviewForm fields={initialFields} />);
+
+    rerender(<CalculatorPreviewForm fields={[...initialFields, newField]} />);
+
+    expect(screen.getByLabelText('Budget')).toBeInTheDocument();
+  });
+
+  it('preserves user-changed values when a new field is added', async () => {
+    const user = userEvent.setup();
+    const initialFields: BaseFieldConfig[] = [makeNumberField()];
+    const newField = makeSliderField({ id: 'field-slider-new', variableName: 'budget_new' });
+
+    const { rerender } = render(<CalculatorPreviewForm fields={initialFields} />);
+
+    const input = screen.getByRole('spinbutton');
+    await user.clear(input);
+    await user.type(input, '77');
+
+    rerender(<CalculatorPreviewForm fields={[...initialFields, newField]} />);
+
+    expect(screen.getByRole('spinbutton')).toHaveValue(77);
+  });
+
   it('renders multiple field types without error', () => {
     const fields: BaseFieldConfig[] = [
       makeNumberField(),

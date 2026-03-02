@@ -223,6 +223,28 @@ describe('FieldPreviewRenderer', () => {
       expect(onChange).toHaveBeenLastCalledWith(42);
     });
 
+    it('changing a slider calls onChange with the new numeric value', () => {
+      const onChange = jest.fn();
+
+      render(<FieldPreviewRenderer field={makeSliderField()} value={100} onChange={onChange} />);
+
+      const slider = screen.getByRole('slider');
+      fireEvent.change(slider, { target: { value: '250' } });
+
+      expect(onChange).toHaveBeenLastCalledWith(250);
+    });
+
+    it('typing in a text input calls onChange with 0', () => {
+      const onChange = jest.fn();
+
+      render(<FieldPreviewRenderer field={makeTextField()} value={0} onChange={onChange} />);
+
+      const input = screen.getByRole('textbox');
+      fireEvent.change(input, { target: { value: 'Acme Corp' } });
+
+      expect(onChange).toHaveBeenLastCalledWith(0);
+    });
+
     it('changing a dropdown selection calls onChange with the option numeric value', async () => {
       const onChange = jest.fn();
       const user = userEvent.setup();
@@ -232,6 +254,39 @@ describe('FieldPreviewRenderer', () => {
       await user.selectOptions(screen.getByRole('combobox'), 'Pro');
 
       expect(onChange).toHaveBeenLastCalledWith(25);
+    });
+
+    it('selecting a radio option calls onChange with the option numeric value', () => {
+      const onChange = jest.fn();
+
+      render(<FieldPreviewRenderer field={makeRadioField()} value={5} onChange={onChange} />);
+
+      const phoneRadio = screen.getByRole('radio', { name: 'Phone' });
+      fireEvent.click(phoneRadio);
+
+      expect(onChange).toHaveBeenLastCalledWith(15);
+    });
+
+    it('checking a checkbox calls onChange with the count of checked items', () => {
+      const onChange = jest.fn();
+
+      render(<FieldPreviewRenderer field={makeCheckboxField()} value={0} onChange={onChange} />);
+
+      const analyticsCheckbox = screen.getByRole('checkbox', { name: 'Analytics' });
+      fireEvent.click(analyticsCheckbox);
+
+      expect(onChange).toHaveBeenLastCalledWith(1);
+    });
+
+    it('checking a second checkbox calls onChange with the updated count', () => {
+      const onChange = jest.fn();
+
+      render(<FieldPreviewRenderer field={makeCheckboxField()} value={0} onChange={onChange} />);
+
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Analytics' }));
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Support' }));
+
+      expect(onChange).toHaveBeenLastCalledWith(2);
     });
   });
 

@@ -1,3 +1,5 @@
+'use client';
+
 import { useState } from 'react';
 import type {
   BaseFieldConfig,
@@ -180,6 +182,7 @@ function CheckboxFieldRenderer({
   );
 }
 
+// TODO [BLDR-US2-A009]: Add image select rendering support
 function ImageSelectFieldRenderer() {
   return <p>Image Select (not yet supported in preview)</p>;
 }
