@@ -132,6 +132,32 @@ describe('EditorPage', () => {
     });
   });
 
+  it('renders the calculator preview form inside the preview pane shadow DOM', async () => {
+    render(<EditorPage calculatorId="calc-1" />);
+
+    const host = screen.getByTestId('preview-shadow-host');
+
+    await waitFor(() => {
+      const form = host.shadowRoot?.querySelector('[aria-label="Calculator Preview Form"]');
+      expect(form).not.toBeNull();
+    });
+  });
+
+  it('adding a field to the editor shows the field label in the preview pane shadow DOM', async () => {
+    const user = userEvent.setup();
+    render(<EditorPage calculatorId="calc-1" />);
+
+    await user.click(screen.getByRole('button', { name: 'Number Input' }));
+
+    const host = screen.getByTestId('preview-shadow-host');
+
+    await waitFor(() => {
+      const form = host.shadowRoot?.querySelector('[aria-label="Calculator Preview Form"]');
+      expect(form).not.toBeNull();
+      expect(form?.textContent).toContain('Number Input');
+    });
+  });
+
   it('reordering via ArrowDown keyboard moves a field down in the list', async () => {
     const user = userEvent.setup();
     render(<EditorPage calculatorId="calc-1" />);

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { FieldTypePalette } from '@/features/add-field';
 import { DraggableFieldList } from '@/features/reorder-fields';
 import { FieldEditorWidget } from '@/widgets/field-editor';
-import { PreviewPane } from '@/widgets/calculator-preview';
+import { PreviewPane, CalculatorPreviewForm } from '@/widgets/calculator-preview';
 import type {
   BaseFieldConfig,
   FieldType,
@@ -84,7 +84,9 @@ export function EditorPage({ calculatorId }: EditorPageProps) {
           )}
         </div>
         <div className="flex-1">
-          <PreviewPane />
+          <PreviewPane>
+            <CalculatorPreviewForm fields={fields} />
+          </PreviewPane>
         </div>
       </div>
     </main>
