@@ -223,7 +223,7 @@ Last updated: 2026-02-28
 |        | CALC-US1-A006 | Add MIN, MAX, ABS, ROUND function support                             | 1   |           |
 |        | CALC-US1-A007 | Implement execution timeout (100ms abort)                             | 1   |           |
 |        | CALC-US1-A008 | Implement error messages with "did you mean?" suggestions             | 1   |           |
-|        | CALC-US1-A009 | Write comprehensive unit tests for edge cases                         | 0   |           |
+| ✅ | CALC-US1-A009 | Write comprehensive unit tests for edge cases                         | 0   | 2026-03-02 |
 
 ### [CALC-US2: Formula Editor UI](./PROJECT_PLAN.md#calc-us2-formula-editor-ui-p0) (P0)
 
