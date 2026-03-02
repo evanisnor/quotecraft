@@ -7,11 +7,15 @@ import type {
   SliderFieldConfig,
   DropdownFieldConfig,
   RadioFieldConfig,
+  ResultOutputConfig,
 } from '@/shared/config';
 import { FieldPreviewRenderer } from '@/shared/ui/field-renderers';
+import { evaluate } from '@quotecraft/formula-engine';
+import type { FormulaResult } from '@quotecraft/formula-engine';
 
 export interface CalculatorPreviewFormProps {
   fields: BaseFieldConfig[];
+  outputs?: ResultOutputConfig[];
 }
 
 function getInitialValue(field: BaseFieldConfig): number {
@@ -49,7 +53,7 @@ function buildFieldDefaults(fields: BaseFieldConfig[]): Record<string, number> {
   return defaults;
 }
 
-export function CalculatorPreviewForm({ fields }: CalculatorPreviewFormProps) {
+export function CalculatorPreviewForm({ fields, outputs = [] }: CalculatorPreviewFormProps) {
   // Tracks values the user has explicitly changed; merged with field defaults so
   // newly added fields appear with their defaults without resetting existing inputs.
   const [userValues, setUserValues] = useState<Record<string, number>>({});
@@ -57,6 +61,15 @@ export function CalculatorPreviewForm({ fields }: CalculatorPreviewFormProps) {
   const values = useMemo(
     () => ({ ...buildFieldDefaults(fields), ...userValues }),
     [fields, userValues],
+  );
+
+  const results = useMemo<Array<{ output: ResultOutputConfig; result: FormulaResult }>>(
+    () =>
+      outputs.map((output) => ({
+        output,
+        result: evaluate(output.expression, values),
+      })),
+    [outputs, values],
   );
 
   function handleChange(variableName: string, value: number): void {
@@ -76,6 +89,20 @@ export function CalculatorPreviewForm({ fields }: CalculatorPreviewFormProps) {
             onChange={(value) => handleChange(field.variableName, value)}
           />
         ))
+      )}
+      {outputs.length > 0 && (
+        <section aria-label="Results">
+          {results.map(({ output, result }) => (
+            <div key={output.id}>
+              <span>{output.label}</span>
+              {result.error !== undefined ? (
+                <span role="alert">{result.error}</span>
+              ) : (
+                <span>{result.value}</span>
+              )}
+            </div>
+          ))}
+        </section>
       )}
     </form>
   );

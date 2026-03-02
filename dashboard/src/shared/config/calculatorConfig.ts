@@ -51,3 +51,9 @@ export interface TextFieldConfig extends BaseFieldConfig {
   type: 'text';
   placeholder?: string;
 }
+
+export interface ResultOutputConfig {
+  id: string;
+  label: string;
+  expression: string;
+}

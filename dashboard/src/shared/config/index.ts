@@ -9,4 +9,5 @@ export type {
   NumberFieldConfig,
   SliderFieldConfig,
   TextFieldConfig,
+  ResultOutputConfig,
 } from './calculatorConfig';

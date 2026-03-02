@@ -85,7 +85,7 @@ export function EditorPage({ calculatorId }: EditorPageProps) {
         </div>
         <div className="flex-1">
           <PreviewPane>
-            <CalculatorPreviewForm fields={fields} />
+            <CalculatorPreviewForm fields={fields} outputs={[]} />
           </PreviewPane>
         </div>
       </div>

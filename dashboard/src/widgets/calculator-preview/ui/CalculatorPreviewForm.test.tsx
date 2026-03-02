@@ -5,6 +5,7 @@ import type {
   NumberFieldConfig,
   SliderFieldConfig,
   DropdownFieldConfig,
+  ResultOutputConfig,
 } from '@/shared/config';
 import { CalculatorPreviewForm } from './CalculatorPreviewForm';
 
@@ -154,5 +155,89 @@ describe('CalculatorPreviewForm', () => {
     ];
 
     expect(() => render(<CalculatorPreviewForm fields={fields} />)).not.toThrow();
+  });
+});
+
+describe('CalculatorPreviewForm — formula engine integration', () => {
+  function makeOutput(overrides: Partial<ResultOutputConfig> = {}): ResultOutputConfig {
+    return {
+      id: 'output-1',
+      label: 'Total',
+      expression: '{quantity} * 10',
+      ...overrides,
+    };
+  }
+
+  it('renders no results section when outputs is undefined', () => {
+    render(<CalculatorPreviewForm fields={[makeNumberField()]} />);
+
+    expect(screen.queryByRole('region', { name: 'Results' })).not.toBeInTheDocument();
+  });
+
+  it('renders no results section when outputs is an empty array', () => {
+    render(<CalculatorPreviewForm fields={[makeNumberField()]} outputs={[]} />);
+
+    expect(screen.queryByRole('region', { name: 'Results' })).not.toBeInTheDocument();
+  });
+
+  it('renders a results section with aria-label="Results" when outputs are provided', () => {
+    const field = makeNumberField({ variableName: 'quantity', defaultValue: 5 });
+    const output = makeOutput({ expression: '10', label: 'Total' });
+
+    render(<CalculatorPreviewForm fields={[field]} outputs={[output]} />);
+
+    expect(screen.getByRole('region', { name: 'Results' })).toBeInTheDocument();
+  });
+
+  it('evaluates a formula against current field values and displays the numeric result', () => {
+    const field = makeNumberField({ variableName: 'quantity', defaultValue: 4 });
+    const output = makeOutput({ expression: '{quantity} * 3', label: 'Total Cost' });
+
+    render(<CalculatorPreviewForm fields={[field]} outputs={[output]} />);
+
+    expect(screen.getByText('Total Cost')).toBeInTheDocument();
+    expect(screen.getByText('12')).toBeInTheDocument();
+  });
+
+  it('displays error in role="alert" when formula is invalid', () => {
+    const field = makeNumberField({ variableName: 'quantity', defaultValue: 5 });
+    const output = makeOutput({ expression: '???invalid???', label: 'Bad Output' });
+
+    render(<CalculatorPreviewForm fields={[field]} outputs={[output]} />);
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toBeInTheDocument();
+    expect(alert.textContent).not.toBe('');
+  });
+
+  it('result updates when a field value changes (reactivity)', async () => {
+    const user = userEvent.setup();
+    const field = makeNumberField({ variableName: 'quantity', defaultValue: 2 });
+    const output = makeOutput({ expression: '{quantity} * 5', label: 'Subtotal' });
+
+    render(<CalculatorPreviewForm fields={[field]} outputs={[output]} />);
+
+    expect(screen.getByText('10')).toBeInTheDocument();
+
+    const input = screen.getByRole('spinbutton');
+    await user.clear(input);
+    await user.type(input, '6');
+
+    expect(screen.getByText('30')).toBeInTheDocument();
+  });
+
+  it('evaluates multiple outputs and displays all results', () => {
+    const field = makeNumberField({ variableName: 'quantity', defaultValue: 3 });
+    const outputs: ResultOutputConfig[] = [
+      { id: 'out-1', label: 'Base', expression: '{quantity} * 2' },
+      { id: 'out-2', label: 'Tax', expression: '{quantity} * 1' },
+    ];
+
+    render(<CalculatorPreviewForm fields={[field]} outputs={outputs} />);
+
+    expect(screen.getByText('Base')).toBeInTheDocument();
+    expect(screen.getByText('6')).toBeInTheDocument();
+    expect(screen.getByText('Tax')).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument();
   });
 });

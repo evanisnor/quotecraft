@@ -190,7 +190,7 @@ Last updated: 2026-02-28
 | ------ | ------------- | ------------------------------------------------------------------------------- | --- | ---------- |
 | ✅     | BLDR-US4-A001 | Build preview pane container with style isolation                               | 0   | 2026-03-02 |
 | ✅     | BLDR-US4-A002 | Wire shared field renderers into the preview                                    | 0   | 2026-03-02 |
-|        | BLDR-US4-A003 | Wire shared formula engine into the preview                                     | 0   |            |
+| ✅     | BLDR-US4-A003 | Wire shared formula engine into the preview                                     | 0   | 2026-03-02 |
 |        | BLDR-US4-A004 | Implement real-time reactivity: config changes propagate to preview immediately | 0   |            |
 
 ### [BLDR-US5: Save & Auto-Save](./PROJECT_PLAN.md#bldr-us5-save--auto-save-p0) (P0)
