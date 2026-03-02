@@ -38,10 +38,7 @@ if (isWatch) {
   }
   const outputFile = outputFiles[0];
 
-  const hash8 = createHash('sha256')
-    .update(outputFile.contents)
-    .digest('hex')
-    .slice(0, 8);
+  const hash8 = createHash('sha256').update(outputFile.contents).digest('hex').slice(0, 8);
 
   const hashedFilename = `widget.${hash8}.js`;
 

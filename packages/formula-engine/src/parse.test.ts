@@ -21,11 +21,7 @@ function variable(name: string): VariableNode {
   return { kind: 'Variable', name };
 }
 
-function binop(
-  op: BinaryOpNode['op'],
-  left: ASTNode,
-  right: ASTNode,
-): BinaryOpNode {
+function binop(op: BinaryOpNode['op'], left: ASTNode, right: ASTNode): BinaryOpNode {
   return { kind: 'BinaryOp', op, left, right };
 }
 
@@ -227,11 +223,7 @@ describe('parse — comparison operators', () => {
 describe('parse — function calls', () => {
   it('parses IF with a comparison and two branches', () => {
     expect(p('IF({qty} > 0, {price}, 0)')).toEqual(
-      call('IF', [
-        binop('>', variable('qty'), num(0)),
-        variable('price'),
-        num(0),
-      ]),
+      call('IF', [binop('>', variable('qty'), num(0)), variable('price'), num(0)]),
     );
   });
 
@@ -272,9 +264,7 @@ describe('parse — nested expressions', () => {
   });
 
   it('parses nested function calls: ROUND(ABS({x}), 2)', () => {
-    expect(p('ROUND(ABS({x}), 2)')).toEqual(
-      call('ROUND', [call('ABS', [variable('x')]), num(2)]),
-    );
+    expect(p('ROUND(ABS({x}), 2)')).toEqual(call('ROUND', [call('ABS', [variable('x')]), num(2)]));
   });
 
   it('parses multi-level precedence: {a} + {b} * {c} - {d} / {e}', () => {
@@ -291,11 +281,7 @@ describe('parse — nested expressions', () => {
   it('parses IF nested inside MIN: MIN(IF({x} > 0, {x}, 0), {y})', () => {
     expect(p('MIN(IF({x} > 0, {x}, 0), {y})')).toEqual(
       call('MIN', [
-        call('IF', [
-          binop('>', variable('x'), num(0)),
-          variable('x'),
-          num(0),
-        ]),
+        call('IF', [binop('>', variable('x'), num(0)), variable('x'), num(0)]),
         variable('y'),
       ]),
     );
@@ -406,10 +392,10 @@ describe('parse — error cases', () => {
 
 describe('parse — comparison operators (table-driven)', () => {
   test.each([
-    { formula: '{x} = {y}',  op: '=' },
+    { formula: '{x} = {y}', op: '=' },
     { formula: '{x} != {y}', op: '!=' },
-    { formula: '{x} > {y}',  op: '>' },
-    { formula: '{x} < {y}',  op: '<' },
+    { formula: '{x} > {y}', op: '>' },
+    { formula: '{x} < {y}', op: '<' },
     { formula: '{x} >= {y}', op: '>=' },
     { formula: '{x} <= {y}', op: '<=' },
   ] as const)('parses $formula with op=$op', ({ formula, op }) => {
@@ -440,11 +426,11 @@ describe('parse — arithmetic operators (table-driven)', () => {
 
 describe('parse — valid function names (table-driven)', () => {
   test.each([
-    { name: 'IF',    args: '1, 2, 3',    count: 3 },
-    { name: 'MIN',   args: '1, 2',       count: 2 },
-    { name: 'MAX',   args: '1, 2',       count: 2 },
-    { name: 'ABS',   args: '1',          count: 1 },
-    { name: 'ROUND', args: '1, 2',       count: 2 },
+    { name: 'IF', args: '1, 2, 3', count: 3 },
+    { name: 'MIN', args: '1, 2', count: 2 },
+    { name: 'MAX', args: '1, 2', count: 2 },
+    { name: 'ABS', args: '1', count: 1 },
+    { name: 'ROUND', args: '1, 2', count: 2 },
   ] as const)('parses $name(...) successfully', ({ name, args, count }) => {
     const result = p(`${name}(${args})`);
     expect(result.kind).toBe('FunctionCall');
@@ -458,14 +444,10 @@ describe('parse — valid function names (table-driven)', () => {
 // ---------------------------------------------------------------------------
 
 describe('parse — invalid identifiers throw ParseError (table-driven)', () => {
-  test.each([
-    'foo',
-    'bar',
-    'SQRT({x})',
-    'POW(2, 3)',
-    'LOG(10)',
-    'unknown',
-  ])('throws ParseError for: %s', (formula) => {
-    expect(() => p(formula)).toThrow(ParseError);
-  });
+  test.each(['foo', 'bar', 'SQRT({x})', 'POW(2, 3)', 'LOG(10)', 'unknown'])(
+    'throws ParseError for: %s',
+    (formula) => {
+      expect(() => p(formula)).toThrow(ParseError);
+    },
+  );
 });

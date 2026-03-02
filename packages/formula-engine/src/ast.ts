@@ -4,18 +4,7 @@
  * Arithmetic: + - * / %
  * Comparison: = != > < >= <=
  */
-export type BinaryOperator =
-  | '+'
-  | '-'
-  | '*'
-  | '/'
-  | '%'
-  | '='
-  | '!='
-  | '>'
-  | '<'
-  | '>='
-  | '<=';
+export type BinaryOperator = '+' | '-' | '*' | '/' | '%' | '=' | '!=' | '>' | '<' | '>=' | '<=';
 
 /**
  * Allow-listed function names. Only these identifiers are legal in a

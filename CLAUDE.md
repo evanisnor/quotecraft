@@ -6,8 +6,6 @@ Project Repository URL: https://github.com/evanisnor/quotecraft
 
 QuoteCraft is a free, no-code, embeddable quote/pricing calculator builder (SaaS). Users build calculators in a visual editor, customize appearance, and embed on any website via `<script>` tag. Free tier is unlimited (views, submissions, calculators) with a "Powered by QuoteCraft" badge. Paid tiers: Pro ($19/mo), Business ($49/mo), Agency ($99/mo).
 
-
-
 ## Project Documents
 
 These are large reference documents (338–1,346 lines). Load them surgically — grep for IDs or read specific sections. Never load an entire document to find a single piece of information.
@@ -20,18 +18,18 @@ These are large reference documents (338–1,346 lines). Load them surgically �
 
 ### SYSTEM_DESIGN.md Section Reference
 
-| Working on... | Read section(s) |
-|---|---|
-| Any new feature | Design Principles, System Overview |
-| API endpoints, handlers, middleware | API Server Architecture, Security |
-| Database schema or migrations | Data Model |
-| Widget bundle, loader, or embed | Embeddable Widget Architecture, Content Delivery Architecture |
-| Dashboard React app | Builder Dashboard Architecture |
-| Authentication or authorization | API Server Architecture, Security |
-| Email or notifications | Email and Notification System |
-| Billing or subscriptions | Billing Integration |
-| Logging or metrics | Observability |
-| Deployment or infrastructure | Deployment and Release Strategy |
+| Working on...                       | Read section(s)                                               |
+| ----------------------------------- | ------------------------------------------------------------- |
+| Any new feature                     | Design Principles, System Overview                            |
+| API endpoints, handlers, middleware | API Server Architecture, Security                             |
+| Database schema or migrations       | Data Model                                                    |
+| Widget bundle, loader, or embed     | Embeddable Widget Architecture, Content Delivery Architecture |
+| Dashboard React app                 | Builder Dashboard Architecture                                |
+| Authentication or authorization     | API Server Architecture, Security                             |
+| Email or notifications              | Email and Notification System                                 |
+| Billing or subscriptions            | Billing Integration                                           |
+| Logging or metrics                  | Observability                                                 |
+| Deployment or infrastructure        | Deployment and Release Strategy                               |
 
 ## Workflow: Picking and Completing Tasks
 

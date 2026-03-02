@@ -81,15 +81,12 @@ describe('tokenize — identifiers', () => {
     expect(tokenize('some_func')).toEqual([tok('IDENT', 'some_func'), EOF]);
   });
 
-  test.each([
-    ['MIN'],
-    ['MAX'],
-    ['ABS'],
-    ['ROUND'],
-    ['IF'],
-  ])('tokenizes built-in keyword %s as IDENT', (keyword) => {
-    expect(tokenize(keyword)).toEqual([tok('IDENT', keyword), EOF]);
-  });
+  test.each([['MIN'], ['MAX'], ['ABS'], ['ROUND'], ['IF']])(
+    'tokenizes built-in keyword %s as IDENT',
+    (keyword) => {
+      expect(tokenize(keyword)).toEqual([tok('IDENT', keyword), EOF]);
+    },
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -187,27 +184,15 @@ describe('tokenize — comparison operators', () => {
   });
 
   it('does not consume GTE when followed by another character', () => {
-    expect(tokenize('>= 5')).toEqual([
-      tok('GTE', '>='),
-      tok('NUMBER', '5'),
-      EOF,
-    ]);
+    expect(tokenize('>= 5')).toEqual([tok('GTE', '>='), tok('NUMBER', '5'), EOF]);
   });
 
   it('tokenizes GT when not followed by =', () => {
-    expect(tokenize('> 5')).toEqual([
-      tok('GT', '>'),
-      tok('NUMBER', '5'),
-      EOF,
-    ]);
+    expect(tokenize('> 5')).toEqual([tok('GT', '>'), tok('NUMBER', '5'), EOF]);
   });
 
   it('tokenizes LT when not followed by =', () => {
-    expect(tokenize('< 5')).toEqual([
-      tok('LT', '<'),
-      tok('NUMBER', '5'),
-      EOF,
-    ]);
+    expect(tokenize('< 5')).toEqual([tok('LT', '<'), tok('NUMBER', '5'), EOF]);
   });
 });
 
@@ -372,17 +357,17 @@ describe('tokenize — error cases', () => {
 
 describe('tokenize — all single-character operators via table', () => {
   test.each([
-    { input: '+', kind: 'PLUS',    value: '+' },
-    { input: '-', kind: 'MINUS',   value: '-' },
-    { input: '*', kind: 'STAR',    value: '*' },
-    { input: '/', kind: 'SLASH',   value: '/' },
+    { input: '+', kind: 'PLUS', value: '+' },
+    { input: '-', kind: 'MINUS', value: '-' },
+    { input: '*', kind: 'STAR', value: '*' },
+    { input: '/', kind: 'SLASH', value: '/' },
     { input: '%', kind: 'PERCENT', value: '%' },
-    { input: '=', kind: 'EQ',      value: '=' },
-    { input: '>', kind: 'GT',      value: '>' },
-    { input: '<', kind: 'LT',      value: '<' },
-    { input: '(', kind: 'LPAREN',  value: '(' },
-    { input: ')', kind: 'RPAREN',  value: ')' },
-    { input: ',', kind: 'COMMA',   value: ',' },
+    { input: '=', kind: 'EQ', value: '=' },
+    { input: '>', kind: 'GT', value: '>' },
+    { input: '<', kind: 'LT', value: '<' },
+    { input: '(', kind: 'LPAREN', value: '(' },
+    { input: ')', kind: 'RPAREN', value: ')' },
+    { input: ',', kind: 'COMMA', value: ',' },
   ] as const)('$input → $kind', ({ input, kind, value }) => {
     const tokens = tokenize(input);
     expect(tokens).toHaveLength(2); // operator + EOF

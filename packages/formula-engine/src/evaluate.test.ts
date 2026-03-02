@@ -38,11 +38,11 @@ describe('evaluate', () => {
 
   describe('arithmetic', () => {
     test.each([
-      { expression: '1 + 2',  expected: 3  },
-      { expression: '10 - 3', expected: 7  },
-      { expression: '4 * 5',  expected: 20 },
-      { expression: '15 / 3', expected: 5  },
-      { expression: '10 % 3', expected: 1  },
+      { expression: '1 + 2', expected: 3 },
+      { expression: '10 - 3', expected: 7 },
+      { expression: '4 * 5', expected: 20 },
+      { expression: '15 / 3', expected: 5 },
+      { expression: '10 % 3', expected: 1 },
     ])('$expression → $expected', ({ expression, expected }) => {
       expect(evaluate(expression, {})).toEqual({ value: expected });
     });
@@ -108,18 +108,18 @@ describe('evaluate', () => {
 
   describe('comparisons', () => {
     test.each([
-      { expression: '5 = 5',  expected: 1, label: 'equal (true)'          },
-      { expression: '5 = 4',  expected: 0, label: 'equal (false)'         },
-      { expression: '5 != 4', expected: 1, label: 'not equal (true)'      },
-      { expression: '5 != 5', expected: 0, label: 'not equal (false)'     },
-      { expression: '5 > 3',  expected: 1, label: 'greater than (true)'   },
-      { expression: '3 > 5',  expected: 0, label: 'greater than (false)'  },
-      { expression: '3 < 5',  expected: 1, label: 'less than (true)'      },
-      { expression: '5 < 3',  expected: 0, label: 'less than (false)'     },
-      { expression: '5 >= 5', expected: 1, label: 'gte (true, equal)'     },
-      { expression: '5 >= 6', expected: 0, label: 'gte (false)'           },
-      { expression: '3 <= 5', expected: 1, label: 'lte (true)'            },
-      { expression: '6 <= 5', expected: 0, label: 'lte (false)'           },
+      { expression: '5 = 5', expected: 1, label: 'equal (true)' },
+      { expression: '5 = 4', expected: 0, label: 'equal (false)' },
+      { expression: '5 != 4', expected: 1, label: 'not equal (true)' },
+      { expression: '5 != 5', expected: 0, label: 'not equal (false)' },
+      { expression: '5 > 3', expected: 1, label: 'greater than (true)' },
+      { expression: '3 > 5', expected: 0, label: 'greater than (false)' },
+      { expression: '3 < 5', expected: 1, label: 'less than (true)' },
+      { expression: '5 < 3', expected: 0, label: 'less than (false)' },
+      { expression: '5 >= 5', expected: 1, label: 'gte (true, equal)' },
+      { expression: '5 >= 6', expected: 0, label: 'gte (false)' },
+      { expression: '3 <= 5', expected: 1, label: 'lte (true)' },
+      { expression: '6 <= 5', expected: 0, label: 'lte (false)' },
     ])('$label: $expression → $expected', ({ expression, expected }) => {
       expect(evaluate(expression, {})).toEqual({ value: expected });
     });
@@ -492,25 +492,33 @@ describe('evaluate', () => {
     it('evaluates a 3-level nested IF to the innermost then branch', () => {
       // IF(a>0, IF(b>0, IF(c>0, 1, 2), 3), 4)  with a=1, b=1, c=1 → 1
       const ctx: FormulaContext = { a: 1, b: 1, c: 1 };
-      expect(evaluate('IF({a} > 0, IF({b} > 0, IF({c} > 0, 1, 2), 3), 4)', ctx)).toEqual({ value: 1 });
+      expect(evaluate('IF({a} > 0, IF({b} > 0, IF({c} > 0, 1, 2), 3), 4)', ctx)).toEqual({
+        value: 1,
+      });
     });
 
     it('evaluates a 3-level nested IF to the innermost else branch', () => {
       // a=1, b=1, c=0 → inner else → 2
       const ctx: FormulaContext = { a: 1, b: 1, c: 0 };
-      expect(evaluate('IF({a} > 0, IF({b} > 0, IF({c} > 0, 1, 2), 3), 4)', ctx)).toEqual({ value: 2 });
+      expect(evaluate('IF({a} > 0, IF({b} > 0, IF({c} > 0, 1, 2), 3), 4)', ctx)).toEqual({
+        value: 2,
+      });
     });
 
     it('evaluates a 3-level nested IF through the middle tier', () => {
       // a=1, b=0 → middle else → 3
       const ctx: FormulaContext = { a: 1, b: 0, c: 0 };
-      expect(evaluate('IF({a} > 0, IF({b} > 0, IF({c} > 0, 1, 2), 3), 4)', ctx)).toEqual({ value: 3 });
+      expect(evaluate('IF({a} > 0, IF({b} > 0, IF({c} > 0, 1, 2), 3), 4)', ctx)).toEqual({
+        value: 3,
+      });
     });
 
     it('evaluates a 3-level nested IF to the outermost else branch', () => {
       // a=0 → outer else → 4
       const ctx: FormulaContext = { a: 0, b: 1, c: 1 };
-      expect(evaluate('IF({a} > 0, IF({b} > 0, IF({c} > 0, 1, 2), 3), 4)', ctx)).toEqual({ value: 4 });
+      expect(evaluate('IF({a} > 0, IF({b} > 0, IF({c} > 0, 1, 2), 3), 4)', ctx)).toEqual({
+        value: 4,
+      });
     });
 
     it('uses the result of an IF as a condition — inner condition true', () => {
@@ -622,12 +630,16 @@ describe('evaluate', () => {
       // IF({qty} > 100, 500 + ({qty} - 100) * 4, {qty} * 5)
       // qty=150 → 500 + (150-100)*4 = 500 + 200 = 700
       const ctx: FormulaContext = { qty: 150 };
-      expect(evaluate('IF({qty} > 100, 500 + ({qty} - 100) * 4, {qty} * 5)', ctx)).toEqual({ value: 700 });
+      expect(evaluate('IF({qty} > 100, 500 + ({qty} - 100) * 4, {qty} * 5)', ctx)).toEqual({
+        value: 700,
+      });
     });
 
     it('computes a tiered rate — below threshold path', () => {
       // qty=50 → 50*5 = 250
-      expect(evaluate('IF({qty} > 100, 500 + ({qty} - 100) * 4, {qty} * 5)', { qty: 50 })).toEqual({ value: 250 });
+      expect(evaluate('IF({qty} > 100, 500 + ({qty} - 100) * 4, {qty} * 5)', { qty: 50 })).toEqual({
+        value: 250,
+      });
     });
 
     it('computes a multi-variable formula: rooms * rate with a discount', () => {
@@ -637,11 +649,15 @@ describe('evaluate', () => {
 
     it('applies a percentage discount when the premium flag is set', () => {
       // IF({premium} = 1, {price} * 0.8, {price})
-      expect(evaluate('IF({premium} = 1, {price} * 0.8, {price})', { premium: 1, price: 500 })).toEqual({ value: 400 });
+      expect(
+        evaluate('IF({premium} = 1, {price} * 0.8, {price})', { premium: 1, price: 500 }),
+      ).toEqual({ value: 400 });
     });
 
     it('does not apply a discount when the premium flag is unset', () => {
-      expect(evaluate('IF({premium} = 1, {price} * 0.8, {price})', { premium: 0, price: 500 })).toEqual({ value: 500 });
+      expect(
+        evaluate('IF({premium} = 1, {price} * 0.8, {price})', { premium: 0, price: 500 }),
+      ).toEqual({ value: 500 });
     });
 
     it('handles a zero-quantity guard to prevent meaningless output', () => {
@@ -660,8 +676,8 @@ describe('evaluate', () => {
       const formula = 'IF({qty} <= 10, {qty} * 10, IF({qty} <= 50, {qty} * 8, {qty} * 6))';
 
       test.each([
-        { qty: 5,   expected: 50,  label: 'tier 1 (qty=5)'   },
-        { qty: 25,  expected: 200, label: 'tier 2 (qty=25)'  },
+        { qty: 5, expected: 50, label: 'tier 1 (qty=5)' },
+        { qty: 25, expected: 200, label: 'tier 2 (qty=25)' },
         { qty: 100, expected: 600, label: 'tier 3 (qty=100)' },
       ])('$label', ({ qty, expected }) => {
         expect(evaluate(formula, { qty })).toEqual({ value: expected });

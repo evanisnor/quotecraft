@@ -24,6 +24,7 @@ make dev
 ```
 
 This starts:
+
 - PostgreSQL and MinIO (via Docker Compose)
 - API server with hot-reload (`air`)
 - Dashboard (Next.js dev server)
@@ -46,13 +47,13 @@ make widget-build     # Build the widget bundle (outputs content-hashed file to 
 
 ## Development URLs
 
-| Service | URL |
-|---------|-----|
-| API | `http://localhost:8080` |
-| Dashboard | `http://localhost:3000` |
+| Service                    | URL                                                                   |
+| -------------------------- | --------------------------------------------------------------------- |
+| API                        | `http://localhost:8080`                                               |
+| Dashboard                  | `http://localhost:3000`                                               |
 | Widget bundle (watch mode) | `http://localhost:8080/static/widget.js` (when `make dev` is running) |
-| MinIO console | `http://localhost:9001` (credentials: `minioadmin` / `minioadmin`) |
-| MinIO API | `http://localhost:9000` |
+| MinIO console              | `http://localhost:9001` (credentials: `minioadmin` / `minioadmin`)    |
+| MinIO API                  | `http://localhost:9000`                                               |
 
 ## Widget Bundle
 
@@ -70,12 +71,12 @@ This writes `widget/dist/widget.<hash8>.js` and `widget/dist/manifest.json`. The
 
 `config.yaml` at the repo root controls all service configuration with local development defaults pre-configured. Key settings:
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `cdn.serve_local` | `true` | Enables the `/static/*` route on the API server |
-| `cdn.widget_dir` | `../widget/dist` | Local directory served at `/static/` |
-| `cdn.base_url` | `http://localhost:8080/static` | Base URL for asset references |
-| `storage.provider` | `s3` | Uses MinIO in dev; use `filesystem` for tests |
+| Setting            | Default                        | Description                                     |
+| ------------------ | ------------------------------ | ----------------------------------------------- |
+| `cdn.serve_local`  | `true`                         | Enables the `/static/*` route on the API server |
+| `cdn.widget_dir`   | `../widget/dist`               | Local directory served at `/static/`            |
+| `cdn.base_url`     | `http://localhost:8080/static` | Base URL for asset references                   |
+| `storage.provider` | `s3`                           | Uses MinIO in dev; use `filesystem` for tests   |
 
 See [SYSTEM_DESIGN.md](./SYSTEM_DESIGN.md) for full architecture details.
 

@@ -1,9 +1,5 @@
 import type { Token } from './token';
-import type {
-  ASTNode,
-  BinaryOperator,
-  FunctionName,
-} from './ast';
+import type { ASTNode, BinaryOperator, FunctionName } from './ast';
 
 /**
  * Thrown when the parser encounters a token sequence that does not match
@@ -61,8 +57,7 @@ class Parser {
     const token = this.peek();
     if (token.kind !== kind) {
       throw new ParseError(
-        `Expected '${kind}' but got '${token.kind}'` +
-          (token.value ? ` ('${token.value}')` : ''),
+        `Expected '${kind}' but got '${token.kind}'` + (token.value ? ` ('${token.value}')` : ''),
       );
     }
     return this.advance();
@@ -92,10 +87,10 @@ class Parser {
       const kind = this.peek().kind;
       let op: BinaryOperator | null = null;
 
-      if      (kind === 'EQ')  op = '=';
+      if (kind === 'EQ') op = '=';
       else if (kind === 'NEQ') op = '!=';
-      else if (kind === 'GT')  op = '>';
-      else if (kind === 'LT')  op = '<';
+      else if (kind === 'GT') op = '>';
+      else if (kind === 'LT') op = '<';
       else if (kind === 'GTE') op = '>=';
       else if (kind === 'LTE') op = '<=';
       else break;
@@ -118,7 +113,7 @@ class Parser {
       const kind = this.peek().kind;
       let op: BinaryOperator | null = null;
 
-      if      (kind === 'PLUS')  op = '+';
+      if (kind === 'PLUS') op = '+';
       else if (kind === 'MINUS') op = '-';
       else break;
 
@@ -140,8 +135,8 @@ class Parser {
       const kind = this.peek().kind;
       let op: BinaryOperator | null = null;
 
-      if      (kind === 'STAR')    op = '*';
-      else if (kind === 'SLASH')   op = '/';
+      if (kind === 'STAR') op = '*';
+      else if (kind === 'SLASH') op = '/';
       else if (kind === 'PERCENT') op = '%';
       else break;
 
@@ -194,8 +189,7 @@ class Parser {
         // Looks like a function call — validate the name
         if (!isFunctionName(token.value)) {
           throw new ParseError(
-            `Unknown function name '${token.value}': ` +
-              `expected one of IF, MIN, MAX, ABS, ROUND`,
+            `Unknown function name '${token.value}': ` + `expected one of IF, MIN, MAX, ABS, ROUND`,
           );
         }
         this.advance(); // consume '('

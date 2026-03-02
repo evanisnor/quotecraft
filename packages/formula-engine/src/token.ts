@@ -6,24 +6,24 @@
  * is the parser's responsibility.
  */
 export type TokenKind =
-  | 'NUMBER'   // numeric literal: e.g. 42, 3.14
-  | 'IDENT'    // identifier or keyword: e.g. IF, MIN, MAX, ABS, ROUND, foo
+  | 'NUMBER' // numeric literal: e.g. 42, 3.14
+  | 'IDENT' // identifier or keyword: e.g. IF, MIN, MAX, ABS, ROUND, foo
   | 'VARIABLE' // field reference: {field_name} — value stored without braces
-  | 'PLUS'     // +
-  | 'MINUS'    // -
-  | 'STAR'     // *
-  | 'SLASH'    // /
-  | 'PERCENT'  // %
-  | 'EQ'       // =
-  | 'NEQ'      // !=
-  | 'GT'       // >
-  | 'LT'       // <
-  | 'GTE'      // >=
-  | 'LTE'      // <=
-  | 'LPAREN'   // (
-  | 'RPAREN'   // )
-  | 'COMMA'    // ,
-  | 'EOF';     // end of input
+  | 'PLUS' // +
+  | 'MINUS' // -
+  | 'STAR' // *
+  | 'SLASH' // /
+  | 'PERCENT' // %
+  | 'EQ' // =
+  | 'NEQ' // !=
+  | 'GT' // >
+  | 'LT' // <
+  | 'GTE' // >=
+  | 'LTE' // <=
+  | 'LPAREN' // (
+  | 'RPAREN' // )
+  | 'COMMA' // ,
+  | 'EOF'; // end of input
 
 /**
  * A single lexical token.

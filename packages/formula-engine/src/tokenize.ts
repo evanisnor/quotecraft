@@ -57,9 +57,7 @@ export function tokenize(input: string): Token[] {
         const dotPos = pos;
         pos++; // consume '.'
         if (pos >= input.length || !isDigit(input[pos])) {
-          throw new TokenizeError(
-            `Invalid number literal: trailing '.' at position ${dotPos}`
-          );
+          throw new TokenizeError(`Invalid number literal: trailing '.' at position ${dotPos}`);
         }
         while (pos < input.length && isDigit(input[pos])) {
           pos++;
@@ -88,14 +86,12 @@ export function tokenize(input: string): Token[] {
       }
       if (pos === start) {
         throw new TokenizeError(
-          `Empty variable name at position ${start - 1}: variable references must be non-empty`
+          `Empty variable name at position ${start - 1}: variable references must be non-empty`,
         );
       }
       if (pos >= input.length || input[pos] !== '}') {
         // start - 1 points back to the '{' that was consumed before setting start
-        throw new TokenizeError(
-          `Unclosed variable reference starting at position ${start - 1}`
-        );
+        throw new TokenizeError(`Unclosed variable reference starting at position ${start - 1}`);
       }
       const name = input.slice(start, pos);
       pos++; // consume '}'
@@ -135,13 +131,11 @@ export function tokenize(input: string): Token[] {
     // '!' alone is not a valid token
     if (ch === '!') {
       throw new TokenizeError(
-        `Unexpected '!' at position ${pos}: expected '!=' but found '!' alone`
+        `Unexpected '!' at position ${pos}: expected '!=' but found '!' alone`,
       );
     }
 
-    throw new TokenizeError(
-      `Unrecognized character '${ch}' at position ${pos}`
-    );
+    throw new TokenizeError(`Unrecognized character '${ch}' at position ${pos}`);
   }
 
   tokens.push({ kind: 'EOF', value: '' });
@@ -171,17 +165,29 @@ function isIdentChar(ch: string): boolean {
  */
 function singleCharToken(ch: string): TokenKind | null {
   switch (ch) {
-    case '+': return 'PLUS';
-    case '-': return 'MINUS';
-    case '*': return 'STAR';
-    case '/': return 'SLASH';
-    case '%': return 'PERCENT';
-    case '=': return 'EQ';
-    case '>': return 'GT';
-    case '<': return 'LT';
-    case '(': return 'LPAREN';
-    case ')': return 'RPAREN';
-    case ',': return 'COMMA';
-    default:  return null;
+    case '+':
+      return 'PLUS';
+    case '-':
+      return 'MINUS';
+    case '*':
+      return 'STAR';
+    case '/':
+      return 'SLASH';
+    case '%':
+      return 'PERCENT';
+    case '=':
+      return 'EQ';
+    case '>':
+      return 'GT';
+    case '<':
+      return 'LT';
+    case '(':
+      return 'LPAREN';
+    case ')':
+      return 'RPAREN';
+    case ',':
+      return 'COMMA';
+    default:
+      return null;
   }
 }
