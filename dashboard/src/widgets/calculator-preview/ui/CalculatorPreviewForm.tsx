@@ -42,6 +42,10 @@ function getInitialValue(field: BaseFieldConfig): number {
       return 0;
     case 'image_select':
       return 0;
+    default: {
+      const _unreachable: never = field.type;
+      return _unreachable;
+    }
   }
 }
 
