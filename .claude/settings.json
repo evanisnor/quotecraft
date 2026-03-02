@@ -1,14 +1,24 @@
 {
   "ENABLE_LSP_TOOL": 1,
   "hooks": {
-    "PostToolUse": [
+    "UserPromptSubmit": [
       {
-        "matcher": "TodoWrite",
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/new-session-on-todos-complete.sh",
+            "command": ".claude/hooks/on-session-start.sh",
             "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/new-session-on-task-complete.sh",
+            "timeout": 10
           }
         ]
       }

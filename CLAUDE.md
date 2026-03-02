@@ -128,7 +128,7 @@ Each completed task gets its own commit. Every commit must include the updated `
 
 ### 7. When a Task is Complete
 
-Exit your current turn. A hook detects the completed todo and signals autoclaude to start a **new session** (not resume) so the next task begins with a full, clean context window.
+Exit your current turn. A Stop hook checks the git log for a ✅ commit to PROJECT_STATUS.md and signals autoclaude to start a **new session** (not resume) so the next task begins with a full, clean context window.
 
 Do not run `/compact`. Do not continue to the next task in the same turn. Just stop — autoclaude handles the restart.
 
