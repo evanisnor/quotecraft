@@ -62,10 +62,14 @@ export function CalculatorPreviewForm({ fields, outputs = [] }: CalculatorPrevie
   // newly added fields appear with their defaults without resetting existing inputs.
   const [userValues, setUserValues] = useState<Record<string, number>>({});
 
-  const values = useMemo(
-    () => ({ ...buildFieldDefaults(fields), ...userValues }),
-    [fields, userValues],
-  );
+  const values = useMemo(() => {
+    const defaults = buildFieldDefaults(fields);
+    const currentVarNames = new Set(fields.map((f) => f.variableName));
+    const filteredUserValues = Object.fromEntries(
+      Object.entries(userValues).filter(([key]) => currentVarNames.has(key)),
+    );
+    return { ...defaults, ...filteredUserValues };
+  }, [fields, userValues]);
 
   const results = useMemo<Array<{ output: ResultOutputConfig; result: FormulaResult }>>(
     () =>

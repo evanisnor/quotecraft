@@ -158,6 +158,60 @@ describe('EditorPage', () => {
     });
   });
 
+  it('label change immediately reflects in the preview pane shadow DOM', async () => {
+    const user = userEvent.setup();
+    render(<EditorPage calculatorId="calc-1" />);
+
+    // Add a Number Input field (auto-selected after add)
+    await user.click(screen.getByRole('button', { name: 'Number Input' }));
+
+    const host = screen.getByTestId('preview-shadow-host');
+
+    // Verify the default label is visible in the shadow DOM
+    await waitFor(() => {
+      const form = host.shadowRoot?.querySelector('[aria-label="Calculator Preview Form"]');
+      expect(form?.textContent).toContain('Number Input');
+    });
+
+    // Update the label via the FieldEditorWidget
+    const labelInput = screen.getByLabelText('Label');
+    await user.clear(labelInput);
+    await user.type(labelInput, 'Widgets Count');
+
+    // The new label should appear in the preview pane shadow DOM
+    await waitFor(() => {
+      const form = host.shadowRoot?.querySelector('[aria-label="Calculator Preview Form"]');
+      expect(form?.textContent).toContain('Widgets Count');
+      expect(form?.textContent).not.toContain('Number Input');
+    });
+  });
+
+  it('deleting a field immediately removes it from the preview pane shadow DOM', async () => {
+    const user = userEvent.setup();
+    render(<EditorPage calculatorId="calc-1" />);
+
+    // Add a field
+    await user.click(screen.getByRole('button', { name: 'Slider' }));
+
+    const host = screen.getByTestId('preview-shadow-host');
+
+    // Verify the field label is visible in the shadow DOM
+    await waitFor(() => {
+      const form = host.shadowRoot?.querySelector('[aria-label="Calculator Preview Form"]');
+      expect(form?.textContent).toContain('Slider');
+    });
+
+    // Delete the field
+    await user.click(screen.getByRole('button', { name: 'Delete field' }));
+    await user.click(screen.getByRole('button', { name: 'Confirm' }));
+
+    // The preview pane should now show the empty-state message
+    await waitFor(() => {
+      const form = host.shadowRoot?.querySelector('[aria-label="Calculator Preview Form"]');
+      expect(form?.textContent).toContain('Add fields to preview your calculator.');
+    });
+  });
+
   it('reordering via ArrowDown keyboard moves a field down in the list', async () => {
     const user = userEvent.setup();
     render(<EditorPage calculatorId="calc-1" />);

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type {
   BaseFieldConfig,
@@ -155,6 +155,105 @@ describe('CalculatorPreviewForm', () => {
     ];
 
     expect(() => render(<CalculatorPreviewForm fields={fields} />)).not.toThrow();
+  });
+});
+
+describe('CalculatorPreviewForm — real-time reactivity', () => {
+  function makeOutput(overrides: Partial<ResultOutputConfig> = {}): ResultOutputConfig {
+    return {
+      id: 'output-1',
+      label: 'Total',
+      expression: '{quantity} * 10',
+      ...overrides,
+    };
+  }
+
+  it('removing a field removes it from the preview', () => {
+    const quantityField = makeNumberField();
+    const budgetField = makeSliderField();
+
+    const { rerender } = render(<CalculatorPreviewForm fields={[quantityField, budgetField]} />);
+
+    expect(screen.getByLabelText('Quantity')).toBeInTheDocument();
+    expect(screen.getByLabelText('Budget')).toBeInTheDocument();
+
+    rerender(<CalculatorPreviewForm fields={[quantityField]} />);
+
+    expect(screen.getByLabelText('Quantity')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Budget')).not.toBeInTheDocument();
+  });
+
+  it('updating a field label reflects immediately in the preview', () => {
+    const field = makeNumberField({ label: 'Quantity' });
+
+    const { rerender } = render(<CalculatorPreviewForm fields={[field]} />);
+
+    expect(screen.getByLabelText('Quantity')).toBeInTheDocument();
+
+    const updatedField = { ...field, label: 'Units' };
+    rerender(<CalculatorPreviewForm fields={[updatedField]} />);
+
+    expect(screen.queryByLabelText('Quantity')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Units')).toBeInTheDocument();
+  });
+
+  it('after field deletion, the deleted field variable is not in formula context', () => {
+    const quantityField = makeNumberField({ variableName: 'quantity', defaultValue: 5 });
+    const budgetField = makeSliderField({ variableName: 'budget', defaultValue: 100 });
+    const output = makeOutput({ expression: '{budget} * 2', label: 'Budget Total' });
+
+    const { rerender } = render(
+      <CalculatorPreviewForm fields={[quantityField, budgetField]} outputs={[output]} />,
+    );
+
+    // Verify the formula evaluates correctly with both fields present
+    expect(screen.getByText('200')).toBeInTheDocument();
+
+    // Change the budget slider value so userValues has an entry for 'budget'
+    const slider = screen.getByLabelText('Budget');
+    fireEvent.change(slider, { target: { value: '150' } });
+
+    // Delete the budget field — remove it from the fields array
+    rerender(<CalculatorPreviewForm fields={[quantityField]} outputs={[output]} />);
+
+    // The formula references {budget} which no longer has a field — must produce an error
+    const alert = screen.getByRole('alert');
+    expect(alert).toBeInTheDocument();
+    expect(alert.textContent).not.toBe('');
+  });
+
+  it('variable name change removes old variable from formula context', async () => {
+    const user = userEvent.setup();
+    const field = makeNumberField({ variableName: 'quantity', defaultValue: 3 });
+    const output = makeOutput({ expression: '{quantity} * 4', label: 'Total' });
+
+    const { rerender } = render(<CalculatorPreviewForm fields={[field]} outputs={[output]} />);
+
+    // Formula evaluates correctly with the original variable name
+    expect(screen.getByText('12')).toBeInTheDocument();
+
+    // Change a value so userValues has an entry for 'quantity'
+    const input = screen.getByRole('spinbutton');
+    await user.clear(input);
+    await user.type(input, '7');
+    expect(screen.getByText('28')).toBeInTheDocument();
+
+    // Rename the variable on the field config
+    const renamedField = { ...field, variableName: 'qty_new' };
+    const outputForOldName = makeOutput({ expression: '{quantity} * 4', label: 'Total' });
+    rerender(<CalculatorPreviewForm fields={[renamedField]} outputs={[outputForOldName]} />);
+
+    // Formula referencing the old name should now produce an error
+    const alert = screen.getByRole('alert');
+    expect(alert).toBeInTheDocument();
+    expect(alert.textContent).not.toBe('');
+
+    // Formula referencing the new name should use the default value (3)
+    const outputForNewName = makeOutput({ expression: '{qty_new} * 4', label: 'Total' });
+    rerender(<CalculatorPreviewForm fields={[renamedField]} outputs={[outputForNewName]} />);
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByText('12')).toBeInTheDocument();
   });
 });
 
