@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { FieldTypePalette } from '@/features/add-field';
 import { DraggableFieldList } from '@/features/reorder-fields';
 import { FieldEditorWidget } from '@/widgets/field-editor';
+import { PreviewPane } from '@/widgets/calculator-preview';
 import type {
   BaseFieldConfig,
   FieldType,
@@ -62,19 +63,30 @@ export function EditorPage({ calculatorId }: EditorPageProps) {
   return (
     <main data-calculator-id={calculatorId}>
       <h1>Calculator Editor</h1>
-      <FieldTypePalette onAdd={handleAddField} />
-      <DraggableFieldList
-        fields={fields}
-        onReorder={handleReorder}
-        renderField={(field) => (
-          <button type="button" onClick={() => setSelectedFieldId(field.id)}>
-            {field.label}
-          </button>
-        )}
-      />
-      {selectedField !== null && (
-        <FieldEditorWidget field={selectedField} onUpdate={handleUpdate} onDelete={handleDelete} />
-      )}
+      <div className="flex gap-6">
+        <div className="flex-1">
+          <FieldTypePalette onAdd={handleAddField} />
+          <DraggableFieldList
+            fields={fields}
+            onReorder={handleReorder}
+            renderField={(field) => (
+              <button type="button" onClick={() => setSelectedFieldId(field.id)}>
+                {field.label}
+              </button>
+            )}
+          />
+          {selectedField !== null && (
+            <FieldEditorWidget
+              field={selectedField}
+              onUpdate={handleUpdate}
+              onDelete={handleDelete}
+            />
+          )}
+        </div>
+        <div className="flex-1">
+          <PreviewPane />
+        </div>
+      </div>
     </main>
   );
 }

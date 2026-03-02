@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EditorPage } from './EditorPage';
 
@@ -110,6 +110,26 @@ describe('EditorPage', () => {
     // The field list should be empty and the editor hidden
     expect(screen.queryAllByRole('listitem')).toHaveLength(0);
     expect(screen.queryByLabelText('Label')).not.toBeInTheDocument();
+  });
+
+  it('renders the preview pane region', async () => {
+    render(<EditorPage calculatorId="calc-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('region', { name: 'Calculator Preview' })).toBeInTheDocument();
+    });
+  });
+
+  it('renders both the editor content column and the preview pane column', async () => {
+    render(<EditorPage calculatorId="calc-1" />);
+
+    // Left column: editor controls are present
+    expect(screen.getByRole('region', { name: 'Field types' })).toBeInTheDocument();
+
+    // Right column: preview pane is present
+    await waitFor(() => {
+      expect(screen.getByRole('region', { name: 'Calculator Preview' })).toBeInTheDocument();
+    });
   });
 
   it('reordering via ArrowDown keyboard moves a field down in the list', async () => {
