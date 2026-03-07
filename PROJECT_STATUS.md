@@ -231,7 +231,7 @@ Last updated: 2026-02-28
 
 | Status | ID            | Task                                                                     | P   | Completed |
 | ------ | ------------- | ------------------------------------------------------------------------ | --- | --------- |
-|        | CALC-US2-A001 | Build formula output list UI (add/remove/reorder output values)          | 0   |           |
+| ✅ | CALC-US2-A001 | Build formula output list UI (add/remove/reorder output values)          | 0   | 2026-03-07 |
 |        | CALC-US2-A002 | Build formula text input with inline validation and error display        | 0   |           |
 |        | CALC-US2-A003 | Implement live result preview using current field defaults               | 0   |           |
 |        | CALC-US2-A004 | Add rounding configuration per output value                              | 1   |           |

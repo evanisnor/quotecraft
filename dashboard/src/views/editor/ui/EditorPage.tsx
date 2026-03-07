@@ -5,6 +5,7 @@ import type { ApiClient } from '@/shared/api';
 import { FieldTypePalette } from '@/features/add-field';
 import { DraggableFieldList } from '@/features/reorder-fields';
 import { useAutoSave, SaveStatusIndicator } from '@/features/auto-save';
+import { OutputList } from '@/features/manage-outputs';
 import { FieldEditorWidget } from '@/widgets/field-editor';
 import { PreviewPane, CalculatorPreviewForm } from '@/widgets/calculator-preview';
 import type {
@@ -13,6 +14,7 @@ import type {
   DropdownFieldConfig,
   RadioFieldConfig,
   CheckboxFieldConfig,
+  ResultOutputConfig,
 } from '@/shared/config';
 import { FIELD_TYPE_LABELS } from '@/shared/config';
 import { generateId, generateVariableName } from '@/shared/lib';
@@ -38,15 +40,19 @@ function createField(type: FieldType): BaseFieldConfig {
   return base;
 }
 
+function createOutput(index: number): ResultOutputConfig {
+  return { id: generateId(), label: `Output ${index + 1}`, expression: '' };
+}
+
 export function EditorPage({ calculatorId, client }: EditorPageProps) {
   const [fields, setFields] = useState<BaseFieldConfig[]>([]);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
+  const [outputs, setOutputs] = useState<ResultOutputConfig[]>([]);
+  const [selectedOutputId, setSelectedOutputId] = useState<string | null>(null);
 
   const selectedField = fields.find((f) => f.id === selectedFieldId) ?? null;
 
-  // Build the full config payload from current editor state.
-  // outputs is empty until CALC-US2 is implemented.
-  const config = useMemo(() => ({ fields, outputs: [] }), [fields]);
+  const config = useMemo(() => ({ fields, outputs }), [fields, outputs]);
 
   const { status: saveStatus, save } = useAutoSave(client, calculatorId, config);
 
@@ -67,6 +73,23 @@ export function EditorPage({ calculatorId, client }: EditorPageProps) {
   function handleDelete(): void {
     setFields((prev) => prev.filter((f) => f.id !== selectedFieldId));
     setSelectedFieldId(null);
+  }
+
+  function handleAddOutput(): void {
+    const newOutput = createOutput(outputs.length);
+    setOutputs((prev) => [...prev, newOutput]);
+    setSelectedOutputId(newOutput.id);
+  }
+
+  function handleDeleteOutput(id: string): void {
+    setOutputs((prev) => prev.filter((o) => o.id !== id));
+    if (selectedOutputId === id) {
+      setSelectedOutputId(null);
+    }
+  }
+
+  function handleReorderOutputs(reordered: ResultOutputConfig[]): void {
+    setOutputs(reordered);
   }
 
   return (
@@ -92,10 +115,18 @@ export function EditorPage({ calculatorId, client }: EditorPageProps) {
               onDelete={handleDelete}
             />
           )}
+          <OutputList
+            outputs={outputs}
+            selectedOutputId={selectedOutputId}
+            onAdd={handleAddOutput}
+            onSelect={setSelectedOutputId}
+            onDelete={handleDeleteOutput}
+            onReorder={handleReorderOutputs}
+          />
         </div>
         <div className="flex-1">
           <PreviewPane>
-            <CalculatorPreviewForm fields={fields} outputs={[]} />
+            <CalculatorPreviewForm fields={fields} outputs={outputs} />
           </PreviewPane>
         </div>
       </div>

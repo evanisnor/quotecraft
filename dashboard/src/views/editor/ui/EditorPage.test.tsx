@@ -258,4 +258,49 @@ describe('EditorPage', () => {
     expect(listItems[0]).toHaveTextContent('Number Input');
     expect(listItems[1]).toHaveTextContent('Text Input');
   });
+
+  it('renders the formula outputs section', () => {
+    renderEditor();
+
+    expect(screen.getByRole('region', { name: 'Formula outputs' })).toBeInTheDocument();
+  });
+
+  it('renders the Add output button', () => {
+    renderEditor();
+
+    expect(screen.getByRole('button', { name: 'Add output' })).toBeInTheDocument();
+  });
+
+  it('adds an output to the list when Add output is clicked', async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.click(screen.getByRole('button', { name: 'Add output' }));
+
+    // The new output appears in the outputs list
+    expect(screen.getByRole('button', { name: 'Output 1' })).toBeInTheDocument();
+  });
+
+  it('adds two outputs and shows both in the list', async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.click(screen.getByRole('button', { name: 'Add output' }));
+    await user.click(screen.getByRole('button', { name: 'Add output' }));
+
+    expect(screen.getByRole('button', { name: 'Output 1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Output 2' })).toBeInTheDocument();
+  });
+
+  it('deletes an output when the delete button is clicked', async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.click(screen.getByRole('button', { name: 'Add output' }));
+    expect(screen.getByRole('button', { name: 'Output 1' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Delete output Output 1' }));
+
+    expect(screen.queryByRole('button', { name: 'Output 1' })).not.toBeInTheDocument();
+  });
 });
