@@ -303,4 +303,55 @@ describe('EditorPage', () => {
 
     expect(screen.queryByRole('button', { name: 'Output 1' })).not.toBeInTheDocument();
   });
+
+  it('shows the formula input when an output is selected', async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.click(screen.getByRole('button', { name: 'Add output' }));
+    // The new output is auto-selected; formula input should be visible
+    expect(screen.getByLabelText('Formula expression')).toBeInTheDocument();
+  });
+
+  it('does not show the formula input before an output is selected', () => {
+    renderEditor();
+
+    expect(screen.queryByLabelText('Formula expression')).not.toBeInTheDocument();
+  });
+
+  it('hides the formula input when the selected output is deleted', async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.click(screen.getByRole('button', { name: 'Add output' }));
+    expect(screen.getByLabelText('Formula expression')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Delete output Output 1' }));
+
+    expect(screen.queryByLabelText('Formula expression')).not.toBeInTheDocument();
+  });
+
+  it('typing in the formula input updates the expression for the selected output', async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.click(screen.getByRole('button', { name: 'Add output' }));
+
+    const formulaInput = screen.getByLabelText('Formula expression');
+    await user.type(formulaInput, '1 + 2');
+
+    expect(formulaInput).toHaveValue('1 + 2');
+  });
+
+  it('shows an inline error when an invalid expression is typed', async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.click(screen.getByRole('button', { name: 'Add output' }));
+
+    await user.type(screen.getByLabelText('Formula expression'), '1 +');
+
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByLabelText('Formula expression')).toHaveAttribute('aria-invalid', 'true');
+  });
 });

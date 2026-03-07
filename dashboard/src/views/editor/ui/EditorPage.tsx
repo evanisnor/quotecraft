@@ -5,7 +5,7 @@ import type { ApiClient } from '@/shared/api';
 import { FieldTypePalette } from '@/features/add-field';
 import { DraggableFieldList } from '@/features/reorder-fields';
 import { useAutoSave, SaveStatusIndicator } from '@/features/auto-save';
-import { OutputList } from '@/features/manage-outputs';
+import { OutputList, FormulaInput } from '@/features/manage-outputs';
 import { FieldEditorWidget } from '@/widgets/field-editor';
 import { PreviewPane, CalculatorPreviewForm } from '@/widgets/calculator-preview';
 import type {
@@ -92,6 +92,10 @@ export function EditorPage({ calculatorId, client }: EditorPageProps) {
     setOutputs(reordered);
   }
 
+  function handleUpdateOutputExpression(id: string, expression: string): void {
+    setOutputs((prev) => prev.map((o) => (o.id === id ? { ...o, expression } : o)));
+  }
+
   return (
     <main data-calculator-id={calculatorId}>
       <h1>Calculator Editor</h1>
@@ -123,6 +127,13 @@ export function EditorPage({ calculatorId, client }: EditorPageProps) {
             onDelete={handleDeleteOutput}
             onReorder={handleReorderOutputs}
           />
+          {selectedOutputId !== null && (
+            <FormulaInput
+              expression={outputs.find((o) => o.id === selectedOutputId)?.expression ?? ''}
+              onChange={(expression) => handleUpdateOutputExpression(selectedOutputId, expression)}
+              fieldVariableNames={fields.map((f) => f.variableName)}
+            />
+          )}
         </div>
         <div className="flex-1">
           <PreviewPane>
