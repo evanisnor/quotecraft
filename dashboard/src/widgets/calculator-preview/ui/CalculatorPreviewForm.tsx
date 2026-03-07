@@ -1,60 +1,15 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import type {
-  BaseFieldConfig,
-  NumberFieldConfig,
-  SliderFieldConfig,
-  DropdownFieldConfig,
-  RadioFieldConfig,
-  ResultOutputConfig,
-} from '@/shared/config';
+import type { BaseFieldConfig, ResultOutputConfig } from '@/shared/config';
 import { FieldPreviewRenderer } from '@/shared/ui/field-renderers';
 import { evaluate } from '@quotecraft/formula-engine';
 import type { FormulaResult } from '@quotecraft/formula-engine';
+import { buildFieldDefaults } from '@/shared/lib';
 
 export interface CalculatorPreviewFormProps {
   fields: BaseFieldConfig[];
   outputs?: ResultOutputConfig[];
-}
-
-function getInitialValue(field: BaseFieldConfig): number {
-  switch (field.type) {
-    case 'number': {
-      const numberField = field as NumberFieldConfig;
-      return numberField.defaultValue ?? 0;
-    }
-    case 'slider': {
-      const sliderField = field as SliderFieldConfig;
-      return sliderField.defaultValue ?? sliderField.min ?? 0;
-    }
-    case 'text':
-      return 0;
-    case 'dropdown': {
-      const dropdownField = field as DropdownFieldConfig;
-      return parseFloat(dropdownField.options[0]?.value ?? '0') || 0;
-    }
-    case 'radio': {
-      const radioField = field as RadioFieldConfig;
-      return parseFloat(radioField.options[0]?.value ?? '0') || 0;
-    }
-    case 'checkbox':
-      return 0;
-    case 'image_select':
-      return 0;
-    default: {
-      const _unreachable: never = field.type;
-      return _unreachable;
-    }
-  }
-}
-
-function buildFieldDefaults(fields: BaseFieldConfig[]): Record<string, number> {
-  const defaults: Record<string, number> = {};
-  for (const field of fields) {
-    defaults[field.variableName] = getInitialValue(field);
-  }
-  return defaults;
 }
 
 export function CalculatorPreviewForm({ fields, outputs = [] }: CalculatorPreviewFormProps) {

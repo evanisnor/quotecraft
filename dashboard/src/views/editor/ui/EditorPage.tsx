@@ -17,7 +17,7 @@ import type {
   ResultOutputConfig,
 } from '@/shared/config';
 import { FIELD_TYPE_LABELS } from '@/shared/config';
-import { generateId, generateVariableName } from '@/shared/lib';
+import { generateId, generateVariableName, buildFieldDefaults } from '@/shared/lib';
 
 interface EditorPageProps {
   calculatorId: string;
@@ -53,6 +53,7 @@ export function EditorPage({ calculatorId, client }: EditorPageProps) {
   const selectedField = fields.find((f) => f.id === selectedFieldId) ?? null;
 
   const config = useMemo(() => ({ fields, outputs }), [fields, outputs]);
+  const fieldDefaults = useMemo(() => buildFieldDefaults(fields), [fields]);
 
   const { status: saveStatus, save } = useAutoSave(client, calculatorId, config);
 
@@ -132,6 +133,7 @@ export function EditorPage({ calculatorId, client }: EditorPageProps) {
               expression={outputs.find((o) => o.id === selectedOutputId)?.expression ?? ''}
               onChange={(expression) => handleUpdateOutputExpression(selectedOutputId, expression)}
               fieldVariableNames={fields.map((f) => f.variableName)}
+              fieldValues={fieldDefaults}
             />
           )}
         </div>

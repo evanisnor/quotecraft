@@ -354,4 +354,34 @@ describe('EditorPage', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.getByLabelText('Formula expression')).toHaveAttribute('aria-invalid', 'true');
   });
+
+  it('shows a live result preview in the formula input using field defaults', async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    // Add a Number Input field — it gets a default defaultValue of undefined so defaults to 0
+    await user.click(screen.getByRole('button', { name: 'Number Input' }));
+
+    // Add an output (auto-selected)
+    await user.click(screen.getByRole('button', { name: 'Add output' }));
+
+    // Type a constant expression so the preview is predictable regardless of field defaults
+    const formulaInput = screen.getByLabelText('Formula expression');
+    await user.type(formulaInput, '7 * 6');
+
+    // The live preview should show the computed result
+    const preview = document.querySelector('[data-testid="formula-preview"]');
+    expect(preview).toBeInTheDocument();
+    expect(preview?.textContent).toBe('Preview: 42');
+  });
+
+  it('shows no live preview when the formula expression is empty', async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.click(screen.getByRole('button', { name: 'Add output' }));
+
+    // Formula expression is empty by default — no preview should be shown
+    expect(document.querySelector('[data-testid="formula-preview"]')).not.toBeInTheDocument();
+  });
 });

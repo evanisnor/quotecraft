@@ -6,6 +6,11 @@ jest.mock('@quotecraft/formula-engine', () => ({
   ...jest.requireActual<typeof import('@quotecraft/formula-engine')>('@quotecraft/formula-engine'),
 }));
 
+// Helper: query for the preview output element
+function queryPreview() {
+  return document.querySelector('[data-testid="formula-preview"]');
+}
+
 describe('FormulaInput', () => {
   it('renders the formula expression input with a label', () => {
     render(<FormulaInput expression="" onChange={() => {}} />);
@@ -157,13 +162,119 @@ describe('FormulaInput', () => {
       throw new Error('Unexpected internal error');
     };
 
-    render(<FormulaInput expression="1 + 2" onChange={() => {}} />);
+    try {
+      render(<FormulaInput expression="1 + 2" onChange={() => {}} />);
 
-    engine.parse = originalParse;
+      const alert = screen.getByRole('alert');
+      expect(alert).toBeInTheDocument();
+      expect(alert.textContent).toBe('Invalid expression');
+      expect(screen.getByLabelText('Formula expression')).toHaveAttribute('aria-invalid', 'true');
+    } finally {
+      engine.parse = originalParse;
+    }
+  });
+});
 
-    const alert = screen.getByRole('alert');
-    expect(alert).toBeInTheDocument();
-    expect(alert.textContent).toBe('Invalid expression');
-    expect(screen.getByLabelText('Formula expression')).toHaveAttribute('aria-invalid', 'true');
+describe('FormulaInput — live result preview', () => {
+  it('shows no preview when expression is empty, even with fieldValues provided', () => {
+    render(<FormulaInput expression="" onChange={() => {}} fieldValues={{ qty: 3, price: 10 }} />);
+
+    expect(queryPreview()).not.toBeInTheDocument();
+  });
+
+  it('shows no preview when expression is only whitespace', () => {
+    render(
+      <FormulaInput expression="   " onChange={() => {}} fieldValues={{ qty: 3, price: 10 }} />,
+    );
+
+    expect(queryPreview()).not.toBeInTheDocument();
+  });
+
+  it('shows no preview when expression has a parse error', () => {
+    render(
+      <FormulaInput expression="1 +" onChange={() => {}} fieldValues={{ qty: 3, price: 10 }} />,
+    );
+
+    expect(queryPreview()).not.toBeInTheDocument();
+  });
+
+  it('shows the computed numeric result when expression is valid and fieldValues are provided', () => {
+    render(
+      <FormulaInput
+        expression="{qty} * {price}"
+        onChange={() => {}}
+        fieldValues={{ qty: 3, price: 10 }}
+      />,
+    );
+
+    const preview = queryPreview();
+    expect(preview).toBeInTheDocument();
+    expect(preview?.textContent).toBe('Preview: 30');
+  });
+
+  it('shows the computed result for a constant expression without fieldValues', () => {
+    render(<FormulaInput expression="2 + 3" onChange={() => {}} />);
+
+    const preview = queryPreview();
+    expect(preview).toBeInTheDocument();
+    expect(preview?.textContent).toBe('Preview: 5');
+  });
+
+  it('shows an evaluation error when expression references an unknown variable (fieldValues is empty)', () => {
+    render(<FormulaInput expression="{unknown}" onChange={() => {}} fieldValues={{}} />);
+
+    const preview = queryPreview();
+    expect(preview).toBeInTheDocument();
+    expect(preview?.textContent).toContain('Evaluation error:');
+  });
+
+  it('shows the Infinity result for division by zero (engine JS semantics, not an error)', () => {
+    // The formula engine follows JavaScript semantics: 1/0 → Infinity, not an error.
+    render(<FormulaInput expression="1 / 0" onChange={() => {}} />);
+
+    const preview = queryPreview();
+    expect(preview).toBeInTheDocument();
+    expect(preview?.textContent).toBe('Preview: Infinity');
+  });
+
+  it('the result element is not a role="alert" — it is informational output', () => {
+    render(<FormulaInput expression="{qty} * 2" onChange={() => {}} fieldValues={{ qty: 5 }} />);
+
+    // The preview element exists and contains the result
+    const preview = queryPreview();
+    expect(preview).toBeInTheDocument();
+
+    // It must NOT be a role="alert"
+    expect(preview).not.toHaveAttribute('role', 'alert');
+  });
+
+  it('preview updates when the expression changes to a new valid value', () => {
+    const { rerender } = render(<FormulaInput expression="2 + 2" onChange={() => {}} />);
+
+    expect(queryPreview()?.textContent).toBe('Preview: 4');
+
+    rerender(<FormulaInput expression="10 * 3" onChange={() => {}} />);
+
+    expect(queryPreview()?.textContent).toBe('Preview: 30');
+  });
+
+  it('preview disappears when expression becomes empty after having been valid', () => {
+    const { rerender } = render(<FormulaInput expression="42" onChange={() => {}} />);
+
+    expect(queryPreview()).toBeInTheDocument();
+
+    rerender(<FormulaInput expression="" onChange={() => {}} />);
+
+    expect(queryPreview()).not.toBeInTheDocument();
+  });
+
+  it('preview disappears when expression becomes invalid after having been valid', () => {
+    const { rerender } = render(<FormulaInput expression="42" onChange={() => {}} />);
+
+    expect(queryPreview()).toBeInTheDocument();
+
+    rerender(<FormulaInput expression="42 +" onChange={() => {}} />);
+
+    expect(queryPreview()).not.toBeInTheDocument();
   });
 });
