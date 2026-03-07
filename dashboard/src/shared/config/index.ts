@@ -10,4 +10,5 @@ export type {
   SliderFieldConfig,
   TextFieldConfig,
   ResultOutputConfig,
+  CalculatorEditorConfig,
 } from './calculatorConfig';

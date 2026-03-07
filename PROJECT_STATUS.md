@@ -197,11 +197,11 @@ Last updated: 2026-02-28
 
 **Requirements:** [1.2.3](./REQUIREMENTS.md#12-calculator-crud)
 
-| Status | ID            | Task                                                               | P   | Completed |
-| ------ | ------------- | ------------------------------------------------------------------ | --- | --------- |
-|        | BLDR-US5-A001 | Implement debounced auto-save that PUTs config to the API          | 0   |           |
-|        | BLDR-US5-A002 | Build save status indicator component                              | 0   |           |
-|        | BLDR-US5-A003 | Implement retry logic with user notification on persistent failure | 1   |           |
+| Status | ID            | Task                                                               | P   | Completed  |
+| ------ | ------------- | ------------------------------------------------------------------ | --- | ---------- |
+| ✅     | BLDR-US5-A001 | Implement debounced auto-save that PUTs config to the API          | 0   | 2026-03-07 |
+| ✅     | BLDR-US5-A002 | Build save status indicator component                              | 0   | 2026-03-07 |
+| ✅     | BLDR-US5-A003 | Implement retry logic with user notification on persistent failure | 1   | 2026-03-07 |
 
 ---
 

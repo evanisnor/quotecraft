@@ -1,23 +1,47 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EditorPage } from './EditorPage';
+import { StubApiClient } from '@/shared/api/testing';
+
+function renderEditor(calculatorId = 'calc-1') {
+  const client = new StubApiClient();
+  // Pre-enqueue success responses so that if auto-save fires (after the 2s debounce)
+  // the StubApiClient does not throw from an empty queue.
+  for (let i = 0; i < 20; i++) {
+    client.enqueueSuccess({});
+  }
+  render(<EditorPage calculatorId={calculatorId} client={client} />);
+  return { client };
+}
 
 describe('EditorPage', () => {
   it('renders the Calculator Editor heading', () => {
-    render(<EditorPage calculatorId="calc-1" />);
+    renderEditor();
 
     expect(screen.getByRole('heading', { name: 'Calculator Editor' })).toBeInTheDocument();
   });
 
   it('renders the field type palette', () => {
-    render(<EditorPage calculatorId="calc-1" />);
+    renderEditor();
 
     expect(screen.getByRole('region', { name: 'Field types' })).toBeInTheDocument();
   });
 
+  it('renders the save status indicator', () => {
+    renderEditor();
+
+    expect(screen.getByRole('status', { name: 'Save status' })).toBeInTheDocument();
+  });
+
+  it('renders a Save button for manual saves', () => {
+    renderEditor();
+
+    expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
+  });
+
   it('adds a field to the list when a type is selected from the palette', async () => {
     const user = userEvent.setup();
-    render(<EditorPage calculatorId="calc-1" />);
+    renderEditor();
 
     await user.click(screen.getByRole('button', { name: 'Text Input' }));
 
@@ -29,7 +53,7 @@ describe('EditorPage', () => {
 
   it('adds two fields and shows both in the list', async () => {
     const user = userEvent.setup();
-    render(<EditorPage calculatorId="calc-1" />);
+    renderEditor();
 
     await user.click(screen.getByRole('button', { name: 'Text Input' }));
     await user.click(screen.getByRole('button', { name: 'Number Input' }));
@@ -40,7 +64,7 @@ describe('EditorPage', () => {
 
   it('shows the FieldEditorWidget when a field in the list is clicked', async () => {
     const user = userEvent.setup();
-    render(<EditorPage calculatorId="calc-1" />);
+    renderEditor();
 
     await user.click(screen.getByRole('button', { name: 'Dropdown' }));
 
@@ -49,14 +73,14 @@ describe('EditorPage', () => {
   });
 
   it('does not show the FieldEditorWidget before a field is selected', () => {
-    render(<EditorPage calculatorId="calc-1" />);
+    renderEditor();
 
     expect(screen.queryByLabelText('Label')).not.toBeInTheDocument();
   });
 
   it('clicking a field button in the list shows the FieldEditorWidget for that field', async () => {
     const user = userEvent.setup();
-    render(<EditorPage calculatorId="calc-1" />);
+    renderEditor();
 
     // Add two fields
     await user.click(screen.getByRole('button', { name: 'Text Input' }));
@@ -74,7 +98,7 @@ describe('EditorPage', () => {
 
   it('updating the label via FieldEditorWidget reflects the change in the list', async () => {
     const user = userEvent.setup();
-    render(<EditorPage calculatorId="calc-1" />);
+    renderEditor();
 
     // Add a text field (label defaults to "Text Input")
     await user.click(screen.getByRole('button', { name: 'Text Input' }));
@@ -95,7 +119,7 @@ describe('EditorPage', () => {
 
   it('deleting a field removes it from the list and hides the editor', async () => {
     const user = userEvent.setup();
-    render(<EditorPage calculatorId="calc-1" />);
+    renderEditor();
 
     // Add a field
     await user.click(screen.getByRole('button', { name: 'Slider' }));
@@ -113,7 +137,7 @@ describe('EditorPage', () => {
   });
 
   it('renders the preview pane region', async () => {
-    render(<EditorPage calculatorId="calc-1" />);
+    renderEditor();
 
     await waitFor(() => {
       expect(screen.getByRole('region', { name: 'Calculator Preview' })).toBeInTheDocument();
@@ -121,7 +145,7 @@ describe('EditorPage', () => {
   });
 
   it('renders both the editor content column and the preview pane column', async () => {
-    render(<EditorPage calculatorId="calc-1" />);
+    renderEditor();
 
     // Left column: editor controls are present
     expect(screen.getByRole('region', { name: 'Field types' })).toBeInTheDocument();
@@ -133,7 +157,7 @@ describe('EditorPage', () => {
   });
 
   it('renders the calculator preview form inside the preview pane shadow DOM', async () => {
-    render(<EditorPage calculatorId="calc-1" />);
+    renderEditor();
 
     const host = screen.getByTestId('preview-shadow-host');
 
@@ -145,7 +169,7 @@ describe('EditorPage', () => {
 
   it('adding a field to the editor shows the field label in the preview pane shadow DOM', async () => {
     const user = userEvent.setup();
-    render(<EditorPage calculatorId="calc-1" />);
+    renderEditor();
 
     await user.click(screen.getByRole('button', { name: 'Number Input' }));
 
@@ -160,7 +184,7 @@ describe('EditorPage', () => {
 
   it('label change immediately reflects in the preview pane shadow DOM', async () => {
     const user = userEvent.setup();
-    render(<EditorPage calculatorId="calc-1" />);
+    renderEditor();
 
     // Add a Number Input field (auto-selected after add)
     await user.click(screen.getByRole('button', { name: 'Number Input' }));
@@ -188,7 +212,7 @@ describe('EditorPage', () => {
 
   it('deleting a field immediately removes it from the preview pane shadow DOM', async () => {
     const user = userEvent.setup();
-    render(<EditorPage calculatorId="calc-1" />);
+    renderEditor();
 
     // Add a field
     await user.click(screen.getByRole('button', { name: 'Slider' }));
@@ -214,7 +238,7 @@ describe('EditorPage', () => {
 
   it('reordering via ArrowDown keyboard moves a field down in the list', async () => {
     const user = userEvent.setup();
-    render(<EditorPage calculatorId="calc-1" />);
+    renderEditor();
 
     // Add two fields
     await user.click(screen.getByRole('button', { name: 'Text Input' }));

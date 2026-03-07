@@ -57,3 +57,12 @@ export interface ResultOutputConfig {
   label: string;
   expression: string;
 }
+
+/**
+ * The full calculator configuration payload sent to and stored by the API.
+ * Contains all editor state: input fields and formula output configurations.
+ */
+export interface CalculatorEditorConfig {
+  fields: BaseFieldConfig[];
+  outputs: ResultOutputConfig[];
+}

@@ -1,4 +1,9 @@
-import { listCalculators, createCalculator, deleteCalculator } from './calculators';
+import {
+  listCalculators,
+  createCalculator,
+  deleteCalculator,
+  updateCalculatorConfig,
+} from './calculators';
 import { StubApiClient } from '@/shared/api/testing';
 
 describe('listCalculators', () => {
@@ -83,5 +88,61 @@ describe('deleteCalculator', () => {
     client.enqueueError('calculator not found');
 
     await expect(deleteCalculator(client, 'bad-id')).rejects.toThrow('calculator not found');
+  });
+});
+
+describe('updateCalculatorConfig', () => {
+  it('resolves without error on successful PUT', async () => {
+    const client = new StubApiClient();
+    client.enqueueSuccess({
+      id: 'calc-id',
+      config: {},
+      config_version: 2,
+      created_at: '',
+      updated_at: '',
+    });
+
+    await expect(
+      updateCalculatorConfig(client, 'calc-id', { fields: [], outputs: [] }),
+    ).resolves.toBeUndefined();
+  });
+
+  it('sends the config wrapped in a config key to the correct URL', async () => {
+    const client = new StubApiClient();
+    client.enqueueSuccess({
+      id: 'calc-id',
+      config: {},
+      config_version: 2,
+      created_at: '',
+      updated_at: '',
+    });
+
+    const config = {
+      fields: [
+        {
+          id: 'f1',
+          type: 'number' as const,
+          label: 'Count',
+          required: false,
+          variableName: 'count',
+        },
+      ],
+      outputs: [],
+    };
+    await updateCalculatorConfig(client, 'calc-id', config);
+
+    expect(client.calls).toHaveLength(1);
+    expect(client.calls[0].method).toBe('PUT');
+    expect(client.calls[0].path).toBe('/v1/calculators/calc-id');
+    expect(client.calls[0].body).toEqual({ config });
+  });
+
+  it('throws with the API error message on failure', async () => {
+    const client = new StubApiClient();
+    client.enqueueError('access forbidden');
+
+    await expect(
+      updateCalculatorConfig(client, 'bad-id', { fields: [], outputs: [] }),
+    ).rejects.toThrow('access forbidden');
   });
 });

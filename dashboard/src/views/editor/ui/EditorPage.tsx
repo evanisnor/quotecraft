@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import type { ApiClient } from '@/shared/api';
 import { FieldTypePalette } from '@/features/add-field';
 import { DraggableFieldList } from '@/features/reorder-fields';
+import { useAutoSave, SaveStatusIndicator } from '@/features/auto-save';
 import { FieldEditorWidget } from '@/widgets/field-editor';
 import { PreviewPane, CalculatorPreviewForm } from '@/widgets/calculator-preview';
 import type {
@@ -17,6 +19,7 @@ import { generateId, generateVariableName } from '@/shared/lib';
 
 interface EditorPageProps {
   calculatorId: string;
+  client: ApiClient;
 }
 
 function createField(type: FieldType): BaseFieldConfig {
@@ -35,11 +38,17 @@ function createField(type: FieldType): BaseFieldConfig {
   return base;
 }
 
-export function EditorPage({ calculatorId }: EditorPageProps) {
+export function EditorPage({ calculatorId, client }: EditorPageProps) {
   const [fields, setFields] = useState<BaseFieldConfig[]>([]);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
 
   const selectedField = fields.find((f) => f.id === selectedFieldId) ?? null;
+
+  // Build the full config payload from current editor state.
+  // outputs is empty until CALC-US2 is implemented.
+  const config = useMemo(() => ({ fields, outputs: [] }), [fields]);
+
+  const { status: saveStatus, save } = useAutoSave(client, calculatorId, config);
 
   function handleAddField(type: FieldType): void {
     const newField = createField(type);
@@ -63,6 +72,7 @@ export function EditorPage({ calculatorId }: EditorPageProps) {
   return (
     <main data-calculator-id={calculatorId}>
       <h1>Calculator Editor</h1>
+      <SaveStatusIndicator status={saveStatus} onSave={save} />
       <div className="flex gap-6">
         <div className="flex-1">
           <FieldTypePalette onAdd={handleAddField} />

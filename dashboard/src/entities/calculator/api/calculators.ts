@@ -1,4 +1,5 @@
 import type { ApiClient } from '@/shared/api';
+import type { CalculatorEditorConfig } from '@/shared/config';
 import type { CalculatorSummary } from '../model/types';
 
 interface CalculatorData {
@@ -29,4 +30,12 @@ export async function createCalculator(client: ApiClient): Promise<CalculatorSum
 
 export async function deleteCalculator(client: ApiClient, id: string): Promise<void> {
   await client.delete(`/v1/calculators/${id}`);
+}
+
+export async function updateCalculatorConfig(
+  client: ApiClient,
+  id: string,
+  config: CalculatorEditorConfig,
+): Promise<void> {
+  await client.put(`/v1/calculators/${id}`, { config });
 }
