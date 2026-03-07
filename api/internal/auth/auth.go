@@ -39,6 +39,12 @@ var ErrInvalidCredentials = errors.New("invalid credentials")
 // ErrUserNotFound is returned by UserReader when no user matches the query.
 var ErrUserNotFound = errors.New("user not found")
 
+// ErrInvalidResetToken is returned when the reset token is not found or has expired.
+var ErrInvalidResetToken = errors.New("invalid or expired reset token")
+
+// ErrResetTokenNotFound is returned by ResetTokenReader when no token matches the hash.
+var ErrResetTokenNotFound = errors.New("reset token not found")
+
 // User represents a registered user account.
 type User struct {
 	ID           string
@@ -54,6 +60,15 @@ type Session struct {
 	TokenHash string
 	CreatedAt time.Time
 	ExpiresAt time.Time
+}
+
+// PasswordResetToken represents a single-use password reset token.
+type PasswordResetToken struct {
+	ID        string
+	UserID    string
+	TokenHash string
+	ExpiresAt time.Time
+	CreatedAt time.Time
 }
 
 // UserWriter creates new user records.
@@ -81,6 +96,31 @@ type SessionReader interface {
 	GetSession(ctx context.Context, tokenHash string) (*Session, error)
 }
 
+// ResetTokenWriter creates password reset token records.
+type ResetTokenWriter interface {
+	CreateResetToken(ctx context.Context, userID, tokenHash string, expiresAt time.Time) (*PasswordResetToken, error)
+}
+
+// ResetTokenReader fetches password reset token records.
+type ResetTokenReader interface {
+	GetResetTokenByHash(ctx context.Context, tokenHash string) (*PasswordResetToken, error)
+}
+
+// ResetTokenDeleter deletes password reset token records.
+type ResetTokenDeleter interface {
+	DeleteResetToken(ctx context.Context, id string) error
+}
+
+// UserPasswordUpdater updates the stored password hash for a user.
+type UserPasswordUpdater interface {
+	UpdateUserPassword(ctx context.Context, userID, passwordHash string) error
+}
+
+// PasswordResetEmailSender sends a password reset email to a user.
+type PasswordResetEmailSender interface {
+	SendPasswordResetEmail(ctx context.Context, toEmail, rawToken string) error
+}
+
 // passwordHasher hashes a plaintext password. Abstracted for testability.
 type passwordHasher func(password []byte, cost int) ([]byte, error)
 
@@ -94,42 +134,82 @@ type tokenGenerator func() (token, tokenHash string, err error)
 
 // Service handles authentication business logic.
 type Service struct {
-	users          UserWriter
-	userReader     UserReader
-	sessions       SessionWriter
-	sessionDeleter SessionDeleter
-	sessionReader  SessionReader
-	hasher         passwordHasher
-	verifier       passwordVerifier
-	genToken       tokenGenerator
+	users               UserWriter
+	userReader          UserReader
+	sessions            SessionWriter
+	sessionDeleter      SessionDeleter
+	sessionReader       SessionReader
+	resetTokenWriter    ResetTokenWriter
+	resetTokenReader    ResetTokenReader
+	resetTokenDeleter   ResetTokenDeleter
+	userPasswordUpdater UserPasswordUpdater
+	emailSender         PasswordResetEmailSender
+	hasher              passwordHasher
+	verifier            passwordVerifier
+	genToken            tokenGenerator
 }
 
 // NewService creates an auth Service with the given repositories.
-func NewService(users UserWriter, userReader UserReader, sessions SessionWriter, sessionDeleter SessionDeleter, sessionReader SessionReader) *Service {
+func NewService(
+	users UserWriter,
+	userReader UserReader,
+	sessions SessionWriter,
+	sessionDeleter SessionDeleter,
+	sessionReader SessionReader,
+	resetTokenWriter ResetTokenWriter,
+	resetTokenReader ResetTokenReader,
+	resetTokenDeleter ResetTokenDeleter,
+	userPasswordUpdater UserPasswordUpdater,
+	emailSender PasswordResetEmailSender,
+) *Service {
 	return &Service{
-		users:          users,
-		userReader:     userReader,
-		sessions:       sessions,
-		sessionDeleter: sessionDeleter,
-		sessionReader:  sessionReader,
-		hasher:         bcrypt.GenerateFromPassword,
-		verifier:       bcrypt.CompareHashAndPassword,
-		genToken:       generateToken,
+		users:               users,
+		userReader:          userReader,
+		sessions:            sessions,
+		sessionDeleter:      sessionDeleter,
+		sessionReader:       sessionReader,
+		resetTokenWriter:    resetTokenWriter,
+		resetTokenReader:    resetTokenReader,
+		resetTokenDeleter:   resetTokenDeleter,
+		userPasswordUpdater: userPasswordUpdater,
+		emailSender:         emailSender,
+		hasher:              bcrypt.GenerateFromPassword,
+		verifier:            bcrypt.CompareHashAndPassword,
+		genToken:            generateToken,
 	}
 }
 
 // newServiceForTest creates an auth Service with injectable dependencies.
 // Used in tests to exercise specific code paths without production side-effects.
-func newServiceForTest(users UserWriter, userReader UserReader, sessions SessionWriter, sessionDeleter SessionDeleter, sessionReader SessionReader, hasher passwordHasher, verifier passwordVerifier, gen tokenGenerator) *Service {
+func newServiceForTest(
+	users UserWriter,
+	userReader UserReader,
+	sessions SessionWriter,
+	sessionDeleter SessionDeleter,
+	sessionReader SessionReader,
+	resetTokenWriter ResetTokenWriter,
+	resetTokenReader ResetTokenReader,
+	resetTokenDeleter ResetTokenDeleter,
+	userPasswordUpdater UserPasswordUpdater,
+	emailSender PasswordResetEmailSender,
+	hasher passwordHasher,
+	verifier passwordVerifier,
+	gen tokenGenerator,
+) *Service {
 	return &Service{
-		users:          users,
-		userReader:     userReader,
-		sessions:       sessions,
-		sessionDeleter: sessionDeleter,
-		sessionReader:  sessionReader,
-		hasher:         hasher,
-		verifier:       verifier,
-		genToken:       gen,
+		users:               users,
+		userReader:          userReader,
+		sessions:            sessions,
+		sessionDeleter:      sessionDeleter,
+		sessionReader:       sessionReader,
+		resetTokenWriter:    resetTokenWriter,
+		resetTokenReader:    resetTokenReader,
+		resetTokenDeleter:   resetTokenDeleter,
+		userPasswordUpdater: userPasswordUpdater,
+		emailSender:         emailSender,
+		hasher:              hasher,
+		verifier:            verifier,
+		genToken:            gen,
 	}
 }
 
@@ -233,6 +313,75 @@ func (s *Service) ValidateToken(ctx context.Context, rawToken string) (string, e
 		return "", ErrInvalidSession
 	}
 	return sess.UserID, nil
+}
+
+// ForgotPassword initiates a password reset for the given email address.
+// If the email is not registered, the method returns nil without sending an email
+// (prevents user enumeration). If the email is registered, a single-use reset
+// token (1 hour TTL) is stored and sent via email.
+func (s *Service) ForgotPassword(ctx context.Context, email string) error {
+	user, err := s.userReader.GetUserByEmail(ctx, email)
+	if errors.Is(err, ErrUserNotFound) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("looking up user: %w", err)
+	}
+
+	rawToken, tokenHash, err := s.genToken()
+	if err != nil {
+		return fmt.Errorf("generating reset token: %w", err)
+	}
+
+	if _, err := s.resetTokenWriter.CreateResetToken(ctx, user.ID, tokenHash, time.Now().UTC().Add(time.Hour)); err != nil {
+		return fmt.Errorf("storing reset token: %w", err)
+	}
+
+	if err := s.emailSender.SendPasswordResetEmail(ctx, user.Email, rawToken); err != nil {
+		return fmt.Errorf("sending reset email: %w", err)
+	}
+
+	return nil
+}
+
+// ResetPassword validates the raw reset token and, if valid, updates the user's
+// password. The token is consumed (deleted) on use, preventing replay.
+// Returns ErrInvalidResetToken if the token is not found or has expired.
+// Returns ErrInvalidInput if the new password is too short.
+func (s *Service) ResetPassword(ctx context.Context, rawToken, newPassword string) error {
+	h := sha256.Sum256([]byte(rawToken))
+	tokenHash := hex.EncodeToString(h[:])
+
+	token, err := s.resetTokenReader.GetResetTokenByHash(ctx, tokenHash)
+	if errors.Is(err, ErrResetTokenNotFound) {
+		return ErrInvalidResetToken
+	}
+	if err != nil {
+		return fmt.Errorf("looking up reset token: %w", err)
+	}
+
+	if token.ExpiresAt.Before(time.Now().UTC()) {
+		return ErrInvalidResetToken
+	}
+
+	if len(newPassword) < 8 {
+		return fmt.Errorf("%w: password must be at least 8 characters", ErrInvalidInput)
+	}
+
+	passwordHash, err := s.hasher([]byte(newPassword), 12)
+	if err != nil {
+		return fmt.Errorf("hashing password: %w", err)
+	}
+
+	if err := s.userPasswordUpdater.UpdateUserPassword(ctx, token.UserID, string(passwordHash)); err != nil {
+		return fmt.Errorf("updating password: %w", err)
+	}
+
+	if err := s.resetTokenDeleter.DeleteResetToken(ctx, token.ID); err != nil {
+		return fmt.Errorf("deleting reset token: %w", err)
+	}
+
+	return nil
 }
 
 // validateRegistrationInput checks email and password constraints.

@@ -32,7 +32,9 @@ func main() {
 
 	userRepo := auth.NewPostgresUserRepository(dbConn.DB())
 	sessionRepo := auth.NewPostgresSessionRepository(dbConn.DB())
-	authService := auth.NewService(userRepo, userRepo, sessionRepo, sessionRepo, sessionRepo)
+	resetTokenRepo := auth.NewPostgresResetTokenRepository(dbConn.DB())
+	emailSender := auth.NewLogPasswordResetEmailSender(logger)
+	authService := auth.NewService(userRepo, userRepo, sessionRepo, sessionRepo, sessionRepo, resetTokenRepo, resetTokenRepo, resetTokenRepo, userRepo, emailSender)
 
 	calcRepo := calculator.NewPostgresCalculatorRepository(dbConn.DB())
 	calcService := calculator.NewService(calcRepo, calcRepo, calcRepo, calcRepo, calcRepo, calcRepo)

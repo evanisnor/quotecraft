@@ -467,3 +467,314 @@ func TestGetSession_QueryError(t *testing.T) {
 		t.Errorf("unfulfilled expectations: %v", err)
 	}
 }
+
+// TestUpdateUserPassword_Success verifies that UpdateUserPassword executes the
+// UPDATE statement with the correct arguments.
+func TestUpdateUserPassword_Success(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("creating sqlmock: %v", err)
+	}
+
+	mock.ExpectExec(regexp.QuoteMeta("UPDATE users SET password_hash = $1 WHERE id = $2")).
+		WithArgs("newhash", "user-123").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectClose()
+
+	repo := NewPostgresUserRepository(db)
+	if err := repo.UpdateUserPassword(context.Background(), "user-123", "newhash"); err != nil {
+		t.Fatalf("UpdateUserPassword() returned unexpected error: %v", err)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Errorf("closing mock db: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestUpdateUserPassword_QueryError verifies that ExecContext errors are wrapped and propagated.
+func TestUpdateUserPassword_QueryError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("creating sqlmock: %v", err)
+	}
+
+	wantErr := errors.New("connection refused")
+	mock.ExpectExec(regexp.QuoteMeta("UPDATE users SET password_hash = $1 WHERE id = $2")).
+		WillReturnError(wantErr)
+	mock.ExpectClose()
+
+	repo := NewPostgresUserRepository(db)
+	err = repo.UpdateUserPassword(context.Background(), "user-123", "newhash")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Errorf("closing mock db: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestCreateResetToken_Success verifies that CreateResetToken executes the INSERT and
+// scans the RETURNING columns into a PasswordResetToken.
+func TestCreateResetToken_Success(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("creating sqlmock: %v", err)
+	}
+
+	now := time.Now().UTC()
+	expiresAt := now.Add(time.Hour)
+
+	rows := sqlmock.NewRows([]string{"id", "user_id", "token_hash", "expires_at", "created_at"}).
+		AddRow("reset-id-1", "user-123", "somehash", expiresAt, now)
+
+	mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO password_reset_tokens")).
+		WithArgs("user-123", "somehash", sqlmock.AnyArg()).
+		WillReturnRows(rows)
+	mock.ExpectClose()
+
+	repo := NewPostgresResetTokenRepository(db)
+	tok, err := repo.CreateResetToken(context.Background(), "user-123", "somehash", expiresAt)
+	if err != nil {
+		t.Fatalf("CreateResetToken() returned unexpected error: %v", err)
+	}
+	if tok.ID != "reset-id-1" {
+		t.Errorf("expected ID reset-id-1, got %q", tok.ID)
+	}
+	if tok.UserID != "user-123" {
+		t.Errorf("expected UserID user-123, got %q", tok.UserID)
+	}
+	if tok.TokenHash != "somehash" {
+		t.Errorf("expected TokenHash somehash, got %q", tok.TokenHash)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Errorf("closing mock db: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestCreateResetToken_QueryError verifies that query errors are wrapped and propagated.
+func TestCreateResetToken_QueryError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("creating sqlmock: %v", err)
+	}
+
+	wantErr := errors.New("table locked")
+	mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO password_reset_tokens")).
+		WillReturnError(wantErr)
+	mock.ExpectClose()
+
+	repo := NewPostgresResetTokenRepository(db)
+	_, err = repo.CreateResetToken(context.Background(), "user-123", "somehash", time.Now().Add(time.Hour))
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Errorf("closing mock db: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestGetResetTokenByHash_Success verifies that GetResetTokenByHash executes the
+// SELECT and scans the result into a PasswordResetToken.
+func TestGetResetTokenByHash_Success(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("creating sqlmock: %v", err)
+	}
+
+	now := time.Now().UTC().Truncate(time.Second)
+	expiresAt := now.Add(time.Hour)
+
+	rows := sqlmock.NewRows([]string{"id", "user_id", "token_hash", "expires_at", "created_at"}).
+		AddRow("reset-id-1", "user-123", "somehash", expiresAt, now)
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, user_id, token_hash, expires_at, created_at FROM password_reset_tokens WHERE token_hash = $1")).
+		WithArgs("somehash").
+		WillReturnRows(rows)
+	mock.ExpectClose()
+
+	repo := NewPostgresResetTokenRepository(db)
+	tok, err := repo.GetResetTokenByHash(context.Background(), "somehash")
+	if err != nil {
+		t.Fatalf("GetResetTokenByHash() returned unexpected error: %v", err)
+	}
+	if tok.ID != "reset-id-1" {
+		t.Errorf("expected ID reset-id-1, got %q", tok.ID)
+	}
+	if tok.UserID != "user-123" {
+		t.Errorf("expected UserID user-123, got %q", tok.UserID)
+	}
+	if !tok.ExpiresAt.Equal(expiresAt) {
+		t.Errorf("expected ExpiresAt %v, got %v", expiresAt, tok.ExpiresAt)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Errorf("closing mock db: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestGetResetTokenByHash_NotFound verifies that sql.ErrNoRows is translated to
+// ErrResetTokenNotFound by the repository.
+func TestGetResetTokenByHash_NotFound(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("creating sqlmock: %v", err)
+	}
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, user_id, token_hash, expires_at, created_at FROM password_reset_tokens WHERE token_hash = $1")).
+		WithArgs("unknownhash").
+		WillReturnError(sql.ErrNoRows)
+	mock.ExpectClose()
+
+	repo := NewPostgresResetTokenRepository(db)
+	_, err = repo.GetResetTokenByHash(context.Background(), "unknownhash")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrResetTokenNotFound) {
+		t.Errorf("expected ErrResetTokenNotFound, got: %v", err)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Errorf("closing mock db: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestGetResetTokenByHash_QueryError verifies that arbitrary query errors are
+// wrapped and propagated.
+func TestGetResetTokenByHash_QueryError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("creating sqlmock: %v", err)
+	}
+
+	wantErr := errors.New("connection refused")
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, user_id, token_hash, expires_at, created_at FROM password_reset_tokens WHERE token_hash = $1")).
+		WithArgs("somehash").
+		WillReturnError(wantErr)
+	mock.ExpectClose()
+
+	repo := NewPostgresResetTokenRepository(db)
+	_, err = repo.GetResetTokenByHash(context.Background(), "somehash")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Errorf("closing mock db: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestDeleteResetToken_Success verifies that DeleteResetToken executes the DELETE
+// statement with the correct id and returns no error.
+func TestDeleteResetToken_Success(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("creating sqlmock: %v", err)
+	}
+
+	mock.ExpectExec(regexp.QuoteMeta("DELETE FROM password_reset_tokens WHERE id = $1")).
+		WithArgs("reset-id-1").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectClose()
+
+	repo := NewPostgresResetTokenRepository(db)
+	if err := repo.DeleteResetToken(context.Background(), "reset-id-1"); err != nil {
+		t.Fatalf("DeleteResetToken() returned unexpected error: %v", err)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Errorf("closing mock db: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestDeleteResetToken_NoRows verifies that DeleteResetToken returns no error when
+// the DELETE affects zero rows (idempotent — token already gone).
+func TestDeleteResetToken_NoRows(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("creating sqlmock: %v", err)
+	}
+
+	mock.ExpectExec(regexp.QuoteMeta("DELETE FROM password_reset_tokens WHERE id = $1")).
+		WithArgs("nonexistent-id").
+		WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectClose()
+
+	repo := NewPostgresResetTokenRepository(db)
+	if err := repo.DeleteResetToken(context.Background(), "nonexistent-id"); err != nil {
+		t.Fatalf("DeleteResetToken() returned unexpected error for zero rows: %v", err)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Errorf("closing mock db: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestDeleteResetToken_QueryError verifies that ExecContext errors are wrapped and propagated.
+func TestDeleteResetToken_QueryError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("creating sqlmock: %v", err)
+	}
+
+	wantErr := errors.New("connection refused")
+	mock.ExpectExec(regexp.QuoteMeta("DELETE FROM password_reset_tokens WHERE id = $1")).
+		WithArgs("reset-id-1").
+		WillReturnError(wantErr)
+	mock.ExpectClose()
+
+	repo := NewPostgresResetTokenRepository(db)
+	err = repo.DeleteResetToken(context.Background(), "reset-id-1")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Errorf("closing mock db: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}

@@ -556,6 +556,237 @@ func TestUserIDFromContext_EmptyString(t *testing.T) {
 	}
 }
 
+// TestForgotPasswordHandler_Success verifies that a valid request returns 200 OK.
+func TestForgotPasswordHandler_Success(t *testing.T) {
+	svc := &stubAuthService{}
+	h := forgotPasswordHandler(svc)
+
+	body := `{"email":"alice@example.com"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/forgot-password", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
+	}
+}
+
+// TestForgotPasswordHandler_MalformedBody verifies that a non-JSON body results in
+// 400 BAD_REQUEST.
+func TestForgotPasswordHandler_MalformedBody(t *testing.T) {
+	svc := &stubAuthService{}
+	h := forgotPasswordHandler(svc)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/forgot-password", strings.NewReader("not json"))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", rec.Code)
+	}
+
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeBadRequest {
+		t.Errorf("expected error code %q, got %q", ErrCodeBadRequest, env.Error.Code)
+	}
+}
+
+// TestForgotPasswordHandler_InternalError verifies that an unexpected service error
+// results in 500 INTERNAL_ERROR.
+func TestForgotPasswordHandler_InternalError(t *testing.T) {
+	svc := &stubAuthService{err: errors.New("database unreachable")}
+	h := forgotPasswordHandler(svc)
+
+	body := `{"email":"alice@example.com"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/forgot-password", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", rec.Code)
+	}
+
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeInternal {
+		t.Errorf("expected error code %q, got %q", ErrCodeInternal, env.Error.Code)
+	}
+}
+
+// TestResetPasswordHandler_Success verifies that a valid request returns 204 No Content.
+func TestResetPasswordHandler_Success(t *testing.T) {
+	svc := &stubAuthService{}
+	h := resetPasswordHandler(svc)
+
+	body := `{"token":"sometoken","new_password":"newpassword123"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/reset-password", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNoContent {
+		t.Errorf("expected 204, got %d", rec.Code)
+	}
+}
+
+// TestResetPasswordHandler_MalformedBody verifies that a non-JSON body results in
+// 400 BAD_REQUEST.
+func TestResetPasswordHandler_MalformedBody(t *testing.T) {
+	svc := &stubAuthService{}
+	h := resetPasswordHandler(svc)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/reset-password", strings.NewReader("not json"))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", rec.Code)
+	}
+
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeBadRequest {
+		t.Errorf("expected error code %q, got %q", ErrCodeBadRequest, env.Error.Code)
+	}
+}
+
+// TestResetPasswordHandler_InvalidToken verifies that ErrInvalidResetToken from the
+// service layer results in 400 BAD_REQUEST.
+func TestResetPasswordHandler_InvalidToken(t *testing.T) {
+	svc := &stubAuthService{err: auth.ErrInvalidResetToken}
+	h := resetPasswordHandler(svc)
+
+	body := `{"token":"expiredtoken","new_password":"newpassword123"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/reset-password", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", rec.Code)
+	}
+
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeBadRequest {
+		t.Errorf("expected error code %q, got %q", ErrCodeBadRequest, env.Error.Code)
+	}
+	if env.Error.Message != "invalid or expired reset token" {
+		t.Errorf("expected message %q, got %q", "invalid or expired reset token", env.Error.Message)
+	}
+}
+
+// TestResetPasswordHandler_InvalidInput verifies that ErrInvalidInput from the
+// service layer results in 400 BAD_REQUEST with a detail message.
+func TestResetPasswordHandler_InvalidInput(t *testing.T) {
+	svc := &stubAuthService{err: fmt.Errorf("%w: password must be at least 8 characters", auth.ErrInvalidInput)}
+	h := resetPasswordHandler(svc)
+
+	body := `{"token":"sometoken","new_password":"short"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/reset-password", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", rec.Code)
+	}
+
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeBadRequest {
+		t.Errorf("expected error code %q, got %q", ErrCodeBadRequest, env.Error.Code)
+	}
+	// The "invalid input: " prefix should be stripped.
+	if strings.HasPrefix(env.Error.Message, "invalid input:") {
+		t.Errorf("expected prefix stripped from message, got: %q", env.Error.Message)
+	}
+}
+
+// TestResetPasswordHandler_InternalError verifies that unexpected service errors
+// result in 500 INTERNAL_ERROR.
+func TestResetPasswordHandler_InternalError(t *testing.T) {
+	svc := &stubAuthService{err: errors.New("database unreachable")}
+	h := resetPasswordHandler(svc)
+
+	body := `{"token":"sometoken","new_password":"newpassword123"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/reset-password", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", rec.Code)
+	}
+
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeInternal {
+		t.Errorf("expected error code %q, got %q", ErrCodeInternal, env.Error.Code)
+	}
+}
+
+// TestMountAuth_RegistersForgotPasswordRoute verifies that MountAuth registers the
+// forgot-password endpoint and it responds to POST /v1/auth/forgot-password.
+func TestMountAuth_RegistersForgotPasswordRoute(t *testing.T) {
+	s := testServer(t)
+	svc := &stubAuthService{}
+	s.MountAuth(svc)
+
+	body := `{"email":"alice@example.com"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/forgot-password", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200 from mounted route, got %d", rec.Code)
+	}
+}
+
+// TestMountAuth_RegistersResetPasswordRoute verifies that MountAuth registers the
+// reset-password endpoint and it responds to POST /v1/auth/reset-password.
+func TestMountAuth_RegistersResetPasswordRoute(t *testing.T) {
+	s := testServer(t)
+	svc := &stubAuthService{}
+	s.MountAuth(svc)
+
+	body := `{"token":"sometoken","new_password":"newpassword123"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/reset-password", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNoContent {
+		t.Errorf("expected 204 from mounted route, got %d", rec.Code)
+	}
+}
+
 // TestAuthenticated_RequiresAuth verifies that routes mounted via Authenticated()
 // return 401 without a valid token and 200 with one.
 func TestAuthenticated_RequiresAuth(t *testing.T) {

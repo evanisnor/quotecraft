@@ -74,12 +74,26 @@ type Logouter interface {
 	Logout(ctx context.Context, token string) error
 }
 
+// PasswordForgetter initiates a password reset for an email address.
+// Defined here at the consumer (server package) per the interfaces-where-consumed convention.
+type PasswordForgetter interface {
+	ForgotPassword(ctx context.Context, email string) error
+}
+
+// PasswordResetter completes a password reset using a raw reset token.
+// Defined here at the consumer (server package) per the interfaces-where-consumed convention.
+type PasswordResetter interface {
+	ResetPassword(ctx context.Context, rawToken, newPassword string) error
+}
+
 // AuthService is the full set of authentication capabilities consumed by the server.
 type AuthService interface {
 	Registrar
 	Authenticator
 	Logouter
 	TokenValidator
+	PasswordForgetter
+	PasswordResetter
 }
 
 // registerRequest is the JSON body expected by POST /v1/auth/register.
@@ -102,6 +116,17 @@ type loginRequest struct {
 // loginResponse is the data payload returned on successful login.
 type loginResponse struct {
 	Token string `json:"token"`
+}
+
+// forgotPasswordRequest is the JSON body expected by POST /v1/auth/forgot-password.
+type forgotPasswordRequest struct {
+	Email string `json:"email"`
+}
+
+// resetPasswordRequest is the JSON body expected by POST /v1/auth/reset-password.
+type resetPasswordRequest struct {
+	Token       string `json:"token"`
+	NewPassword string `json:"new_password"`
 }
 
 // registerHandler returns an http.HandlerFunc that handles POST /v1/auth/register.
@@ -186,9 +211,60 @@ func logoutHandler(auth Logouter) http.HandlerFunc {
 	}
 }
 
+// forgotPasswordHandler returns an http.HandlerFunc that handles POST /v1/auth/forgot-password.
+// Always responds 200 OK to prevent user enumeration — the caller cannot determine
+// whether the email address is registered.
+func forgotPasswordHandler(fp PasswordForgetter) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body forgotPasswordRequest
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			WriteError(w, http.StatusBadRequest, ErrCodeBadRequest, "malformed request body")
+			return
+		}
+
+		if err := fp.ForgotPassword(r.Context(), body.Email); err != nil {
+			LoggerFrom(r.Context()).Error("forgot password", "error", err)
+			WriteError(w, http.StatusInternalServerError, ErrCodeInternal, "internal error")
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+// resetPasswordHandler returns an http.HandlerFunc that handles POST /v1/auth/reset-password.
+func resetPasswordHandler(rp PasswordResetter) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body resetPasswordRequest
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			WriteError(w, http.StatusBadRequest, ErrCodeBadRequest, "malformed request body")
+			return
+		}
+
+		if err := rp.ResetPassword(r.Context(), body.Token, body.NewPassword); err != nil {
+			if errors.Is(err, auth.ErrInvalidResetToken) {
+				WriteError(w, http.StatusBadRequest, ErrCodeBadRequest, "invalid or expired reset token")
+				return
+			}
+			if errors.Is(err, auth.ErrInvalidInput) {
+				msg := strings.TrimPrefix(err.Error(), "invalid input: ")
+				WriteError(w, http.StatusBadRequest, ErrCodeBadRequest, msg)
+				return
+			}
+			LoggerFrom(r.Context()).Error("reset password", "error", err)
+			WriteError(w, http.StatusInternalServerError, ErrCodeInternal, "internal error")
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
 // MountAuth registers all authentication routes on the server's private route group.
 func (s *Server) MountAuth(svc AuthService) {
 	s.privateGroup.Post("/auth/register", registerHandler(svc))
 	s.privateGroup.Post("/auth/login", loginHandler(svc))
 	s.privateGroup.Post("/auth/logout", logoutHandler(svc))
+	s.privateGroup.Post("/auth/forgot-password", forgotPasswordHandler(svc))
+	s.privateGroup.Post("/auth/reset-password", resetPasswordHandler(svc))
 }

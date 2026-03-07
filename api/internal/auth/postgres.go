@@ -10,7 +10,8 @@ import (
 	"github.com/lib/pq"
 )
 
-// PostgresUserRepository implements UserWriter against a PostgreSQL database.
+// PostgresUserRepository implements UserWriter, UserReader, and UserPasswordUpdater
+// against a PostgreSQL database.
 type PostgresUserRepository struct {
 	db *sql.DB
 }
@@ -59,6 +60,16 @@ func (r *PostgresUserRepository) GetUserByEmail(ctx context.Context, email strin
 		return nil, fmt.Errorf("querying user: %w", err)
 	}
 	return &u, nil
+}
+
+// UpdateUserPassword updates the password_hash for the user with the given ID.
+func (r *PostgresUserRepository) UpdateUserPassword(ctx context.Context, userID, passwordHash string) error {
+	const query = `UPDATE users SET password_hash = $1 WHERE id = $2`
+	_, err := r.db.ExecContext(ctx, query, passwordHash, userID)
+	if err != nil {
+		return fmt.Errorf("updating password: %w", err)
+	}
+	return nil
 }
 
 // PostgresSessionRepository implements SessionWriter against a PostgreSQL database.
@@ -120,4 +131,72 @@ func (r *PostgresSessionRepository) CreateSession(ctx context.Context, userID, t
 	}
 
 	return &sess, nil
+}
+
+// PostgresResetTokenRepository implements ResetTokenWriter, ResetTokenReader,
+// and ResetTokenDeleter against a PostgreSQL database.
+type PostgresResetTokenRepository struct {
+	db *sql.DB
+}
+
+// NewPostgresResetTokenRepository creates a PostgresResetTokenRepository backed by db.
+func NewPostgresResetTokenRepository(db *sql.DB) *PostgresResetTokenRepository {
+	return &PostgresResetTokenRepository{db: db}
+}
+
+// CreateResetToken inserts a new password reset token row and returns the created record.
+func (r *PostgresResetTokenRepository) CreateResetToken(ctx context.Context, userID, tokenHash string, expiresAt time.Time) (*PasswordResetToken, error) {
+	const query = `
+		INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+		VALUES ($1, $2, $3)
+		RETURNING id, user_id, token_hash, expires_at, created_at
+	`
+
+	var t PasswordResetToken
+	err := r.db.QueryRowContext(ctx, query, userID, tokenHash, expiresAt).Scan(
+		&t.ID,
+		&t.UserID,
+		&t.TokenHash,
+		&t.ExpiresAt,
+		&t.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("inserting reset token: %w", err)
+	}
+
+	return &t, nil
+}
+
+// GetResetTokenByHash fetches the password reset token identified by tokenHash.
+// Returns ErrResetTokenNotFound if no row matches.
+func (r *PostgresResetTokenRepository) GetResetTokenByHash(ctx context.Context, tokenHash string) (*PasswordResetToken, error) {
+	const query = `SELECT id, user_id, token_hash, expires_at, created_at FROM password_reset_tokens WHERE token_hash = $1`
+
+	var t PasswordResetToken
+	err := r.db.QueryRowContext(ctx, query, tokenHash).Scan(
+		&t.ID,
+		&t.UserID,
+		&t.TokenHash,
+		&t.ExpiresAt,
+		&t.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrResetTokenNotFound
+		}
+		return nil, fmt.Errorf("querying reset token: %w", err)
+	}
+
+	return &t, nil
+}
+
+// DeleteResetToken removes the password reset token row identified by id.
+// If no row matches, no error is returned (the operation is idempotent).
+func (r *PostgresResetTokenRepository) DeleteResetToken(ctx context.Context, id string) error {
+	const query = `DELETE FROM password_reset_tokens WHERE id = $1`
+	_, err := r.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("deleting reset token: %w", err)
+	}
+	return nil
 }

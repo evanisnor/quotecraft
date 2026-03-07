@@ -39,6 +39,14 @@ func (s *stubAuthService) ValidateToken(_ context.Context, _ string) (string, er
 	return s.userID, s.err
 }
 
+func (s *stubAuthService) ForgotPassword(_ context.Context, _ string) error {
+	return s.err
+}
+
+func (s *stubAuthService) ResetPassword(_ context.Context, _, _ string) error {
+	return s.err
+}
+
 // stubCalculatorService is a reusable test implementation of CalculatorService.
 type stubCalculatorService struct {
 	calc  *calculator.Calculator

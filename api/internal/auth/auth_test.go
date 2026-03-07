@@ -10,12 +10,44 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// defaultStubs returns a full set of no-op test stubs for NewService / newServiceForTest.
+func defaultStubs() (
+	*stubUserWriter,
+	*stubUserReader,
+	*stubSessionWriter,
+	*stubSessionDeleter,
+	*stubSessionReader,
+	*stubResetTokenWriter,
+	*stubResetTokenReader,
+	*stubResetTokenDeleter,
+	*stubUserPasswordUpdater,
+	*stubPasswordResetEmailSender,
+) {
+	return &stubUserWriter{},
+		&stubUserReader{},
+		&stubSessionWriter{},
+		&stubSessionDeleter{},
+		&stubSessionReader{},
+		&stubResetTokenWriter{},
+		&stubResetTokenReader{},
+		&stubResetTokenDeleter{},
+		&stubUserPasswordUpdater{},
+		&stubPasswordResetEmailSender{}
+}
+
+// newTestService constructs a Service with all default stubs using NewService.
+func newTestService() *Service {
+	uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
+	return NewService(uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es)
+}
+
 // TestRegister_Success verifies that a valid registration returns a non-empty
 // opaque token, calls CreateUser and CreateSession.
 func TestRegister_Success(t *testing.T) {
 	users := &stubUserWriter{}
 	sessions := &stubSessionWriter{}
-	svc := NewService(users, &stubUserReader{}, sessions, &stubSessionDeleter{}, &stubSessionReader{})
+	_, ur, _, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
+	svc := NewService(users, ur, sessions, sd, sr, rtw, rtr, rtd, upu, es)
 
 	token, err := svc.Register(context.Background(), "alice@example.com", "securepassword")
 	if err != nil {
@@ -45,7 +77,7 @@ func TestRegister_InvalidEmail(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := NewService(&stubUserWriter{}, &stubUserReader{}, &stubSessionWriter{}, &stubSessionDeleter{}, &stubSessionReader{})
+			svc := newTestService()
 			_, err := svc.Register(context.Background(), tt.email, "securepassword")
 			if err == nil {
 				t.Fatal("expected error for invalid email, got nil")
@@ -60,7 +92,7 @@ func TestRegister_InvalidEmail(t *testing.T) {
 // TestRegister_ShortPassword verifies that a password shorter than 8 characters
 // returns ErrInvalidInput.
 func TestRegister_ShortPassword(t *testing.T) {
-	svc := NewService(&stubUserWriter{}, &stubUserReader{}, &stubSessionWriter{}, &stubSessionDeleter{}, &stubSessionReader{})
+	svc := newTestService()
 
 	_, err := svc.Register(context.Background(), "alice@example.com", "short")
 	if err == nil {
@@ -73,7 +105,7 @@ func TestRegister_ShortPassword(t *testing.T) {
 
 // TestRegister_PasswordExactly8Chars verifies that a password of exactly 8 characters passes.
 func TestRegister_PasswordExactly8Chars(t *testing.T) {
-	svc := NewService(&stubUserWriter{}, &stubUserReader{}, &stubSessionWriter{}, &stubSessionDeleter{}, &stubSessionReader{})
+	svc := newTestService()
 
 	_, err := svc.Register(context.Background(), "alice@example.com", "exactly8")
 	if err != nil {
@@ -84,8 +116,9 @@ func TestRegister_PasswordExactly8Chars(t *testing.T) {
 // TestRegister_EmailConflict verifies that when CreateUser returns ErrEmailConflict
 // (as the repository does for pq code 23505), Register propagates it.
 func TestRegister_EmailConflict(t *testing.T) {
-	users := &stubUserWriter{err: ErrEmailConflict}
-	svc := NewService(users, &stubUserReader{}, &stubSessionWriter{}, &stubSessionDeleter{}, &stubSessionReader{})
+	uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
+	uw.err = ErrEmailConflict
+	svc := NewService(uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es)
 
 	_, err := svc.Register(context.Background(), "alice@example.com", "securepassword")
 	if err == nil {
@@ -100,8 +133,9 @@ func TestRegister_EmailConflict(t *testing.T) {
 // CreateUser are propagated as-is (not mapped to ErrEmailConflict).
 func TestRegister_CreateUserInternalError(t *testing.T) {
 	wantErr := errors.New("database connection lost")
-	users := &stubUserWriter{err: wantErr}
-	svc := NewService(users, &stubUserReader{}, &stubSessionWriter{}, &stubSessionDeleter{}, &stubSessionReader{})
+	uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
+	uw.err = wantErr
+	svc := NewService(uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es)
 
 	_, err := svc.Register(context.Background(), "alice@example.com", "securepassword")
 	if err == nil {
@@ -118,8 +152,9 @@ func TestRegister_CreateUserInternalError(t *testing.T) {
 // TestRegister_CreateSessionError verifies that CreateSession errors are propagated.
 func TestRegister_CreateSessionError(t *testing.T) {
 	wantErr := errors.New("session table unreachable")
-	sessions := &stubSessionWriter{err: wantErr}
-	svc := NewService(&stubUserWriter{}, &stubUserReader{}, sessions, &stubSessionDeleter{}, &stubSessionReader{})
+	uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
+	sw.err = wantErr
+	svc := NewService(uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es)
 
 	_, err := svc.Register(context.Background(), "alice@example.com", "securepassword")
 	if err == nil {
@@ -134,12 +169,9 @@ func TestRegister_CreateSessionError(t *testing.T) {
 // hasher) are wrapped and propagated from Register.
 func TestRegister_HasherError(t *testing.T) {
 	wantErr := errors.New("bcrypt failed")
+	uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
 	svc := newServiceForTest(
-		&stubUserWriter{},
-		&stubUserReader{},
-		&stubSessionWriter{},
-		&stubSessionDeleter{},
-		&stubSessionReader{},
+		uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es,
 		func(_ []byte, _ int) ([]byte, error) { return nil, wantErr },
 		bcrypt.CompareHashAndPassword,
 		generateToken,
@@ -158,12 +190,9 @@ func TestRegister_HasherError(t *testing.T) {
 // wrapped and propagated from Register.
 func TestRegister_TokenGenerationError(t *testing.T) {
 	wantErr := errors.New("entropy exhausted")
+	uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
 	svc := newServiceForTest(
-		&stubUserWriter{},
-		&stubUserReader{},
-		&stubSessionWriter{},
-		&stubSessionDeleter{},
-		&stubSessionReader{},
+		uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es,
 		bcrypt.GenerateFromPassword,
 		bcrypt.CompareHashAndPassword,
 		func() (string, string, error) { return "", "", wantErr },
@@ -180,12 +209,9 @@ func TestRegister_TokenGenerationError(t *testing.T) {
 
 // TestLogin_Success verifies that valid credentials return a non-empty opaque token.
 func TestLogin_Success(t *testing.T) {
+	uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
 	svc := newServiceForTest(
-		&stubUserWriter{},
-		&stubUserReader{},
-		&stubSessionWriter{},
-		&stubSessionDeleter{},
-		&stubSessionReader{},
+		uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es,
 		bcrypt.GenerateFromPassword,
 		func(_, _ []byte) error { return nil }, // verifier always succeeds
 		generateToken,
@@ -203,12 +229,10 @@ func TestLogin_Success(t *testing.T) {
 // TestLogin_UserNotFound verifies that when GetUserByEmail returns ErrUserNotFound,
 // Login returns ErrInvalidCredentials (to avoid leaking user existence).
 func TestLogin_UserNotFound(t *testing.T) {
+	uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
+	ur.err = ErrUserNotFound
 	svc := newServiceForTest(
-		&stubUserWriter{},
-		&stubUserReader{err: ErrUserNotFound},
-		&stubSessionWriter{},
-		&stubSessionDeleter{},
-		&stubSessionReader{},
+		uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es,
 		bcrypt.GenerateFromPassword,
 		bcrypt.CompareHashAndPassword,
 		generateToken,
@@ -227,12 +251,10 @@ func TestLogin_UserNotFound(t *testing.T) {
 // are wrapped and propagated (not mapped to ErrInvalidCredentials).
 func TestLogin_GetUserInternalError(t *testing.T) {
 	wantErr := errors.New("database connection lost")
+	uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
+	ur.err = wantErr
 	svc := newServiceForTest(
-		&stubUserWriter{},
-		&stubUserReader{err: wantErr},
-		&stubSessionWriter{},
-		&stubSessionDeleter{},
-		&stubSessionReader{},
+		uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es,
 		bcrypt.GenerateFromPassword,
 		bcrypt.CompareHashAndPassword,
 		generateToken,
@@ -253,12 +275,9 @@ func TestLogin_GetUserInternalError(t *testing.T) {
 // TestLogin_InvalidPassword verifies that when the verifier returns an error,
 // Login returns ErrInvalidCredentials.
 func TestLogin_InvalidPassword(t *testing.T) {
+	uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
 	svc := newServiceForTest(
-		&stubUserWriter{},
-		&stubUserReader{},
-		&stubSessionWriter{},
-		&stubSessionDeleter{},
-		&stubSessionReader{},
+		uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es,
 		bcrypt.GenerateFromPassword,
 		func(_, _ []byte) error { return errors.New("bcrypt mismatch") },
 		generateToken,
@@ -277,12 +296,9 @@ func TestLogin_InvalidPassword(t *testing.T) {
 // wrapped and propagated from Login.
 func TestLogin_TokenGenerationError(t *testing.T) {
 	wantErr := errors.New("entropy exhausted")
+	uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
 	svc := newServiceForTest(
-		&stubUserWriter{},
-		&stubUserReader{},
-		&stubSessionWriter{},
-		&stubSessionDeleter{},
-		&stubSessionReader{},
+		uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es,
 		bcrypt.GenerateFromPassword,
 		func(_, _ []byte) error { return nil },
 		func() (string, string, error) { return "", "", wantErr },
@@ -301,12 +317,10 @@ func TestLogin_TokenGenerationError(t *testing.T) {
 // wrapped and propagated from Login.
 func TestLogin_CreateSessionError(t *testing.T) {
 	wantErr := errors.New("session table unreachable")
+	uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
+	sw.err = wantErr
 	svc := newServiceForTest(
-		&stubUserWriter{},
-		&stubUserReader{},
-		&stubSessionWriter{err: wantErr},
-		&stubSessionDeleter{},
-		&stubSessionReader{},
+		uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es,
 		bcrypt.GenerateFromPassword,
 		func(_, _ []byte) error { return nil },
 		generateToken,
@@ -453,8 +467,9 @@ func TestGenerateToken(t *testing.T) {
 
 // TestLogout_Success verifies that Logout hashes the token and calls DeleteSession.
 func TestLogout_Success(t *testing.T) {
+	uw, ur, sw, _, sr, rtw, rtr, rtd, upu, es := defaultStubs()
 	deleter := &stubSessionDeleter{}
-	svc := NewService(&stubUserWriter{}, &stubUserReader{}, &stubSessionWriter{}, deleter, &stubSessionReader{})
+	svc := NewService(uw, ur, sw, deleter, sr, rtw, rtr, rtd, upu, es)
 
 	if err := svc.Logout(context.Background(), "some-raw-token"); err != nil {
 		t.Fatalf("Logout() returned unexpected error: %v", err)
@@ -464,8 +479,9 @@ func TestLogout_Success(t *testing.T) {
 // TestLogout_DeleteError verifies that a DeleteSession error is propagated by Logout.
 func TestLogout_DeleteError(t *testing.T) {
 	wantErr := errors.New("delete failed")
+	uw, ur, sw, _, sr, rtw, rtr, rtd, upu, es := defaultStubs()
 	deleter := &stubSessionDeleter{err: wantErr}
-	svc := NewService(&stubUserWriter{}, &stubUserReader{}, &stubSessionWriter{}, deleter, &stubSessionReader{})
+	svc := NewService(uw, ur, sw, deleter, sr, rtw, rtr, rtd, upu, es)
 
 	err := svc.Logout(context.Background(), "some-raw-token")
 	if err == nil {
@@ -482,7 +498,8 @@ func TestValidateToken_Success(t *testing.T) {
 		UserID:    "user-abc",
 		ExpiresAt: time.Now().Add(24 * time.Hour),
 	}
-	svc := NewService(&stubUserWriter{}, &stubUserReader{}, &stubSessionWriter{}, &stubSessionDeleter{}, &stubSessionReader{session: sess})
+	uw, ur, sw, sd, _, rtw, rtr, rtd, upu, es := defaultStubs()
+	svc := NewService(uw, ur, sw, sd, &stubSessionReader{session: sess}, rtw, rtr, rtd, upu, es)
 
 	userID, err := svc.ValidateToken(context.Background(), "some-raw-token")
 	if err != nil {
@@ -496,7 +513,8 @@ func TestValidateToken_Success(t *testing.T) {
 // TestValidateToken_SessionNotFound verifies that ErrSessionNotFound from the
 // reader is mapped to ErrInvalidSession.
 func TestValidateToken_SessionNotFound(t *testing.T) {
-	svc := NewService(&stubUserWriter{}, &stubUserReader{}, &stubSessionWriter{}, &stubSessionDeleter{}, &stubSessionReader{err: ErrSessionNotFound})
+	uw, ur, sw, sd, _, rtw, rtr, rtd, upu, es := defaultStubs()
+	svc := NewService(uw, ur, sw, sd, &stubSessionReader{err: ErrSessionNotFound}, rtw, rtr, rtd, upu, es)
 
 	_, err := svc.ValidateToken(context.Background(), "unknown-token")
 	if err == nil {
@@ -513,7 +531,8 @@ func TestValidateToken_ExpiredSession(t *testing.T) {
 		UserID:    "user-abc",
 		ExpiresAt: time.Now().Add(-1 * time.Hour), // already expired
 	}
-	svc := NewService(&stubUserWriter{}, &stubUserReader{}, &stubSessionWriter{}, &stubSessionDeleter{}, &stubSessionReader{session: sess})
+	uw, ur, sw, sd, _, rtw, rtr, rtd, upu, es := defaultStubs()
+	svc := NewService(uw, ur, sw, sd, &stubSessionReader{session: sess}, rtw, rtr, rtd, upu, es)
 
 	_, err := svc.ValidateToken(context.Background(), "expired-token")
 	if err == nil {
@@ -528,7 +547,8 @@ func TestValidateToken_ExpiredSession(t *testing.T) {
 // wrapped and propagated (not mapped to ErrInvalidSession).
 func TestValidateToken_InternalError(t *testing.T) {
 	wantErr := errors.New("database unreachable")
-	svc := NewService(&stubUserWriter{}, &stubUserReader{}, &stubSessionWriter{}, &stubSessionDeleter{}, &stubSessionReader{err: wantErr})
+	uw, ur, sw, sd, _, rtw, rtr, rtd, upu, es := defaultStubs()
+	svc := NewService(uw, ur, sw, sd, &stubSessionReader{err: wantErr}, rtw, rtr, rtd, upu, es)
 
 	_, err := svc.ValidateToken(context.Background(), "some-token")
 	if err == nil {
@@ -539,5 +559,258 @@ func TestValidateToken_InternalError(t *testing.T) {
 	}
 	if !errors.Is(err, wantErr) {
 		t.Errorf("expected wrapped wantErr, got: %v", err)
+	}
+}
+
+// TestForgotPassword_UserNotFound verifies that when the email is not registered,
+// ForgotPassword returns nil (no error, prevents user enumeration).
+func TestForgotPassword_UserNotFound(t *testing.T) {
+	uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
+	ur.err = ErrUserNotFound
+	svc := NewService(uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es)
+
+	err := svc.ForgotPassword(context.Background(), "nobody@example.com")
+	if err != nil {
+		t.Errorf("ForgotPassword() expected nil for unknown email, got: %v", err)
+	}
+	if es.called {
+		t.Error("expected email sender not to be called for unknown email")
+	}
+}
+
+// TestForgotPassword_GetUserInternalError verifies that unexpected DB errors are
+// wrapped and propagated.
+func TestForgotPassword_GetUserInternalError(t *testing.T) {
+	wantErr := errors.New("database connection lost")
+	uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
+	ur.err = wantErr
+	svc := NewService(uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es)
+
+	err := svc.ForgotPassword(context.Background(), "alice@example.com")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
+	}
+}
+
+// TestForgotPassword_TokenGenerationError verifies that token generator failures
+// are propagated.
+func TestForgotPassword_TokenGenerationError(t *testing.T) {
+	wantErr := errors.New("entropy exhausted")
+	uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
+	svc := newServiceForTest(
+		uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es,
+		bcrypt.GenerateFromPassword,
+		bcrypt.CompareHashAndPassword,
+		func() (string, string, error) { return "", "", wantErr },
+	)
+
+	err := svc.ForgotPassword(context.Background(), "alice@example.com")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
+	}
+}
+
+// TestForgotPassword_CreateResetTokenError verifies that token storage failures
+// are propagated.
+func TestForgotPassword_CreateResetTokenError(t *testing.T) {
+	wantErr := errors.New("reset token table locked")
+	uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
+	rtw.err = wantErr
+	svc := NewService(uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es)
+
+	err := svc.ForgotPassword(context.Background(), "alice@example.com")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
+	}
+}
+
+// TestForgotPassword_EmailSenderError verifies that email send failures are
+// propagated.
+func TestForgotPassword_EmailSenderError(t *testing.T) {
+	wantErr := errors.New("SMTP connection refused")
+	uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
+	es.err = wantErr
+	svc := NewService(uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es)
+
+	err := svc.ForgotPassword(context.Background(), "alice@example.com")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
+	}
+}
+
+// TestForgotPassword_Success verifies that a registered user triggers the email
+// sender and returns nil.
+func TestForgotPassword_Success(t *testing.T) {
+	uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
+	svc := NewService(uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es)
+
+	err := svc.ForgotPassword(context.Background(), "alice@example.com")
+	if err != nil {
+		t.Fatalf("ForgotPassword() returned unexpected error: %v", err)
+	}
+	if !es.called {
+		t.Error("expected email sender to be called, but it was not")
+	}
+	if es.calledWith.email != "alice@example.com" {
+		t.Errorf("expected email sent to alice@example.com, got %q", es.calledWith.email)
+	}
+	if es.calledWith.rawToken == "" {
+		t.Error("expected non-empty raw token sent to email sender")
+	}
+}
+
+// TestResetPassword_InvalidToken verifies that a non-existent token returns ErrInvalidResetToken.
+func TestResetPassword_InvalidToken(t *testing.T) {
+	uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
+	rtr.err = ErrResetTokenNotFound
+	svc := NewService(uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es)
+
+	err := svc.ResetPassword(context.Background(), "somerawtoken", "newpassword123")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrInvalidResetToken) {
+		t.Errorf("expected ErrInvalidResetToken, got: %v", err)
+	}
+}
+
+// TestResetPassword_ExpiredToken verifies that an expired token returns ErrInvalidResetToken.
+func TestResetPassword_ExpiredToken(t *testing.T) {
+	uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
+	rtr.token = &PasswordResetToken{
+		ID:        "reset-id",
+		UserID:    "user-123",
+		ExpiresAt: time.Now().Add(-1 * time.Hour), // already expired
+	}
+	svc := NewService(uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es)
+
+	err := svc.ResetPassword(context.Background(), "somerawtoken", "newpassword123")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrInvalidResetToken) {
+		t.Errorf("expected ErrInvalidResetToken, got: %v", err)
+	}
+}
+
+// TestResetPassword_ShortPassword verifies that a new password shorter than 8
+// characters returns ErrInvalidInput.
+func TestResetPassword_ShortPassword(t *testing.T) {
+	uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
+	rtr.token = &PasswordResetToken{
+		ID:        "reset-id",
+		UserID:    "user-123",
+		ExpiresAt: time.Now().Add(time.Hour),
+	}
+	svc := NewService(uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es)
+
+	err := svc.ResetPassword(context.Background(), "somerawtoken", "short")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrInvalidInput) {
+		t.Errorf("expected ErrInvalidInput, got: %v", err)
+	}
+}
+
+// TestResetPassword_HasherError verifies that bcrypt failures are propagated.
+func TestResetPassword_HasherError(t *testing.T) {
+	wantErr := errors.New("bcrypt failed")
+	uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
+	rtr.token = &PasswordResetToken{
+		ID:        "reset-id",
+		UserID:    "user-123",
+		ExpiresAt: time.Now().Add(time.Hour),
+	}
+	svc := newServiceForTest(
+		uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es,
+		func(_ []byte, _ int) ([]byte, error) { return nil, wantErr },
+		bcrypt.CompareHashAndPassword,
+		generateToken,
+	)
+
+	err := svc.ResetPassword(context.Background(), "somerawtoken", "newpassword123")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
+	}
+}
+
+// TestResetPassword_UpdatePasswordError verifies that DB update failures are propagated.
+func TestResetPassword_UpdatePasswordError(t *testing.T) {
+	wantErr := errors.New("users table locked")
+	uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
+	rtr.token = &PasswordResetToken{
+		ID:        "reset-id",
+		UserID:    "user-123",
+		ExpiresAt: time.Now().Add(time.Hour),
+	}
+	upu.err = wantErr
+	svc := NewService(uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es)
+
+	err := svc.ResetPassword(context.Background(), "somerawtoken", "newpassword123")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
+	}
+}
+
+// TestResetPassword_DeleteTokenError verifies that token deletion failures are propagated.
+func TestResetPassword_DeleteTokenError(t *testing.T) {
+	wantErr := errors.New("reset token table locked")
+	uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
+	rtr.token = &PasswordResetToken{
+		ID:        "reset-id",
+		UserID:    "user-123",
+		ExpiresAt: time.Now().Add(time.Hour),
+	}
+	rtd.err = wantErr
+	svc := NewService(uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es)
+
+	err := svc.ResetPassword(context.Background(), "somerawtoken", "newpassword123")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
+	}
+}
+
+// TestResetPassword_Success verifies that a valid token and valid password results
+// in the password being updated and the token being deleted.
+func TestResetPassword_Success(t *testing.T) {
+	uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es := defaultStubs()
+	rtr.token = &PasswordResetToken{
+		ID:        "reset-id",
+		UserID:    "user-123",
+		ExpiresAt: time.Now().Add(time.Hour),
+	}
+	svc := NewService(uw, ur, sw, sd, sr, rtw, rtr, rtd, upu, es)
+
+	err := svc.ResetPassword(context.Background(), "somerawtoken", "newpassword123")
+	if err != nil {
+		t.Fatalf("ResetPassword() returned unexpected error: %v", err)
+	}
+	if upu.updatedUserID != "user-123" {
+		t.Errorf("expected password updated for user-123, got %q", upu.updatedUserID)
+	}
+	if rtd.deletedID != "reset-id" {
+		t.Errorf("expected reset token deleted by ID reset-id, got %q", rtd.deletedID)
 	}
 }
