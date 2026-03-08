@@ -8,12 +8,13 @@ import (
 // Sentinel error codes used by handlers when calling WriteError. These codes
 // are included in the JSON error envelope and are safe to expose to clients.
 const (
-	ErrCodeInternal     = "INTERNAL_ERROR"
-	ErrCodeNotFound     = "NOT_FOUND"
-	ErrCodeBadRequest   = "BAD_REQUEST"
-	ErrCodeUnauthorized = "UNAUTHORIZED"
-	ErrCodeForbidden    = "FORBIDDEN"
-	ErrCodeConflict     = "CONFLICT"
+	ErrCodeInternal        = "INTERNAL_ERROR"
+	ErrCodeNotFound        = "NOT_FOUND"
+	ErrCodeBadRequest      = "BAD_REQUEST"
+	ErrCodeUnauthorized    = "UNAUTHORIZED"
+	ErrCodeForbidden       = "FORBIDDEN"
+	ErrCodeConflict        = "CONFLICT"
+	ErrCodeTooManyRequests = "TOO_MANY_REQUESTS"
 )
 
 // fallbackErrorBody is written verbatim when json.Marshal itself fails. Using a

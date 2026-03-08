@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/evanisnor/quotecraft/api/internal/auth"
 )
 
@@ -316,16 +318,28 @@ func googleCallbackHandler(g GoogleOAuthCallbacker) http.HandlerFunc {
 	}
 }
 
-// MountGoogleOAuth registers the Google OAuth callback route on the server's private route group.
+// MountGoogleOAuth registers the Google OAuth callback route on the server's rate-limited
+// auth group (when MountAuth has already been called) or on privateGroup as a fallback.
 func (s *Server) MountGoogleOAuth(g GoogleOAuthCallbacker) {
-	s.privateGroup.Post("/auth/google", googleCallbackHandler(g))
+	group := s.privateGroup
+	if s.authGroup != nil {
+		group = s.authGroup
+	}
+	group.Post("/auth/google", googleCallbackHandler(g))
 }
 
-// MountAuth registers all authentication routes on the server's private route group.
+// MountAuth registers all authentication routes on a rate-limited sub-group of the
+// server's private route group. Each unique client IP is limited to 10 requests per
+// minute across all auth endpoints to prevent credential stuffing and brute force attacks.
 func (s *Server) MountAuth(svc AuthService) {
-	s.privateGroup.Post("/auth/register", registerHandler(svc))
-	s.privateGroup.Post("/auth/login", loginHandler(svc))
-	s.privateGroup.Post("/auth/logout", logoutHandler(svc))
-	s.privateGroup.Post("/auth/forgot-password", forgotPasswordHandler(svc))
-	s.privateGroup.Post("/auth/reset-password", resetPasswordHandler(svc))
+	limiter := newRateLimiter(10) // 10 requests per minute per IP
+	s.privateGroup.Group(func(r chi.Router) {
+		r.Use(IPRateLimit(limiter))
+		s.authGroup = r
+		r.Post("/auth/register", registerHandler(svc))
+		r.Post("/auth/login", loginHandler(svc))
+		r.Post("/auth/logout", logoutHandler(svc))
+		r.Post("/auth/forgot-password", forgotPasswordHandler(svc))
+		r.Post("/auth/reset-password", resetPasswordHandler(svc))
+	})
 }

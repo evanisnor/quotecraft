@@ -20,6 +20,7 @@ type Server struct {
 	pinger       Pinger
 	publicGroup  chi.Router // /v1 group with wildcard CORS; populated by future public route tasks
 	privateGroup chi.Router // /v1 group with restricted CORS; populated by future private route tasks
+	authGroup    chi.Router // rate-limited sub-group of privateGroup for auth endpoints; set by MountAuth
 }
 
 // New creates a Server with the configured middleware stack applied.

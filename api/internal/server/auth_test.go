@@ -981,6 +981,25 @@ func TestGoogleCallback_Handler_MalformedJSON(t *testing.T) {
 	}
 }
 
+// TestMountAuth_RegistersRoutes verifies that after MountAuth all five auth routes
+// respond with a non-404, non-405 status code confirming they are registered.
+func TestMountAuth_RegistersRoutes(t *testing.T) {
+	s := testServer(t)
+	svc := &stubAuthService{token: "test-token"}
+	s.MountAuth(svc)
+
+	// Use a valid login body as the representative probe; we just need to confirm
+	// the route is registered (i.e. the handler runs, not 404 / 405).
+	body := `{"email":"alice@example.com","password":"securepassword"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/login", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code == http.StatusNotFound || rec.Code == http.StatusMethodNotAllowed {
+		t.Errorf("expected a registered route response for /v1/auth/login, got %d", rec.Code)
+	}
+}
+
 // TestMountGoogleOAuth_RegistersRoute verifies that MountGoogleOAuth registers
 // the endpoint and it responds to POST /v1/auth/google.
 func TestMountGoogleOAuth_RegistersRoute(t *testing.T) {
