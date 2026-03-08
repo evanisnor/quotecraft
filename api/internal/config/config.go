@@ -14,6 +14,15 @@ type Config struct {
 	CDN     CDNConfig     `yaml:"cdn"`
 }
 
+// GoogleOAuthConfig holds client credentials for Google OAuth.
+type GoogleOAuthConfig struct {
+	// ClientID is the Google OAuth 2.0 client ID.
+	ClientID string `yaml:"client_id"`
+
+	// ClientSecret is the Google OAuth 2.0 client secret.
+	ClientSecret string `yaml:"client_secret"`
+}
+
 // APIConfig holds configuration for the HTTP API server.
 type APIConfig struct {
 	// Port is the TCP port the server listens on.
@@ -25,6 +34,10 @@ type APIConfig struct {
 
 	// DatabaseURL is the PostgreSQL connection string used by the API server.
 	DatabaseURL string `yaml:"database_url"`
+
+	// GoogleOAuth holds the Google OAuth 2.0 client credentials.
+	// When ClientID is empty, Google OAuth is disabled.
+	GoogleOAuth GoogleOAuthConfig `yaml:"google_oauth"`
 }
 
 // StorageConfig holds configuration for the object storage backend.

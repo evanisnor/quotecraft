@@ -153,3 +153,40 @@ func (s *stubPasswordResetEmailSender) SendPasswordResetEmail(_ context.Context,
 type errorReader struct{ err error }
 
 func (e errorReader) Read(_ []byte) (int, error) { return 0, e.err }
+
+// stubCodeExchanger is a reusable test double for CodeExchanger.
+type stubCodeExchanger struct {
+	token string
+	err   error
+}
+
+func (s *stubCodeExchanger) Exchange(_ context.Context, _, _, _ string) (string, error) {
+	return s.token, s.err
+}
+
+// stubUserInfoFetcher is a reusable test double for UserInfoFetcher.
+type stubUserInfoFetcher struct {
+	providerID string
+	email      string
+	err        error
+}
+
+func (s *stubUserInfoFetcher) FetchUserInfo(_ context.Context, _ string) (string, string, error) {
+	return s.providerID, s.email, s.err
+}
+
+// stubOAuthUserManager is a reusable test double for OAuthUserManager.
+type stubOAuthUserManager struct {
+	user *User
+	err  error
+}
+
+func (s *stubOAuthUserManager) GetOrCreateOAuthUser(_ context.Context, _, _, _ string) (*User, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	if s.user != nil {
+		return s.user, nil
+	}
+	return &User{ID: "user-oauth-123", Email: "alice@example.com"}, nil
+}

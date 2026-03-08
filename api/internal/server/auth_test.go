@@ -787,6 +787,217 @@ func TestMountAuth_RegistersResetPasswordRoute(t *testing.T) {
 	}
 }
 
+// TestGoogleCallback_Handler_Success verifies that a valid request returns
+// 201 Created with the session token in the response body.
+func TestGoogleCallback_Handler_Success(t *testing.T) {
+	svc := &stubGoogleOAuthCallbacker{token: "google-session-token"}
+	h := googleCallbackHandler(svc)
+
+	body := `{"code":"auth-code","code_verifier":"verifier-abc","redirect_uri":"https://app.example.com/callback"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/google", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Errorf("expected 201, got %d", rec.Code)
+	}
+
+	var env Envelope[map[string]any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error != nil {
+		t.Errorf("expected no error in response, got: %+v", env.Error)
+	}
+	token, ok := env.Data["token"].(string)
+	if !ok || token == "" {
+		t.Errorf("expected non-empty token in data, got: %+v", env.Data)
+	}
+	if token != "google-session-token" {
+		t.Errorf("expected token google-session-token, got %q", token)
+	}
+}
+
+// TestGoogleCallback_Handler_MissingCode verifies that an empty code results in 400.
+func TestGoogleCallback_Handler_MissingCode(t *testing.T) {
+	svc := &stubGoogleOAuthCallbacker{}
+	h := googleCallbackHandler(svc)
+
+	body := `{"code":"","code_verifier":"verifier-abc","redirect_uri":"https://app.example.com/callback"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/google", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", rec.Code)
+	}
+
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeBadRequest {
+		t.Errorf("expected error code %q, got %q", ErrCodeBadRequest, env.Error.Code)
+	}
+}
+
+// TestGoogleCallback_Handler_MissingCodeVerifier verifies that an empty
+// code_verifier results in 400.
+func TestGoogleCallback_Handler_MissingCodeVerifier(t *testing.T) {
+	svc := &stubGoogleOAuthCallbacker{}
+	h := googleCallbackHandler(svc)
+
+	body := `{"code":"auth-code","code_verifier":"","redirect_uri":"https://app.example.com/callback"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/google", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", rec.Code)
+	}
+
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeBadRequest {
+		t.Errorf("expected error code %q, got %q", ErrCodeBadRequest, env.Error.Code)
+	}
+}
+
+// TestGoogleCallback_Handler_MissingRedirectURI verifies that an empty
+// redirect_uri results in 400.
+func TestGoogleCallback_Handler_MissingRedirectURI(t *testing.T) {
+	svc := &stubGoogleOAuthCallbacker{}
+	h := googleCallbackHandler(svc)
+
+	body := `{"code":"auth-code","code_verifier":"verifier-abc","redirect_uri":""}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/google", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", rec.Code)
+	}
+
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeBadRequest {
+		t.Errorf("expected error code %q, got %q", ErrCodeBadRequest, env.Error.Code)
+	}
+}
+
+// TestGoogleCallback_Handler_EmailConflict verifies that ErrEmailConflict from
+// the service results in 409 Conflict.
+func TestGoogleCallback_Handler_EmailConflict(t *testing.T) {
+	svc := &stubGoogleOAuthCallbacker{err: auth.ErrEmailConflict}
+	h := googleCallbackHandler(svc)
+
+	body := `{"code":"auth-code","code_verifier":"verifier-abc","redirect_uri":"https://app.example.com/callback"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/google", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusConflict {
+		t.Errorf("expected 409, got %d", rec.Code)
+	}
+
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeConflict {
+		t.Errorf("expected error code %q, got %q", ErrCodeConflict, env.Error.Code)
+	}
+	if env.Error.Message != "email already registered with a different login method" {
+		t.Errorf("expected conflict message, got %q", env.Error.Message)
+	}
+}
+
+// TestGoogleCallback_Handler_ServiceError verifies that an unexpected service
+// error results in 500 Internal Server Error.
+func TestGoogleCallback_Handler_ServiceError(t *testing.T) {
+	svc := &stubGoogleOAuthCallbacker{err: errors.New("database unreachable")}
+	h := googleCallbackHandler(svc)
+
+	body := `{"code":"auth-code","code_verifier":"verifier-abc","redirect_uri":"https://app.example.com/callback"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/google", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", rec.Code)
+	}
+
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeInternal {
+		t.Errorf("expected error code %q, got %q", ErrCodeInternal, env.Error.Code)
+	}
+}
+
+// TestGoogleCallback_Handler_MalformedJSON verifies that a non-JSON body
+// results in 400 Bad Request.
+func TestGoogleCallback_Handler_MalformedJSON(t *testing.T) {
+	svc := &stubGoogleOAuthCallbacker{}
+	h := googleCallbackHandler(svc)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/google", strings.NewReader("not json"))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", rec.Code)
+	}
+
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeBadRequest {
+		t.Errorf("expected error code %q, got %q", ErrCodeBadRequest, env.Error.Code)
+	}
+}
+
+// TestMountGoogleOAuth_RegistersRoute verifies that MountGoogleOAuth registers
+// the endpoint and it responds to POST /v1/auth/google.
+func TestMountGoogleOAuth_RegistersRoute(t *testing.T) {
+	s := testServer(t)
+	svc := &stubGoogleOAuthCallbacker{token: "google-token"}
+	s.MountGoogleOAuth(svc)
+
+	body := `{"code":"auth-code","code_verifier":"verifier-abc","redirect_uri":"https://app.example.com/callback"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/google", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Errorf("expected 201 from mounted route, got %d", rec.Code)
+	}
+}
+
 // TestAuthenticated_RequiresAuth verifies that routes mounted via Authenticated()
 // return 401 without a valid token and 200 with one.
 func TestAuthenticated_RequiresAuth(t *testing.T) {

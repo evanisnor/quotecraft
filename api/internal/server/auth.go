@@ -96,6 +96,12 @@ type AuthService interface {
 	PasswordResetter
 }
 
+// GoogleOAuthCallbacker handles the server-side leg of the Google OAuth PKCE flow.
+// Defined here at the consumer (server package) per the interfaces-where-consumed convention.
+type GoogleOAuthCallbacker interface {
+	GoogleCallback(ctx context.Context, code, codeVerifier, redirectURI string) (string, error)
+}
+
 // registerRequest is the JSON body expected by POST /v1/auth/register.
 type registerRequest struct {
 	Email    string `json:"email"`
@@ -258,6 +264,61 @@ func resetPasswordHandler(rp PasswordResetter) http.HandlerFunc {
 
 		w.WriteHeader(http.StatusNoContent)
 	}
+}
+
+// googleCallbackRequest is the JSON body expected by POST /v1/auth/google.
+type googleCallbackRequest struct {
+	Code         string `json:"code"`
+	CodeVerifier string `json:"code_verifier"`
+	RedirectURI  string `json:"redirect_uri"`
+}
+
+// googleCallbackResponse is the data payload returned on a successful Google OAuth callback.
+type googleCallbackResponse struct {
+	Token string `json:"token"`
+}
+
+// googleCallbackHandler returns an http.HandlerFunc that handles POST /v1/auth/google.
+// It validates the PKCE parameters, delegates to the service, and maps errors to HTTP status codes.
+func googleCallbackHandler(g GoogleOAuthCallbacker) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body googleCallbackRequest
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			WriteError(w, http.StatusBadRequest, ErrCodeBadRequest, "malformed request body")
+			return
+		}
+
+		if body.Code == "" {
+			WriteError(w, http.StatusBadRequest, ErrCodeBadRequest, "code is required")
+			return
+		}
+		if body.CodeVerifier == "" {
+			WriteError(w, http.StatusBadRequest, ErrCodeBadRequest, "code_verifier is required")
+			return
+		}
+		if body.RedirectURI == "" {
+			WriteError(w, http.StatusBadRequest, ErrCodeBadRequest, "redirect_uri is required")
+			return
+		}
+
+		token, err := g.GoogleCallback(r.Context(), body.Code, body.CodeVerifier, body.RedirectURI)
+		if err != nil {
+			if errors.Is(err, auth.ErrEmailConflict) {
+				WriteError(w, http.StatusConflict, ErrCodeConflict, "email already registered with a different login method")
+				return
+			}
+			LoggerFrom(r.Context()).Error("google oauth callback", "error", err)
+			WriteError(w, http.StatusInternalServerError, ErrCodeInternal, "internal error")
+			return
+		}
+
+		WriteJSON(w, http.StatusCreated, googleCallbackResponse{Token: token})
+	}
+}
+
+// MountGoogleOAuth registers the Google OAuth callback route on the server's private route group.
+func (s *Server) MountGoogleOAuth(g GoogleOAuthCallbacker) {
+	s.privateGroup.Post("/auth/google", googleCallbackHandler(g))
 }
 
 // MountAuth registers all authentication routes on the server's private route group.

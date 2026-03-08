@@ -778,3 +778,179 @@ func TestDeleteResetToken_QueryError(t *testing.T) {
 		t.Errorf("unfulfilled expectations: %v", err)
 	}
 }
+
+// TestGetOrCreateOAuthUser_Create verifies that when no existing OAuth user
+// exists, GetOrCreateOAuthUser inserts a new user and returns it.
+func TestGetOrCreateOAuthUser_Create(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("creating sqlmock: %v", err)
+	}
+
+	now := time.Now().UTC()
+	rows := sqlmock.NewRows([]string{"id", "email", "created_at"}).
+		AddRow("user-oauth-123", "alice@example.com", now)
+
+	mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO users (oauth_provider, oauth_id, email)")).
+		WithArgs("google", "google-sub-123", "alice@example.com").
+		WillReturnRows(rows)
+	mock.ExpectClose()
+
+	repo := NewPostgresUserRepository(db)
+	user, err := repo.GetOrCreateOAuthUser(context.Background(), "google", "google-sub-123", "alice@example.com")
+	if err != nil {
+		t.Fatalf("GetOrCreateOAuthUser() returned unexpected error: %v", err)
+	}
+	if user.ID != "user-oauth-123" {
+		t.Errorf("expected ID user-oauth-123, got %q", user.ID)
+	}
+	if user.Email != "alice@example.com" {
+		t.Errorf("expected email alice@example.com, got %q", user.Email)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Errorf("closing mock db: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestGetOrCreateOAuthUser_FindExisting verifies that when the INSERT returns
+// no rows (DO NOTHING conflict on oauth_provider+oauth_id), GetOrCreateOAuthUser
+// falls back to a SELECT and returns the existing user.
+func TestGetOrCreateOAuthUser_FindExisting(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("creating sqlmock: %v", err)
+	}
+
+	now := time.Now().UTC()
+	// INSERT returns no rows (DO NOTHING fired).
+	mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO users (oauth_provider, oauth_id, email)")).
+		WithArgs("google", "google-sub-123", "alice@example.com").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "email", "created_at"}))
+
+	// Fallback SELECT.
+	selectRows := sqlmock.NewRows([]string{"id", "email", "created_at"}).
+		AddRow("user-existing-456", "alice@example.com", now)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, email, created_at FROM users WHERE oauth_provider = $1 AND oauth_id = $2")).
+		WithArgs("google", "google-sub-123").
+		WillReturnRows(selectRows)
+	mock.ExpectClose()
+
+	repo := NewPostgresUserRepository(db)
+	user, err := repo.GetOrCreateOAuthUser(context.Background(), "google", "google-sub-123", "alice@example.com")
+	if err != nil {
+		t.Fatalf("GetOrCreateOAuthUser() returned unexpected error: %v", err)
+	}
+	if user.ID != "user-existing-456" {
+		t.Errorf("expected ID user-existing-456, got %q", user.ID)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Errorf("closing mock db: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestGetOrCreateOAuthUser_EmailConflict verifies that a pq 23505 error from the
+// INSERT (email unique constraint violation) is translated to ErrEmailConflict.
+func TestGetOrCreateOAuthUser_EmailConflict(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("creating sqlmock: %v", err)
+	}
+
+	pgErr := &pq.Error{Code: "23505", Message: "duplicate key value violates unique constraint \"users_email_key\""}
+	mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO users (oauth_provider, oauth_id, email)")).
+		WithArgs("google", "google-sub-999", "existing@example.com").
+		WillReturnError(pgErr)
+	mock.ExpectClose()
+
+	repo := NewPostgresUserRepository(db)
+	_, err = repo.GetOrCreateOAuthUser(context.Background(), "google", "google-sub-999", "existing@example.com")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrEmailConflict) {
+		t.Errorf("expected ErrEmailConflict, got: %v", err)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Errorf("closing mock db: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestGetOrCreateOAuthUser_InsertError verifies that non-23505 INSERT errors are
+// wrapped and propagated.
+func TestGetOrCreateOAuthUser_InsertError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("creating sqlmock: %v", err)
+	}
+
+	wantErr := errors.New("connection refused")
+	mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO users (oauth_provider, oauth_id, email)")).
+		WithArgs("google", "google-sub-123", "alice@example.com").
+		WillReturnError(wantErr)
+	mock.ExpectClose()
+
+	repo := NewPostgresUserRepository(db)
+	_, err = repo.GetOrCreateOAuthUser(context.Background(), "google", "google-sub-123", "alice@example.com")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Errorf("closing mock db: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestGetOrCreateOAuthUser_SelectError verifies that a SELECT error (after DO NOTHING)
+// is wrapped and propagated.
+func TestGetOrCreateOAuthUser_SelectError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("creating sqlmock: %v", err)
+	}
+
+	wantErr := errors.New("database unreachable")
+	// INSERT returns no rows (DO NOTHING fired).
+	mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO users (oauth_provider, oauth_id, email)")).
+		WithArgs("google", "google-sub-123", "alice@example.com").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "email", "created_at"}))
+
+	// Fallback SELECT fails.
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, email, created_at FROM users WHERE oauth_provider = $1 AND oauth_id = $2")).
+		WithArgs("google", "google-sub-123").
+		WillReturnError(wantErr)
+	mock.ExpectClose()
+
+	repo := NewPostgresUserRepository(db)
+	_, err = repo.GetOrCreateOAuthUser(context.Background(), "google", "google-sub-123", "alice@example.com")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Errorf("closing mock db: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}

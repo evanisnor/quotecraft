@@ -62,6 +62,53 @@ func (r *PostgresUserRepository) GetUserByEmail(ctx context.Context, email strin
 	return &u, nil
 }
 
+// GetOrCreateOAuthUser finds a user by OAuth provider and ID, or inserts a new
+// user if none exists. Returns ErrEmailConflict if the email is already
+// associated with a different account (pq code 23505 on the email column).
+func (r *PostgresUserRepository) GetOrCreateOAuthUser(ctx context.Context, provider, oauthID, email string) (*User, error) {
+	const insertQuery = `
+		INSERT INTO users (oauth_provider, oauth_id, email)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (oauth_provider, oauth_id) WHERE oauth_provider IS NOT NULL AND oauth_id IS NOT NULL
+		DO NOTHING
+		RETURNING id, email, created_at
+	`
+
+	var u User
+	err := r.db.QueryRowContext(ctx, insertQuery, provider, oauthID, email).Scan(
+		&u.ID,
+		&u.Email,
+		&u.CreatedAt,
+	)
+	if err == nil {
+		return &u, nil
+	}
+
+	// INSERT returned no rows: the ON CONFLICT DO NOTHING clause fired because
+	// the (oauth_provider, oauth_id) pair already exists. Fetch the existing row.
+	if errors.Is(err, sql.ErrNoRows) {
+		const selectQuery = `SELECT id, email, created_at FROM users WHERE oauth_provider = $1 AND oauth_id = $2`
+		var existing User
+		if err := r.db.QueryRowContext(ctx, selectQuery, provider, oauthID).Scan(
+			&existing.ID,
+			&existing.Email,
+			&existing.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("fetching existing oauth user: %w", err)
+		}
+		return &existing, nil
+	}
+
+	// INSERT failed with a unique constraint violation on the email column:
+	// the email is already registered to a different account.
+	var pgErr *pq.Error
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return nil, ErrEmailConflict
+	}
+
+	return nil, fmt.Errorf("inserting oauth user: %w", err)
+}
+
 // UpdateUserPassword updates the password_hash for the user with the given ID.
 func (r *PostgresUserRepository) UpdateUserPassword(ctx context.Context, userID, passwordHash string) error {
 	const query = `UPDATE users SET password_hash = $1 WHERE id = $2`

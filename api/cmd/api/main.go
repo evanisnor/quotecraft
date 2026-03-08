@@ -36,11 +36,19 @@ func main() {
 	emailSender := auth.NewLogPasswordResetEmailSender(logger)
 	authService := auth.NewService(userRepo, userRepo, sessionRepo, sessionRepo, sessionRepo, resetTokenRepo, resetTokenRepo, resetTokenRepo, userRepo, emailSender)
 
+	if cfg.API.GoogleOAuth.ClientID != "" {
+		googleExchanger := auth.NewGoogleExchanger(cfg.API.GoogleOAuth.ClientID, cfg.API.GoogleOAuth.ClientSecret, nil)
+		authService.WithGoogleOAuth(userRepo, googleExchanger, googleExchanger)
+	}
+
 	calcRepo := calculator.NewPostgresCalculatorRepository(dbConn.DB())
 	calcService := calculator.NewService(calcRepo, calcRepo, calcRepo, calcRepo, calcRepo, calcRepo)
 
 	srv := server.New(&cfg.API, logger, dbConn)
 	srv.MountAuth(authService)
+	if cfg.API.GoogleOAuth.ClientID != "" {
+		srv.MountGoogleOAuth(authService)
+	}
 	srv.MountCalculators(authService, calcService)
 	srv.MountPublicCalculators(calcService)
 	if cfg.CDN.ServeLocal {

@@ -47,6 +47,16 @@ func (s *stubAuthService) ResetPassword(_ context.Context, _, _ string) error {
 	return s.err
 }
 
+// stubGoogleOAuthCallbacker is a reusable test implementation of GoogleOAuthCallbacker.
+type stubGoogleOAuthCallbacker struct {
+	token string
+	err   error
+}
+
+func (s *stubGoogleOAuthCallbacker) GoogleCallback(_ context.Context, _, _, _ string) (string, error) {
+	return s.token, s.err
+}
+
 // stubCalculatorService is a reusable test implementation of CalculatorService.
 type stubCalculatorService struct {
 	calc  *calculator.Calculator

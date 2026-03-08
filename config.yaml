@@ -3,6 +3,9 @@ api:
   dashboard_origins:
     - 'http://localhost:3000'
   database_url: 'postgres://quotecraft:quotecraft@localhost:5432/quotecraft?sslmode=disable'
+  google_oauth:
+    client_id: ''
+    client_secret: ''
 
 storage:
   provider: s3

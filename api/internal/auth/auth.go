@@ -121,6 +121,11 @@ type PasswordResetEmailSender interface {
 	SendPasswordResetEmail(ctx context.Context, toEmail, rawToken string) error
 }
 
+// OAuthUserManager finds or creates a user by OAuth provider identity.
+type OAuthUserManager interface {
+	GetOrCreateOAuthUser(ctx context.Context, provider, oauthID, email string) (*User, error)
+}
+
 // passwordHasher hashes a plaintext password. Abstracted for testability.
 type passwordHasher func(password []byte, cost int) ([]byte, error)
 
@@ -147,6 +152,9 @@ type Service struct {
 	hasher              passwordHasher
 	verifier            passwordVerifier
 	genToken            tokenGenerator
+	oauthUserManager    OAuthUserManager
+	codeExchanger       CodeExchanger
+	userInfoFetcher     UserInfoFetcher
 }
 
 // NewService creates an auth Service with the given repositories.
@@ -211,6 +219,53 @@ func newServiceForTest(
 		verifier:            verifier,
 		genToken:            gen,
 	}
+}
+
+// WithGoogleOAuth configures Google OAuth support on the Service.
+// It sets the OAuthUserManager, CodeExchanger, and UserInfoFetcher dependencies
+// and returns the same Service pointer for chained calls.
+func (s *Service) WithGoogleOAuth(oauthUserManager OAuthUserManager, exchanger CodeExchanger, fetcher UserInfoFetcher) *Service {
+	s.oauthUserManager = oauthUserManager
+	s.codeExchanger = exchanger
+	s.userInfoFetcher = fetcher
+	return s
+}
+
+// GoogleCallback handles the server-side leg of the Google OAuth PKCE flow.
+// It exchanges the authorization code for an access token, fetches the user's
+// Google profile, finds or creates a local user account, and issues a session.
+//
+// Returns ErrEmailConflict if the Google email is already registered to an
+// account that used a different login method.
+func (s *Service) GoogleCallback(ctx context.Context, code, codeVerifier, redirectURI string) (string, error) {
+	accessToken, err := s.codeExchanger.Exchange(ctx, code, codeVerifier, redirectURI)
+	if err != nil {
+		return "", fmt.Errorf("exchanging oauth code: %w", err)
+	}
+
+	providerID, email, err := s.userInfoFetcher.FetchUserInfo(ctx, accessToken)
+	if err != nil {
+		return "", fmt.Errorf("fetching oauth user info: %w", err)
+	}
+
+	user, err := s.oauthUserManager.GetOrCreateOAuthUser(ctx, "google", providerID, email)
+	if err != nil {
+		if errors.Is(err, ErrEmailConflict) {
+			return "", err
+		}
+		return "", fmt.Errorf("finding or creating oauth user: %w", err)
+	}
+
+	token, tokenHash, err := s.genToken()
+	if err != nil {
+		return "", fmt.Errorf("generating session token: %w", err)
+	}
+
+	if _, err := s.sessions.CreateSession(ctx, user.ID, tokenHash, time.Now().UTC().Add(24*time.Hour)); err != nil {
+		return "", fmt.Errorf("creating session: %w", err)
+	}
+
+	return token, nil
 }
 
 // Register creates a new user account and returns an opaque session token.
