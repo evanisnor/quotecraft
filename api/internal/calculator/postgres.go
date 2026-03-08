@@ -136,6 +136,29 @@ func (r *PostgresCalculatorRepository) DeleteCalculator(ctx context.Context, id 
 	return nil
 }
 
+// DuplicateCalculator inserts a copy of the calculator identified by id, with config_version reset to 1.
+// Returns ErrNotFound if no matching, non-deleted row exists.
+func (r *PostgresCalculatorRepository) DuplicateCalculator(ctx context.Context, id string) (*Calculator, error) {
+	const query = `
+		INSERT INTO calculators (user_id, name, config, config_version)
+		SELECT user_id, name, config, 1
+		FROM calculators
+		WHERE id = $1 AND is_deleted = FALSE
+		RETURNING id, user_id, name, config, config_version, is_deleted, created_at, updated_at
+	`
+	var c Calculator
+	err := r.db.QueryRowContext(ctx, query, id).Scan(
+		&c.ID, &c.UserID, &c.Name, &c.Config, &c.ConfigVersion, &c.IsDeleted, &c.CreatedAt, &c.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("duplicating calculator: %w", err)
+	}
+	return &c, nil
+}
+
 // CreateCalculator inserts a new calculator row and returns the created Calculator.
 // The name defaults to ”, config defaults to '{}', and config_version to 1 per the table definition.
 func (r *PostgresCalculatorRepository) CreateCalculator(ctx context.Context, userID string) (*Calculator, error) {

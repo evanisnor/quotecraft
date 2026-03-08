@@ -87,3 +87,7 @@ func (s *stubCalculatorService) Delete(_ context.Context, _, _ string) error {
 func (s *stubCalculatorService) GetPublicConfig(_ context.Context, _ string) (*calculator.Calculator, error) {
 	return s.calc, s.err
 }
+
+func (s *stubCalculatorService) Duplicate(_ context.Context, _, _ string) (*calculator.Calculator, error) {
+	return s.calc, s.err
+}

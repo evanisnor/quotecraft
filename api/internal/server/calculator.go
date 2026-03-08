@@ -39,6 +39,11 @@ type CalculatorDeleter interface {
 	Delete(ctx context.Context, id, userID string) error
 }
 
+// CalculatorDuplicator creates a copy of an existing calculator.
+type CalculatorDuplicator interface {
+	Duplicate(ctx context.Context, id, userID string) (*calculator.Calculator, error)
+}
+
 // CalculatorService is the full set of calculator capabilities consumed by the server.
 type CalculatorService interface {
 	CalculatorCreator
@@ -46,6 +51,7 @@ type CalculatorService interface {
 	CalculatorGetter
 	CalculatorUpdater
 	CalculatorDeleter
+	CalculatorDuplicator
 }
 
 // createCalculatorResponse is the data payload returned on successful calculator creation.
@@ -236,6 +242,38 @@ func deleteCalculatorHandler(svc CalculatorDeleter) http.HandlerFunc {
 	}
 }
 
+// duplicateCalculatorHandler returns an http.HandlerFunc for POST /v1/calculators/{id}/duplicate.
+func duplicateCalculatorHandler(svc CalculatorDuplicator) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, ok := UserIDFromContext(r.Context())
+		if !ok {
+			WriteError(w, http.StatusUnauthorized, ErrCodeUnauthorized, "missing authentication")
+			return
+		}
+		id := chi.URLParam(r, "id")
+		calc, err := svc.Duplicate(r.Context(), id, userID)
+		if err != nil {
+			if errors.Is(err, calculator.ErrNotFound) {
+				WriteError(w, http.StatusNotFound, ErrCodeNotFound, "calculator not found")
+				return
+			}
+			if errors.Is(err, calculator.ErrForbidden) {
+				WriteError(w, http.StatusForbidden, ErrCodeForbidden, "access forbidden")
+				return
+			}
+			LoggerFrom(r.Context()).Error("duplicating calculator", "error", err)
+			WriteError(w, http.StatusInternalServerError, ErrCodeInternal, "internal error")
+			return
+		}
+		WriteJSON(w, http.StatusCreated, createCalculatorResponse{
+			ID:        calc.ID,
+			Name:      calc.Name,
+			CreatedAt: calc.CreatedAt,
+			UpdatedAt: calc.UpdatedAt,
+		})
+	}
+}
+
 // MountCalculators registers calculator routes on the server's private authenticated group.
 func (s *Server) MountCalculators(validator TokenValidator, svc CalculatorService) {
 	protected := s.Authenticated(validator)
@@ -244,6 +282,7 @@ func (s *Server) MountCalculators(validator TokenValidator, svc CalculatorServic
 	protected.Get("/calculators/{id}", getCalculatorHandler(svc))
 	protected.Put("/calculators/{id}", updateCalculatorHandler(svc))
 	protected.Delete("/calculators/{id}", deleteCalculatorHandler(svc))
+	protected.Post("/calculators/{id}/duplicate", duplicateCalculatorHandler(svc))
 }
 
 // CalculatorPublicConfigGetter retrieves calculator config for public widget rendering.

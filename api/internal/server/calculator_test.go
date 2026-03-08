@@ -823,6 +823,157 @@ func TestMountCalculators_RegistersDeleteRoute(t *testing.T) {
 	}
 }
 
+func TestDuplicateCalculatorHandler_Success(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+	calc := &calculator.Calculator{
+		ID:        "calc-new",
+		UserID:    "user-xyz",
+		Name:      "My Calculator",
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	svc := &stubCalculatorService{calc: calc}
+	h := duplicateCalculatorHandler(svc)
+
+	req := newChiRequest(http.MethodPost, "/v1/calculators/calc-abc/duplicate", "id", "calc-abc")
+	ctx := context.WithValue(req.Context(), authUserKey{}, "user-xyz")
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Errorf("expected 201, got %d", rec.Code)
+	}
+	var env Envelope[map[string]any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error != nil {
+		t.Errorf("expected no error in response, got: %+v", env.Error)
+	}
+	id, ok := env.Data["id"].(string)
+	if !ok || id != "calc-new" {
+		t.Errorf("expected id %q, got %v", "calc-new", env.Data["id"])
+	}
+	name, ok := env.Data["name"].(string)
+	if !ok || name != "My Calculator" {
+		t.Errorf("expected name %q, got %v", "My Calculator", env.Data["name"])
+	}
+}
+
+func TestDuplicateCalculatorHandler_MissingAuth(t *testing.T) {
+	svc := &stubCalculatorService{}
+	h := duplicateCalculatorHandler(svc)
+
+	req := newChiRequest(http.MethodPost, "/v1/calculators/calc-abc/duplicate", "id", "calc-abc")
+	// No user ID in context
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestDuplicateCalculatorHandler_NotFound(t *testing.T) {
+	svc := &stubCalculatorService{err: calculator.ErrNotFound}
+	h := duplicateCalculatorHandler(svc)
+
+	req := newChiRequest(http.MethodPost, "/v1/calculators/calc-missing/duplicate", "id", "calc-missing")
+	ctx := context.WithValue(req.Context(), authUserKey{}, "user-xyz")
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", rec.Code)
+	}
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeNotFound {
+		t.Errorf("expected error code %q, got %q", ErrCodeNotFound, env.Error.Code)
+	}
+}
+
+func TestDuplicateCalculatorHandler_Forbidden(t *testing.T) {
+	svc := &stubCalculatorService{err: calculator.ErrForbidden}
+	h := duplicateCalculatorHandler(svc)
+
+	req := newChiRequest(http.MethodPost, "/v1/calculators/calc-abc/duplicate", "id", "calc-abc")
+	ctx := context.WithValue(req.Context(), authUserKey{}, "other-user")
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("expected 403, got %d", rec.Code)
+	}
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeForbidden {
+		t.Errorf("expected error code %q, got %q", ErrCodeForbidden, env.Error.Code)
+	}
+}
+
+func TestDuplicateCalculatorHandler_InternalError(t *testing.T) {
+	svc := &stubCalculatorService{err: errors.New("db failure")}
+	h := duplicateCalculatorHandler(svc)
+
+	req := newChiRequest(http.MethodPost, "/v1/calculators/calc-abc/duplicate", "id", "calc-abc")
+	ctx := context.WithValue(req.Context(), authUserKey{}, "user-xyz")
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", rec.Code)
+	}
+	var env Envelope[any]
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if env.Error == nil {
+		t.Fatal("expected error in response, got nil")
+	}
+	if env.Error.Code != ErrCodeInternal {
+		t.Errorf("expected error code %q, got %q", ErrCodeInternal, env.Error.Code)
+	}
+}
+
+func TestMountCalculators_RegistersDuplicateRoute(t *testing.T) {
+	s := testServer(t)
+	authSvc := &stubAuthService{userID: "user-xyz"}
+	s.MountAuth(authSvc)
+
+	now := time.Now().UTC()
+	calcSvc := &stubCalculatorService{calc: &calculator.Calculator{
+		ID:        "calc-new",
+		UserID:    "user-xyz",
+		CreatedAt: now,
+		UpdatedAt: now,
+	}}
+	s.MountCalculators(authSvc, calcSvc)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/calculators/some-id/duplicate", nil)
+	req.Header.Set("Authorization", "Bearer valid-token")
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Errorf("expected 201 from mounted duplicate route, got %d", rec.Code)
+	}
+}
+
 func TestPublicConfigHandler_Success(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 	calc := &calculator.Calculator{

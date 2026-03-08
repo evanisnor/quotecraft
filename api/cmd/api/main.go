@@ -42,7 +42,7 @@ func main() {
 	}
 
 	calcRepo := calculator.NewPostgresCalculatorRepository(dbConn.DB())
-	calcService := calculator.NewService(calcRepo, calcRepo, calcRepo, calcRepo, calcRepo, calcRepo)
+	calcService := calculator.NewService(calcRepo, calcRepo, calcRepo, calcRepo, calcRepo, calcRepo, calcRepo)
 
 	srv := server.New(&cfg.API, logger, dbConn)
 	srv.MountAuth(authService)

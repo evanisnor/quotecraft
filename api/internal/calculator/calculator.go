@@ -56,6 +56,11 @@ type PublicConfigGetter interface {
 	GetPublicCalculatorConfig(ctx context.Context, id string) (*Calculator, error)
 }
 
+// Duplicator creates a copy of an existing calculator record.
+type Duplicator interface {
+	DuplicateCalculator(ctx context.Context, id string) (*Calculator, error)
+}
+
 // Service handles calculator business logic.
 type Service struct {
 	creator            Creator
@@ -64,11 +69,12 @@ type Service struct {
 	updater            Updater
 	deleter            Deleter
 	publicConfigGetter PublicConfigGetter
+	duplicator         Duplicator
 }
 
-// NewService creates a calculator Service with the given creator, lister, getter, updater, deleter, and publicConfigGetter.
-func NewService(creator Creator, lister Lister, getter Getter, updater Updater, deleter Deleter, publicConfigGetter PublicConfigGetter) *Service {
-	return &Service{creator: creator, lister: lister, getter: getter, updater: updater, deleter: deleter, publicConfigGetter: publicConfigGetter}
+// NewService creates a calculator Service with the given creator, lister, getter, updater, deleter, publicConfigGetter, and duplicator.
+func NewService(creator Creator, lister Lister, getter Getter, updater Updater, deleter Deleter, publicConfigGetter PublicConfigGetter, duplicator Duplicator) *Service {
+	return &Service{creator: creator, lister: lister, getter: getter, updater: updater, deleter: deleter, publicConfigGetter: publicConfigGetter, duplicator: duplicator}
 }
 
 // Create creates a new empty calculator owned by the given user.
@@ -136,4 +142,18 @@ func (s *Service) Delete(ctx context.Context, id, userID string) error {
 		return fmt.Errorf("deleting calculator: %w", err)
 	}
 	return nil
+}
+
+// Duplicate verifies ownership of the calculator then creates a copy with a new ID and config_version reset to 1.
+// Returns ErrNotFound if the calculator does not exist or is soft-deleted.
+// Returns ErrForbidden if the calculator exists but is owned by a different user.
+func (s *Service) Duplicate(ctx context.Context, id, userID string) (*Calculator, error) {
+	if _, err := s.getter.GetCalculator(ctx, id, userID); err != nil {
+		return nil, fmt.Errorf("verifying calculator ownership: %w", err)
+	}
+	calc, err := s.duplicator.DuplicateCalculator(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("duplicating calculator: %w", err)
+	}
+	return calc, nil
 }

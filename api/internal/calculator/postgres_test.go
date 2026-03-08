@@ -619,6 +619,101 @@ func TestGetPublicCalculatorConfig_QueryError(t *testing.T) {
 	}
 }
 
+func TestDuplicateCalculator_Success(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock.New() failed: %v", err)
+	}
+
+	now := time.Now().UTC().Truncate(time.Second)
+	rows := sqlmock.NewRows([]string{
+		"id", "user_id", "name", "config", "config_version", "is_deleted", "created_at", "updated_at",
+	}).AddRow("calc-new", "user-id", "", []byte("{}"), 1, false, now, now)
+	mock.ExpectQuery(`INSERT INTO calculators`).
+		WithArgs("calc-id").
+		WillReturnRows(rows)
+	mock.ExpectClose()
+
+	repo := NewPostgresCalculatorRepository(db)
+	calc, err := repo.DuplicateCalculator(context.Background(), "calc-id")
+	if err != nil {
+		t.Fatalf("DuplicateCalculator() returned unexpected error: %v", err)
+	}
+	if calc.ID != "calc-new" {
+		t.Errorf("expected ID %q, got %q", "calc-new", calc.ID)
+	}
+	if calc.UserID != "user-id" {
+		t.Errorf("expected UserID %q, got %q", "user-id", calc.UserID)
+	}
+	if calc.ConfigVersion != 1 {
+		t.Errorf("expected ConfigVersion 1, got %d", calc.ConfigVersion)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatalf("Close() failed: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unmet expectations: %v", err)
+	}
+}
+
+func TestDuplicateCalculator_NotFound(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock.New() failed: %v", err)
+	}
+
+	rows := sqlmock.NewRows([]string{
+		"id", "user_id", "name", "config", "config_version", "is_deleted", "created_at", "updated_at",
+	})
+	mock.ExpectQuery(`INSERT INTO calculators`).
+		WithArgs("calc-missing").
+		WillReturnRows(rows)
+	mock.ExpectClose()
+
+	repo := NewPostgresCalculatorRepository(db)
+	_, err = repo.DuplicateCalculator(context.Background(), "calc-missing")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrNotFound) {
+		t.Errorf("expected ErrNotFound, got: %v", err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatalf("Close() failed: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unmet expectations: %v", err)
+	}
+}
+
+func TestDuplicateCalculator_QueryError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock.New() failed: %v", err)
+	}
+
+	wantErr := errors.New("connection reset")
+	mock.ExpectQuery(`INSERT INTO calculators`).
+		WithArgs("calc-id").
+		WillReturnError(wantErr)
+	mock.ExpectClose()
+
+	repo := NewPostgresCalculatorRepository(db)
+	_, err = repo.DuplicateCalculator(context.Background(), "calc-id")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected wrapped wantErr, got: %v", err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatalf("Close() failed: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unmet expectations: %v", err)
+	}
+}
+
 func TestDeleteCalculator_RowsAffectedError(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {
