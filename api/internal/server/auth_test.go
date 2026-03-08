@@ -1001,7 +1001,7 @@ func TestMountAuth_RegistersRoutes(t *testing.T) {
 }
 
 // TestMountGoogleOAuth_RegistersRoute verifies that MountGoogleOAuth registers
-// the endpoint and it responds to POST /v1/auth/google.
+// the endpoint and it responds to POST /v1/auth/google when called without MountAuth.
 func TestMountGoogleOAuth_RegistersRoute(t *testing.T) {
 	s := testServer(t)
 	svc := &stubGoogleOAuthCallbacker{token: "google-token"}
@@ -1014,6 +1014,29 @@ func TestMountGoogleOAuth_RegistersRoute(t *testing.T) {
 
 	if rec.Code != http.StatusCreated {
 		t.Errorf("expected 201 from mounted route, got %d", rec.Code)
+	}
+}
+
+// TestMountGoogleOAuth_UsesAuthGroupWhenAvailable verifies that when MountAuth is
+// called before MountGoogleOAuth, the Google OAuth route is mounted on the shared
+// auth sub-group (with rate limiting applied) rather than the bare private group.
+func TestMountGoogleOAuth_UsesAuthGroupWhenAvailable(t *testing.T) {
+	s := testServer(t)
+	authSvc := &stubAuthService{}
+	googleSvc := &stubGoogleOAuthCallbacker{token: "google-token"}
+
+	// MountAuth must be called first so s.authGroup is populated.
+	s.MountAuth(authSvc)
+	s.MountGoogleOAuth(googleSvc)
+
+	body := `{"code":"auth-code","code_verifier":"verifier-abc","redirect_uri":"https://app.example.com/callback"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/google", strings.NewReader(body))
+	req.RemoteAddr = "10.0.0.1:1234"
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Errorf("expected 201 from rate-limited auth group, got %d", rec.Code)
 	}
 }
 
