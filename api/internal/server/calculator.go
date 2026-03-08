@@ -322,6 +322,12 @@ func publicConfigHandler(svc CalculatorPublicConfigGetter) http.HandlerFunc {
 }
 
 // MountPublicCalculators registers public (no auth) calculator routes on the server's public group.
+// The config endpoint is rate-limited to 60 requests per minute per IP to prevent abuse while
+// allowing normal widget traffic (widgets are cached client-side and by CDN).
 func (s *Server) MountPublicCalculators(svc CalculatorPublicConfigGetter) {
-	s.publicGroup.Get("/calculators/{id}/config", publicConfigHandler(svc))
+	limiter := newRateLimiter(60) // 60 requests per minute per IP
+	s.publicGroup.Group(func(r chi.Router) {
+		r.Use(IPRateLimit(limiter))
+		r.Get("/calculators/{id}/config", publicConfigHandler(svc))
+	})
 }

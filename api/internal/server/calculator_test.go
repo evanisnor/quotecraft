@@ -1090,3 +1090,36 @@ func TestMountPublicCalculators_RegistersRoute(t *testing.T) {
 		t.Errorf("expected Cache-Control %q, got %q", "public, max-age=300", cacheControl)
 	}
 }
+
+// TestMountPublicCalculators_RateLimitsConfigEndpoint verifies that making more than 60 rapid
+// GET requests to /v1/calculators/:id/config from the same IP triggers a 429 response.
+// The token bucket starts with capacity=60, so the 61st request must be denied.
+func TestMountPublicCalculators_RateLimitsConfigEndpoint(t *testing.T) {
+	s := testServer(t)
+	now := time.Now().UTC()
+	calcSvc := &stubCalculatorService{calc: &calculator.Calculator{
+		ID:            "calc-abc",
+		UserID:        "user-xyz",
+		Config:        []byte(`{}`),
+		ConfigVersion: 1,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}}
+	s.MountPublicCalculators(calcSvc)
+
+	const limit = 60
+	ip := "10.0.0.5"
+
+	var lastCode int
+	for i := 0; i < limit+1; i++ {
+		req := httptest.NewRequest(http.MethodGet, "/v1/calculators/calc-abc/config", nil)
+		req.RemoteAddr = ip + ":1234"
+		rec := httptest.NewRecorder()
+		s.Handler().ServeHTTP(rec, req)
+		lastCode = rec.Code
+	}
+
+	if lastCode != http.StatusTooManyRequests {
+		t.Errorf("expected the 61st request to return 429, got %d", lastCode)
+	}
+}
