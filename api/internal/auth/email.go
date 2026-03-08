@@ -21,7 +21,7 @@ func NewLogPasswordResetEmailSender(logger *slog.Logger) *LogPasswordResetEmailS
 func (s *LogPasswordResetEmailSender) SendPasswordResetEmail(ctx context.Context, toEmail, rawToken string) error {
 	s.logger.InfoContext(ctx, "password reset requested",
 		"to", toEmail,
-		"reset_token", rawToken,
+		"token_present", rawToken != "",
 	)
 	return nil
 }
