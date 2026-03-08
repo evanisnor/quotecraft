@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -12,6 +13,7 @@ import (
 	"github.com/evanisnor/quotecraft/api/internal/config"
 	"github.com/evanisnor/quotecraft/api/internal/db"
 	"github.com/evanisnor/quotecraft/api/internal/server"
+	"github.com/evanisnor/quotecraft/api/internal/storage"
 )
 
 func main() {
@@ -44,6 +46,12 @@ func main() {
 	calcRepo := calculator.NewPostgresCalculatorRepository(dbConn.DB())
 	calcService := calculator.NewService(calcRepo, calcRepo, calcRepo, calcRepo, calcRepo, calcRepo, calcRepo)
 
+	storageAdapter, err := initStorage(context.Background(), logger, cfg)
+	if err != nil {
+		logger.Error("failed to initialize storage", "error", err)
+		os.Exit(1)
+	}
+
 	srv := server.New(&cfg.API, logger, dbConn)
 	srv.MountAuth(authService)
 	if cfg.API.GoogleOAuth.ClientID != "" {
@@ -51,6 +59,7 @@ func main() {
 	}
 	srv.MountCalculators(authService, calcService)
 	srv.MountPublicCalculators(calcService)
+	srv.MountAssets(authService, storageAdapter)
 	if cfg.CDN.ServeLocal {
 		srv.MountStaticFiles(cfg.CDN.WidgetDir)
 	}
@@ -61,6 +70,32 @@ func main() {
 	if err := http.ListenAndServe(addr, srv.Handler()); err != nil {
 		logger.Error("server exited", "error", err)
 		os.Exit(1)
+	}
+}
+
+// initStorage selects and initialises the configured object storage adapter.
+// For "s3": when cfg.Storage.S3.Endpoint is non-empty (MinIO dev mode) the base
+// URL is endpoint + "/" + bucket; when the endpoint is empty (production AWS S3)
+// cfg.CDN.BaseURL is used so that GetURL returns CDN-prefixed URLs.
+// For "filesystem": cfg.CDN.BaseURL is used as the base URL.
+// Returns an error if the provider is unrecognised or initialisation fails.
+func initStorage(ctx context.Context, logger *slog.Logger, cfg *config.Config) (storage.Storage, error) {
+	switch cfg.Storage.Provider {
+	case "s3":
+		baseURL := cfg.CDN.BaseURL
+		if cfg.Storage.S3.Endpoint != "" {
+			// MinIO dev mode: return direct MinIO URLs.
+			baseURL = cfg.Storage.S3.Endpoint + "/" + cfg.Storage.S3.Bucket
+		}
+		adapter, err := storage.NewS3AdapterFromConfig(ctx, cfg.Storage.S3, baseURL)
+		if err != nil {
+			return nil, fmt.Errorf("initializing S3 storage: %w", err)
+		}
+		return adapter, nil
+	case "filesystem":
+		return storage.NewFilesystemAdapter(cfg.Storage.Filesystem.BaseDir, cfg.CDN.BaseURL), nil
+	default:
+		return nil, fmt.Errorf("unknown storage provider: %q", cfg.Storage.Provider)
 	}
 }
 

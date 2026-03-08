@@ -5,7 +5,10 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/evanisnor/quotecraft/api/internal/config"
 )
 
 // capturingHandler is a slog.Handler that stores all log records for assertion in tests.
@@ -157,5 +160,120 @@ func TestLoadConfig_LogsWarningForInvalidYAML(t *testing.T) {
 	}
 	if !warned {
 		t.Error("expected a 'failed to load config' warning for invalid YAML, got none")
+	}
+}
+
+// TestInitStorage_Filesystem verifies that initStorage returns a non-nil adapter
+// and no error when the provider is "filesystem".
+func TestInitStorage_Filesystem(t *testing.T) {
+	dir := t.TempDir()
+	cfg := &config.Config{
+		Storage: config.StorageConfig{
+			Provider: "filesystem",
+			Filesystem: config.FilesystemStorageConfig{
+				BaseDir: dir,
+			},
+		},
+		CDN: config.CDNConfig{
+			BaseURL: "http://localhost:8080/static",
+		},
+	}
+
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	adapter, err := initStorage(context.Background(), logger, cfg)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if adapter == nil {
+		t.Fatal("expected non-nil adapter")
+	}
+}
+
+// TestInitStorage_UnknownProvider verifies that initStorage returns an error
+// when an unrecognised storage provider is configured.
+func TestInitStorage_UnknownProvider(t *testing.T) {
+	cfg := &config.Config{
+		Storage: config.StorageConfig{
+			Provider: "unknown",
+		},
+	}
+
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	adapter, err := initStorage(context.Background(), logger, cfg)
+	if err == nil {
+		t.Fatal("expected error for unknown provider, got nil")
+	}
+	if adapter != nil {
+		t.Errorf("expected nil adapter on error, got %v", adapter)
+	}
+	if !strings.Contains(err.Error(), "unknown storage provider") {
+		t.Errorf("expected error to mention unknown storage provider, got: %v", err)
+	}
+}
+
+// TestInitStorage_S3_DevMode verifies that initStorage returns a non-nil adapter
+// with MinIO-prefixed URLs when the S3 endpoint is set (dev/MinIO mode).
+// NewS3AdapterFromConfig does not dial during construction so this works without a live MinIO.
+func TestInitStorage_S3_DevMode(t *testing.T) {
+	cfg := &config.Config{
+		Storage: config.StorageConfig{
+			Provider: "s3",
+			S3: config.S3Config{
+				Endpoint:     "http://localhost:9000",
+				Bucket:       "test-bucket",
+				AccessKey:    "minioadmin",
+				SecretKey:    "minioadmin",
+				UsePathStyle: true,
+			},
+		},
+		CDN: config.CDNConfig{
+			BaseURL: "https://cdn.example.com",
+		},
+	}
+
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	adapter, err := initStorage(context.Background(), logger, cfg)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if adapter == nil {
+		t.Fatal("expected non-nil adapter")
+	}
+
+	url := adapter.GetURL("testkey")
+	if !strings.HasPrefix(url, "http://localhost:9000/test-bucket/") {
+		t.Errorf("expected URL to start with MinIO endpoint prefix, got %q", url)
+	}
+}
+
+// TestInitStorage_S3_ProductionMode verifies that initStorage returns a non-nil adapter
+// with CDN-prefixed URLs when no S3 endpoint is set (production AWS S3 mode).
+// NewS3AdapterFromConfig does not dial during construction so this works without AWS credentials.
+func TestInitStorage_S3_ProductionMode(t *testing.T) {
+	cfg := &config.Config{
+		Storage: config.StorageConfig{
+			Provider: "s3",
+			S3: config.S3Config{
+				Endpoint: "", // no custom endpoint = production AWS S3
+				Bucket:   "prod-bucket",
+			},
+		},
+		CDN: config.CDNConfig{
+			BaseURL: "https://cdn.example.com",
+		},
+	}
+
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	adapter, err := initStorage(context.Background(), logger, cfg)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if adapter == nil {
+		t.Fatal("expected non-nil adapter")
+	}
+
+	url := adapter.GetURL("testkey")
+	if !strings.HasPrefix(url, "https://cdn.example.com/") {
+		t.Errorf("expected URL to start with CDN prefix, got %q", url)
 	}
 }
