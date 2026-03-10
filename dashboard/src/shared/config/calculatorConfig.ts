@@ -70,11 +70,22 @@ export interface ResultOutputConfig {
   expression: string;
 }
 
+export type LayoutMode = 'single-page' | 'multi-step';
+
+export interface Step {
+  id: string;
+  title: string;
+  fieldIds: string[];
+}
+
 /**
  * The full calculator configuration payload sent to and stored by the API.
- * Contains all editor state: input fields and formula output configurations.
+ * Contains all editor state: input fields, formula output configurations,
+ * layout mode, and step definitions.
  */
 export interface CalculatorEditorConfig {
   fields: BaseFieldConfig[];
   outputs: ResultOutputConfig[];
+  layoutMode: LayoutMode;
+  steps: Step[];
 }

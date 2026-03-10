@@ -12,5 +12,7 @@ export type {
   ImageSelectOption,
   ImageSelectFieldConfig,
   ResultOutputConfig,
+  LayoutMode,
+  Step,
   CalculatorEditorConfig,
 } from './calculatorConfig';

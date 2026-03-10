@@ -103,7 +103,12 @@ describe('updateCalculatorConfig', () => {
     });
 
     await expect(
-      updateCalculatorConfig(client, 'calc-id', { fields: [], outputs: [] }),
+      updateCalculatorConfig(client, 'calc-id', {
+        fields: [],
+        outputs: [],
+        layoutMode: 'single-page',
+        steps: [],
+      }),
     ).resolves.toBeUndefined();
   });
 
@@ -128,6 +133,8 @@ describe('updateCalculatorConfig', () => {
         },
       ],
       outputs: [],
+      layoutMode: 'single-page' as const,
+      steps: [],
     };
     await updateCalculatorConfig(client, 'calc-id', config);
 
@@ -142,7 +149,12 @@ describe('updateCalculatorConfig', () => {
     client.enqueueError('access forbidden');
 
     await expect(
-      updateCalculatorConfig(client, 'bad-id', { fields: [], outputs: [] }),
+      updateCalculatorConfig(client, 'bad-id', {
+        fields: [],
+        outputs: [],
+        layoutMode: 'single-page',
+        steps: [],
+      }),
     ).rejects.toThrow('access forbidden');
   });
 });

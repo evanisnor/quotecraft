@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import type { ApiClient } from '@/shared/api';
 import { FieldTypePalette } from '@/features/add-field';
+import { LayoutModeToggle } from '@/features/toggle-layout';
 import { DraggableFieldList } from '@/features/reorder-fields';
 import { useAutoSave, SaveStatusIndicator } from '@/features/auto-save';
 import { OutputList, FormulaInput } from '@/features/manage-outputs';
@@ -16,6 +17,8 @@ import type {
   CheckboxFieldConfig,
   ImageSelectFieldConfig,
   ResultOutputConfig,
+  LayoutMode,
+  Step,
 } from '@/shared/config';
 import { FIELD_TYPE_LABELS } from '@/shared/config';
 import { generateId, generateVariableName, buildFieldDefaults } from '@/shared/lib';
@@ -53,10 +56,15 @@ export function EditorPage({ calculatorId, client }: EditorPageProps) {
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [outputs, setOutputs] = useState<ResultOutputConfig[]>([]);
   const [selectedOutputId, setSelectedOutputId] = useState<string | null>(null);
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>('single-page');
+  const [steps, setSteps] = useState<Step[]>([]);
 
   const selectedField = fields.find((f) => f.id === selectedFieldId) ?? null;
 
-  const config = useMemo(() => ({ fields, outputs }), [fields, outputs]);
+  const config = useMemo(
+    () => ({ fields, outputs, layoutMode, steps }),
+    [fields, outputs, layoutMode, steps],
+  );
   const fieldDefaults = useMemo(() => buildFieldDefaults(fields), [fields]);
 
   const { status: saveStatus, save } = useAutoSave(client, calculatorId, config);
@@ -76,6 +84,8 @@ export function EditorPage({ calculatorId, client }: EditorPageProps) {
   }
 
   function handleDelete(): void {
+    // Note: steps[].fieldIds is not updated here. Keeping step field assignments
+    // synchronized with field additions and deletions is owned by BLDR-US3-A002.
     setFields((prev) => prev.filter((f) => f.id !== selectedFieldId));
     setSelectedFieldId(null);
   }
@@ -101,6 +111,22 @@ export function EditorPage({ calculatorId, client }: EditorPageProps) {
     setOutputs((prev) => prev.map((o) => (o.id === id ? { ...o, expression } : o)));
   }
 
+  function handleLayoutModeChange(newMode: LayoutMode): void {
+    if (newMode === 'multi-step' && steps.length === 0) {
+      // On first entry into multi-step mode, put all existing fields into a
+      // single default step. Subsequent entries preserve existing step assignments.
+      const initialStep: Step = {
+        id: generateId(),
+        title: 'Step 1',
+        fieldIds: fields.map((f) => f.id),
+      };
+      setSteps([initialStep]);
+    }
+    // Steps are intentionally preserved when switching back to single-page so
+    // that returning to multi-step mode restores the builder's step assignments.
+    setLayoutMode(newMode);
+  }
+
   async function handleUploadImage(file: File): Promise<string> {
     const result = await client.uploadFile<{ url: string }>('/v1/assets', file);
     return result.url;
@@ -112,6 +138,7 @@ export function EditorPage({ calculatorId, client }: EditorPageProps) {
       <SaveStatusIndicator status={saveStatus} onSave={save} />
       <div className="flex gap-6">
         <div className="flex-1">
+          <LayoutModeToggle mode={layoutMode} onChange={handleLayoutModeChange} />
           <FieldTypePalette onAdd={handleAddField} />
           <DraggableFieldList
             fields={fields}

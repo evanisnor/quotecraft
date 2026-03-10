@@ -3,13 +3,20 @@ import { useAutoSave } from './useAutoSave';
 import { StubApiClient } from '@/shared/api/testing';
 import type { CalculatorEditorConfig } from '@/shared/config';
 
-const EMPTY_CONFIG: CalculatorEditorConfig = { fields: [], outputs: [] };
+const EMPTY_CONFIG: CalculatorEditorConfig = {
+  fields: [],
+  outputs: [],
+  layoutMode: 'single-page',
+  steps: [],
+};
 const DELAY_MS = 500;
 
 function makeConfig(id: string): CalculatorEditorConfig {
   return {
     fields: [{ id, type: 'number', label: 'Count', required: false, variableName: 'count' }],
     outputs: [],
+    layoutMode: 'single-page',
+    steps: [],
   };
 }
 

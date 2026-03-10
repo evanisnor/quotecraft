@@ -442,4 +442,104 @@ describe('EditorPage', () => {
       ).not.toBeNull();
     });
   });
+
+  describe('layout mode toggle', () => {
+    it('renders the layout mode radiogroup', () => {
+      renderEditor();
+
+      expect(screen.getByRole('radiogroup', { name: 'Layout Mode' })).toBeInTheDocument();
+    });
+
+    it('starts in single-page mode', () => {
+      renderEditor();
+
+      expect(screen.getByRole('radio', { name: 'Single Page' })).toBeChecked();
+      expect(screen.getByRole('radio', { name: 'Multi-Step' })).not.toBeChecked();
+    });
+
+    it('switches to multi-step when Multi-Step radio is selected', async () => {
+      const user = userEvent.setup();
+      renderEditor();
+
+      await user.click(screen.getByRole('radio', { name: 'Multi-Step' }));
+
+      expect(screen.getByRole('radio', { name: 'Multi-Step' })).toBeChecked();
+      expect(screen.getByRole('radio', { name: 'Single Page' })).not.toBeChecked();
+    });
+
+    it('switching to multi-step and back to single-page does not lose fields', async () => {
+      const user = userEvent.setup();
+      renderEditor();
+
+      await user.click(screen.getByRole('button', { name: 'Text Input' }));
+      const fieldCountBefore = screen.getAllByRole('listitem').length;
+
+      await user.click(screen.getByRole('radio', { name: 'Multi-Step' }));
+      await user.click(screen.getByRole('radio', { name: 'Single Page' }));
+
+      expect(screen.getAllByRole('listitem')).toHaveLength(fieldCountBefore);
+      expect(screen.getByRole('radio', { name: 'Single Page' })).toBeChecked();
+    });
+
+    it('creates an initial step with empty fieldIds when switching to multi-step with no fields', async () => {
+      const user = userEvent.setup();
+      const { client } = renderEditor();
+
+      await user.click(screen.getByRole('radio', { name: 'Multi-Step' }));
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => {
+        const saveCalls = client.calls.filter((c) => c.method === 'PUT');
+        expect(saveCalls).toHaveLength(1);
+        const { config } = saveCalls[0].body as {
+          config: { layoutMode: string; steps: { title: string; fieldIds: string[] }[] };
+        };
+        expect(config.layoutMode).toBe('multi-step');
+        expect(config.steps).toHaveLength(1);
+        expect(config.steps[0].title).toBe('Step 1');
+        expect(config.steps[0].fieldIds).toHaveLength(0);
+      });
+    });
+
+    it('creates an initial step containing all existing field IDs when switching to multi-step', async () => {
+      const user = userEvent.setup();
+      const { client } = renderEditor();
+
+      await user.click(screen.getByRole('button', { name: 'Text Input' }));
+      await user.click(screen.getByRole('button', { name: 'Number Input' }));
+      await user.click(screen.getByRole('radio', { name: 'Multi-Step' }));
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => {
+        const saveCalls = client.calls.filter((c) => c.method === 'PUT');
+        expect(saveCalls).toHaveLength(1);
+        const { config } = saveCalls[0].body as {
+          config: { layoutMode: string; steps: { fieldIds: string[] }[] };
+        };
+        expect(config.layoutMode).toBe('multi-step');
+        expect(config.steps).toHaveLength(1);
+        expect(config.steps[0].fieldIds).toHaveLength(2);
+      });
+    });
+
+    it('preserves existing step assignments when re-entering multi-step mode', async () => {
+      const user = userEvent.setup();
+      const { client } = renderEditor();
+
+      // Enter multi-step (creates one initial step)
+      await user.click(screen.getByRole('radio', { name: 'Multi-Step' }));
+      // Return to single-page (steps are preserved but inactive)
+      await user.click(screen.getByRole('radio', { name: 'Single Page' }));
+      // Re-enter multi-step (should NOT create a second step)
+      await user.click(screen.getByRole('radio', { name: 'Multi-Step' }));
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => {
+        const saveCalls = client.calls.filter((c) => c.method === 'PUT');
+        expect(saveCalls).toHaveLength(1);
+        const { config } = saveCalls[0].body as { config: { steps: unknown[] } };
+        expect(config.steps).toHaveLength(1);
+      });
+    });
+  });
 });
