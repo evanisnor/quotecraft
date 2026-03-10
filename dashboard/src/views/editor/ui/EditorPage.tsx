@@ -14,6 +14,7 @@ import type {
   DropdownFieldConfig,
   RadioFieldConfig,
   CheckboxFieldConfig,
+  ImageSelectFieldConfig,
   ResultOutputConfig,
 } from '@/shared/config';
 import { FIELD_TYPE_LABELS } from '@/shared/config';
@@ -36,6 +37,9 @@ function createField(type: FieldType): BaseFieldConfig {
   };
   if (type === 'dropdown' || type === 'radio' || type === 'checkbox') {
     return { ...base, options: [] } as DropdownFieldConfig | RadioFieldConfig | CheckboxFieldConfig;
+  }
+  if (type === 'image_select') {
+    return { ...base, options: [] } as ImageSelectFieldConfig;
   }
   return base;
 }
@@ -97,6 +101,11 @@ export function EditorPage({ calculatorId, client }: EditorPageProps) {
     setOutputs((prev) => prev.map((o) => (o.id === id ? { ...o, expression } : o)));
   }
 
+  async function handleUploadImage(file: File): Promise<string> {
+    const result = await client.uploadFile<{ url: string }>('/v1/assets', file);
+    return result.url;
+  }
+
   return (
     <main data-calculator-id={calculatorId}>
       <h1>Calculator Editor</h1>
@@ -118,6 +127,7 @@ export function EditorPage({ calculatorId, client }: EditorPageProps) {
               field={selectedField}
               onUpdate={handleUpdate}
               onDelete={handleDelete}
+              onUploadImage={handleUploadImage}
             />
           )}
           <OutputList

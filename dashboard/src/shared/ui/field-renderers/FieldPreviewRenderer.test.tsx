@@ -1,13 +1,13 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type {
-  BaseFieldConfig,
   NumberFieldConfig,
   SliderFieldConfig,
   TextFieldConfig,
   DropdownFieldConfig,
   RadioFieldConfig,
   CheckboxFieldConfig,
+  ImageSelectFieldConfig,
 } from '@/shared/config';
 import { FieldPreviewRenderer } from './FieldPreviewRenderer';
 
@@ -98,13 +98,20 @@ function makeCheckboxField(overrides: Partial<CheckboxFieldConfig> = {}): Checkb
   };
 }
 
-function makeImageSelectField(): BaseFieldConfig {
+function makeImageSelectField(
+  overrides: Partial<ImageSelectFieldConfig> = {},
+): ImageSelectFieldConfig {
   return {
     id: 'field-image',
     type: 'image_select',
     label: 'Logo',
     required: false,
     variableName: 'logo',
+    options: [
+      { id: 'opt-1', label: 'Classic', value: '10', imageUrl: 'https://example.com/classic.png' },
+      { id: 'opt-2', label: 'Modern', value: '20', imageUrl: '' },
+    ],
+    ...overrides,
   };
 }
 
@@ -202,12 +209,68 @@ describe('FieldPreviewRenderer', () => {
   });
 
   describe('image_select field', () => {
-    it('renders a placeholder message', () => {
+    it('renders radio inputs for each option', () => {
       render(
         <FieldPreviewRenderer field={makeImageSelectField()} value={0} onChange={jest.fn()} />,
       );
 
-      expect(screen.getByText('Image Select (not yet supported in preview)')).toBeInTheDocument();
+      const radios = screen.getAllByRole('radio');
+      expect(radios).toHaveLength(2);
+    });
+
+    it('renders a fieldset with a legend', () => {
+      render(
+        <FieldPreviewRenderer field={makeImageSelectField()} value={0} onChange={jest.fn()} />,
+      );
+
+      expect(screen.getByRole('group', { name: 'Logo' })).toBeInTheDocument();
+    });
+
+    it('renders image when imageUrl is non-empty', () => {
+      render(
+        <FieldPreviewRenderer field={makeImageSelectField()} value={0} onChange={jest.fn()} />,
+      );
+
+      const img = screen.getByAltText('Classic');
+      expect(img).toBeInTheDocument();
+      expect(img).toHaveAttribute('src', 'https://example.com/classic.png');
+    });
+
+    it('does not render img when imageUrl is empty string', () => {
+      render(
+        <FieldPreviewRenderer field={makeImageSelectField()} value={0} onChange={jest.fn()} />,
+      );
+
+      expect(screen.queryByAltText('Modern')).not.toBeInTheDocument();
+    });
+
+    it('selecting an image option calls onChange with its numeric value', () => {
+      const onChange = jest.fn();
+
+      render(<FieldPreviewRenderer field={makeImageSelectField()} value={0} onChange={onChange} />);
+
+      const classicRadio = screen.getByRole('radio', { name: /Classic/i });
+      fireEvent.click(classicRadio);
+
+      expect(onChange).toHaveBeenCalledWith(10);
+    });
+
+    it('the radio matching the current value is checked', () => {
+      render(
+        <FieldPreviewRenderer field={makeImageSelectField()} value={10} onChange={jest.fn()} />,
+      );
+
+      const classicRadio = screen.getByRole('radio', { name: /Classic/i });
+      expect(classicRadio).toBeChecked();
+    });
+
+    it('a radio not matching the current value is not checked', () => {
+      render(
+        <FieldPreviewRenderer field={makeImageSelectField()} value={10} onChange={jest.fn()} />,
+      );
+
+      const modernRadio = screen.getByRole('radio', { name: /Modern/i });
+      expect(modernRadio).not.toBeChecked();
     });
   });
 

@@ -9,6 +9,8 @@ export type {
   NumberFieldConfig,
   SliderFieldConfig,
   TextFieldConfig,
+  ImageSelectOption,
+  ImageSelectFieldConfig,
   ResultOutputConfig,
   CalculatorEditorConfig,
 } from './calculatorConfig';

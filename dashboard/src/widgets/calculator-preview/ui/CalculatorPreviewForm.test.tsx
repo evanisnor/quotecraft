@@ -5,6 +5,7 @@ import type {
   NumberFieldConfig,
   SliderFieldConfig,
   DropdownFieldConfig,
+  ImageSelectFieldConfig,
   ResultOutputConfig,
 } from '@/shared/config';
 import { CalculatorPreviewForm } from './CalculatorPreviewForm';
@@ -151,7 +152,8 @@ describe('CalculatorPreviewForm', () => {
         label: 'Logo',
         required: false,
         variableName: 'logo',
-      },
+        options: [],
+      } as ImageSelectFieldConfig,
     ];
 
     expect(() => render(<CalculatorPreviewForm fields={fields} />)).not.toThrow();

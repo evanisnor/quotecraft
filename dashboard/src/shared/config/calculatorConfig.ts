@@ -52,6 +52,18 @@ export interface TextFieldConfig extends BaseFieldConfig {
   placeholder?: string;
 }
 
+export interface ImageSelectOption {
+  id: string;
+  label: string;
+  value: string;
+  imageUrl: string;
+}
+
+export interface ImageSelectFieldConfig extends BaseFieldConfig {
+  type: 'image_select';
+  options: ImageSelectOption[];
+}
+
 export interface ResultOutputConfig {
   id: string;
   label: string;

@@ -41,12 +41,19 @@ interface QueueEntry {
   error?: Error;
 }
 
+export interface StubApiCall {
+  method: string;
+  path: string;
+  body?: unknown;
+  file?: File;
+}
+
 /**
  * StubApiClient is a reusable test implementation of ApiClient.
  * Enqueue success responses or errors before each API call under test.
  */
 export class StubApiClient implements ApiClient {
-  readonly calls: { method: string; path: string; body?: unknown }[] = [];
+  readonly calls: StubApiCall[] = [];
   private queue: QueueEntry[] = [];
 
   enqueueSuccess<T>(data: T): void {
@@ -82,5 +89,10 @@ export class StubApiClient implements ApiClient {
   async delete(path: string): Promise<void> {
     this.calls.push({ method: 'DELETE', path });
     await this.dequeue<void>();
+  }
+
+  async uploadFile<T>(path: string, file: File): Promise<T> {
+    this.calls.push({ method: 'UPLOAD', path, file });
+    return this.dequeue<T>();
   }
 }

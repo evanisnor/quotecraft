@@ -162,6 +162,80 @@ describe('ApiClient.put', () => {
   });
 });
 
+describe('ApiClient.uploadFile', () => {
+  it('returns parsed data on success, sends FormData without Content-Type header', async () => {
+    let capturedHeaders: HeadersInit | undefined;
+    let capturedBody: unknown;
+
+    const capturingFetch: typeof globalThis.fetch = async (_url, options) => {
+      capturedHeaders = options?.headers;
+      capturedBody = options?.body;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          data: { url: 'https://cdn.example.com/image.png' },
+          error: null,
+          meta: {},
+        }),
+      } as Response;
+    };
+
+    const client = createApiClient(BASE_URL, TOKEN, capturingFetch);
+    const file = new File(['content'], 'image.png', { type: 'image/png' });
+
+    const result = await client.uploadFile<{ url: string }>('/v1/assets', file);
+
+    expect(result).toEqual({ url: 'https://cdn.example.com/image.png' });
+    expect(capturedBody).toBeInstanceOf(FormData);
+    const headers = capturedHeaders as Record<string, string>;
+    expect(headers['Authorization']).toBe(`Bearer ${TOKEN}`);
+    expect(headers['Content-Type']).toBeUndefined();
+  });
+
+  it('throws API error message on non-ok response', async () => {
+    const stub = stubFetchWith([
+      {
+        status: 422,
+        body: {
+          data: null,
+          error: { code: 'INVALID_FILE_TYPE', message: 'only image files are accepted' },
+          meta: {},
+        },
+      },
+    ]);
+    const client = createApiClient(BASE_URL, TOKEN, stub.fetch);
+    const file = new File(['content'], 'document.pdf', { type: 'application/pdf' });
+
+    await expect(client.uploadFile('/v1/assets', file)).rejects.toThrow(
+      'only image files are accepted',
+    );
+  });
+
+  it('throws generic message when error field is null on non-ok response', async () => {
+    const stub = stubFetchWith([{ status: 500, body: { data: null, error: null, meta: {} } }]);
+    const client = createApiClient(BASE_URL, TOKEN, stub.fetch);
+    const file = new File(['content'], 'image.png', { type: 'image/png' });
+
+    await expect(client.uploadFile('/v1/assets', file)).rejects.toThrow('Unknown error');
+  });
+
+  it('throws on null data in success response', async () => {
+    const stub = stubFetchWith([
+      {
+        status: 200,
+        body: { data: null, error: null, meta: {} },
+      },
+    ]);
+    const client = createApiClient(BASE_URL, TOKEN, stub.fetch);
+    const file = new File(['content'], 'image.png', { type: 'image/png' });
+
+    await expect(client.uploadFile('/v1/assets', file)).rejects.toThrow(
+      'Unexpected response: missing data',
+    );
+  });
+});
+
 describe('ApiClient.delete', () => {
   it('resolves on 204', async () => {
     const stub = stubFetchWith([{ status: 204, body: null }]);

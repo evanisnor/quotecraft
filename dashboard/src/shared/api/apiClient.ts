@@ -9,6 +9,7 @@ export interface ApiClient {
   post<T>(path: string, body?: unknown): Promise<T>;
   put<T>(path: string, body?: unknown): Promise<T>;
   delete(path: string): Promise<void>;
+  uploadFile<T>(path: string, file: File): Promise<T>;
 }
 
 async function request<T>(
@@ -82,6 +83,32 @@ export function createApiClient(
         }
         throw new Error(message);
       }
+    },
+
+    async uploadFile<T>(path: string, file: File): Promise<T> {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetcher(`${baseUrl}${path}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          // Do NOT set Content-Type — the browser sets it with the multipart boundary
+        },
+        body: formData,
+      });
+
+      const envelope = (await response.json()) as ApiEnvelope<T>;
+
+      if (!response.ok) {
+        throw new Error(envelope.error?.message ?? 'Unknown error');
+      }
+
+      if (envelope.data === null) {
+        throw new Error('Unexpected response: missing data');
+      }
+
+      return envelope.data;
     },
   };
 }

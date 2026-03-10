@@ -31,6 +31,7 @@ function neverResolvingClient(): ApiClient {
     post: () => new Promise(() => undefined),
     put: () => new Promise(() => undefined),
     delete: () => new Promise(() => undefined),
+    uploadFile: () => new Promise(() => undefined),
   };
 }
 

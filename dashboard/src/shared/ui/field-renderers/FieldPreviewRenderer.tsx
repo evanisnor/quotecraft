@@ -9,6 +9,7 @@ import type {
   NumberFieldConfig,
   SliderFieldConfig,
   TextFieldConfig,
+  ImageSelectFieldConfig,
 } from '@/shared/config';
 
 export interface FieldPreviewRendererProps {
@@ -182,9 +183,36 @@ function CheckboxFieldRenderer({
   );
 }
 
-// TODO [BLDR-US2-A009]: Add image select rendering support
-function ImageSelectFieldRenderer() {
-  return <p>Image Select (not yet supported in preview)</p>;
+function ImageSelectFieldRenderer({
+  field,
+  value,
+  onChange,
+}: {
+  field: ImageSelectFieldConfig;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <fieldset>
+      <legend>{field.label}</legend>
+      {field.options.map((opt) => {
+        const numericValue = parseFloat(opt.value) || 0;
+        return (
+          <label key={opt.id}>
+            <input
+              type="radio"
+              name={`field-preview-${field.id}`}
+              value={numericValue}
+              checked={value === numericValue}
+              onChange={() => onChange(numericValue)}
+            />
+            {opt.imageUrl !== '' && <img src={opt.imageUrl} alt={opt.label} />}
+            {opt.label}
+          </label>
+        );
+      })}
+    </fieldset>
+  );
 }
 
 export function FieldPreviewRenderer({ field, value, onChange }: FieldPreviewRendererProps) {
@@ -225,11 +253,18 @@ export function FieldPreviewRenderer({ field, value, onChange }: FieldPreviewRen
       case 'checkbox':
         return <CheckboxFieldRenderer field={field as CheckboxFieldConfig} onChange={onChange} />;
       case 'image_select':
-        return <ImageSelectFieldRenderer />;
+        return (
+          <ImageSelectFieldRenderer
+            field={field as ImageSelectFieldConfig}
+            value={value}
+            onChange={onChange}
+          />
+        );
     }
   }
 
-  const isFieldset = field.type === 'radio' || field.type === 'checkbox';
+  const isFieldset =
+    field.type === 'radio' || field.type === 'checkbox' || field.type === 'image_select';
 
   return (
     <div>

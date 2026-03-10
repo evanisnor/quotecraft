@@ -384,4 +384,62 @@ describe('EditorPage', () => {
     // Formula expression is empty by default — no preview should be shown
     expect(document.querySelector('[data-testid="formula-preview"]')).not.toBeInTheDocument();
   });
+
+  it('adding an Image Select field shows it in the list', async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.click(screen.getByRole('button', { name: 'Image Select' }));
+
+    const listItems = screen.getAllByRole('listitem');
+    expect(listItems).toHaveLength(1);
+    expect(listItems[0]).toHaveTextContent('Image Select');
+  });
+
+  it('after adding Image Select and clicking it, shows the Add option button', async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.click(screen.getByRole('button', { name: 'Image Select' }));
+
+    // The field is auto-selected after add, so the image select config panel is visible
+    expect(screen.getByRole('button', { name: 'Add option' })).toBeInTheDocument();
+  });
+
+  it('uploading an image calls client.uploadFile and updates the imageUrl on the option', async () => {
+    const user = userEvent.setup();
+
+    // Use a fresh client with the upload response queued first (before any auto-save responses)
+    // so that the uploadFile call receives the expected URL rather than an auto-save placeholder.
+    const client = new StubApiClient();
+    client.enqueueSuccess({ url: 'https://cdn.example.com/uploaded.png' });
+    // Pre-enqueue auto-save placeholders after the upload response
+    for (let i = 0; i < 20; i++) {
+      client.enqueueSuccess({});
+    }
+    render(<EditorPage calculatorId="calc-upload" client={client} />);
+
+    await user.click(screen.getByRole('button', { name: 'Image Select' }));
+
+    // Add an option so the upload control appears
+    await user.click(screen.getByRole('button', { name: 'Add option' }));
+
+    // Simulate selecting a file on the hidden file input via fireEvent (matches jsdom behavior)
+    const file = new File(['img'], 'photo.png', { type: 'image/png' });
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    expect(fileInputs.length).toBe(1);
+    fireEvent.change(fileInputs[0], { target: { files: [file] } });
+
+    // The uploadFile call should have been made with the asset path
+    await waitFor(() => {
+      expect(client.calls.some((c) => c.method === 'UPLOAD' && c.path === '/v1/assets')).toBe(true);
+    });
+
+    // The image preview should now show the returned URL
+    await waitFor(() => {
+      expect(
+        document.querySelector('img[src="https://cdn.example.com/uploaded.png"]'),
+      ).not.toBeNull();
+    });
+  });
 });
