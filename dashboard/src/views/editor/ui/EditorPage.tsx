@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import type { ApiClient } from '@/shared/api';
 import { FieldTypePalette } from '@/features/add-field';
 import { LayoutModeToggle } from '@/features/toggle-layout';
+import { StepManager } from '@/features/manage-steps';
 import { DraggableFieldList } from '@/features/reorder-fields';
 import { useAutoSave, SaveStatusIndicator } from '@/features/auto-save';
 import { OutputList, FormulaInput } from '@/features/manage-outputs';
@@ -73,6 +74,11 @@ export function EditorPage({ calculatorId, client }: EditorPageProps) {
     const newField = createField(type);
     setFields((prev) => [...prev, newField]);
     setSelectedFieldId(newField.id);
+    if (layoutMode === 'multi-step') {
+      setSteps((prev) =>
+        prev.map((s, i) => (i === 0 ? { ...s, fieldIds: [...s.fieldIds, newField.id] } : s)),
+      );
+    }
   }
 
   function handleReorder(reordered: BaseFieldConfig[]): void {
@@ -84,10 +90,14 @@ export function EditorPage({ calculatorId, client }: EditorPageProps) {
   }
 
   function handleDelete(): void {
-    // Note: steps[].fieldIds is not updated here. Keeping step field assignments
-    // synchronized with field additions and deletions is owned by BLDR-US3-A002.
-    setFields((prev) => prev.filter((f) => f.id !== selectedFieldId));
+    const deletedId = selectedFieldId;
+    setFields((prev) => prev.filter((f) => f.id !== deletedId));
     setSelectedFieldId(null);
+    if (deletedId !== null) {
+      setSteps((prev) =>
+        prev.map((s) => ({ ...s, fieldIds: s.fieldIds.filter((id) => id !== deletedId) })),
+      );
+    }
   }
 
   function handleAddOutput(): void {
@@ -109,6 +119,47 @@ export function EditorPage({ calculatorId, client }: EditorPageProps) {
 
   function handleUpdateOutputExpression(id: string, expression: string): void {
     setOutputs((prev) => prev.map((o) => (o.id === id ? { ...o, expression } : o)));
+  }
+
+  function handleAddStep(): void {
+    setSteps((prev) => [
+      ...prev,
+      { id: generateId(), title: `Step ${prev.length + 1}`, fieldIds: [] },
+    ]);
+  }
+
+  function handleDeleteStep(stepId: string): void {
+    setSteps((prev) => prev.filter((s) => s.id !== stepId));
+  }
+
+  function handleReorderSteps(reordered: Step[]): void {
+    setSteps(reordered);
+  }
+
+  function handleRenameStep(stepId: string, title: string): void {
+    setSteps((prev) => prev.map((s) => (s.id === stepId ? { ...s, title } : s)));
+  }
+
+  function handleMoveFieldToStep(fieldId: string, targetStepId: string): void {
+    setSteps((prev) =>
+      prev.map((s) => {
+        if (s.id === targetStepId) {
+          return {
+            ...s,
+            fieldIds: s.fieldIds.includes(fieldId) ? s.fieldIds : [...s.fieldIds, fieldId],
+          };
+        }
+        return { ...s, fieldIds: s.fieldIds.filter((id) => id !== fieldId) };
+      }),
+    );
+  }
+
+  function handleRemoveFieldFromStep(fieldId: string, stepId: string): void {
+    setSteps((prev) =>
+      prev.map((s) =>
+        s.id === stepId ? { ...s, fieldIds: s.fieldIds.filter((id) => id !== fieldId) } : s,
+      ),
+    );
   }
 
   function handleLayoutModeChange(newMode: LayoutMode): void {
@@ -139,6 +190,18 @@ export function EditorPage({ calculatorId, client }: EditorPageProps) {
       <div className="flex gap-6">
         <div className="flex-1">
           <LayoutModeToggle mode={layoutMode} onChange={handleLayoutModeChange} />
+          {layoutMode === 'multi-step' && (
+            <StepManager
+              steps={steps}
+              fields={fields}
+              onAddStep={handleAddStep}
+              onDeleteStep={handleDeleteStep}
+              onReorderSteps={handleReorderSteps}
+              onRenameStep={handleRenameStep}
+              onMoveFieldToStep={handleMoveFieldToStep}
+              onRemoveFieldFromStep={handleRemoveFieldFromStep}
+            />
+          )}
           <FieldTypePalette onAdd={handleAddField} />
           <DraggableFieldList
             fields={fields}

@@ -542,4 +542,153 @@ describe('EditorPage', () => {
       });
     });
   });
+
+  describe('step manager', () => {
+    it('does not show step manager in single-page mode', () => {
+      renderEditor();
+
+      expect(screen.queryByRole('region', { name: 'Step manager' })).not.toBeInTheDocument();
+    });
+
+    it('shows step manager when multi-step mode is selected', async () => {
+      const user = userEvent.setup();
+      renderEditor();
+
+      await user.click(screen.getByRole('radio', { name: 'Multi-Step' }));
+
+      expect(screen.getByRole('region', { name: 'Step manager' })).toBeInTheDocument();
+    });
+
+    it('adding a field while in multi-step mode adds it to the first step', async () => {
+      const user = userEvent.setup();
+      const { client } = renderEditor();
+
+      await user.click(screen.getByRole('radio', { name: 'Multi-Step' }));
+      await user.click(screen.getByRole('button', { name: 'Text Input' }));
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => {
+        const saveCalls = client.calls.filter((c) => c.method === 'PUT');
+        expect(saveCalls).toHaveLength(1);
+        const { config } = saveCalls[0].body as {
+          config: { fields: { id: string }[]; steps: { fieldIds: string[] }[] };
+        };
+        expect(config.steps[0].fieldIds).toHaveLength(1);
+        expect(config.steps[0].fieldIds[0]).toBe(config.fields[0].id);
+      });
+    });
+
+    it('deleting a field while in multi-step mode removes it from steps', async () => {
+      const user = userEvent.setup();
+      const { client } = renderEditor();
+
+      // Add a field and enter multi-step (field goes into initial step)
+      await user.click(screen.getByRole('button', { name: 'Text Input' }));
+      await user.click(screen.getByRole('radio', { name: 'Multi-Step' }));
+
+      // Delete the field
+      await user.click(screen.getByRole('button', { name: 'Delete field' }));
+      await user.click(screen.getByRole('button', { name: 'Confirm' }));
+
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => {
+        const saveCalls = client.calls.filter((c) => c.method === 'PUT');
+        expect(saveCalls).toHaveLength(1);
+        const { config } = saveCalls[0].body as {
+          config: { steps: { fieldIds: string[] }[] };
+        };
+        expect(config.steps[0].fieldIds).toHaveLength(0);
+      });
+    });
+
+    it('adding a step creates a new step shown in the step manager', async () => {
+      const user = userEvent.setup();
+      renderEditor();
+
+      await user.click(screen.getByRole('radio', { name: 'Multi-Step' }));
+
+      // Initial step is Step 1; click Add step to create Step 2
+      await user.click(screen.getByRole('button', { name: 'Add step' }));
+
+      expect(screen.getByRole('textbox', { name: 'Step 2 title' })).toBeInTheDocument();
+    });
+
+    it('deleting a step removes it from the step manager', async () => {
+      const user = userEvent.setup();
+      renderEditor();
+
+      await user.click(screen.getByRole('radio', { name: 'Multi-Step' }));
+      await user.click(screen.getByRole('button', { name: 'Add step' }));
+
+      // Both Step 1 and Step 2 exist; delete Step 2
+      await user.click(screen.getByRole('button', { name: 'Delete Step 2' }));
+
+      expect(screen.queryByRole('textbox', { name: 'Step 2 title' })).not.toBeInTheDocument();
+    });
+
+    it('renaming a step updates the title in the step manager', async () => {
+      const user = userEvent.setup();
+      renderEditor();
+
+      await user.click(screen.getByRole('radio', { name: 'Multi-Step' }));
+
+      const input = screen.getByRole('textbox', { name: 'Step 1 title' });
+      fireEvent.change(input, { target: { value: 'Introduction' } });
+
+      expect(screen.getByRole('textbox', { name: 'Step 1 title' })).toHaveValue('Introduction');
+    });
+
+    it('moving a field to a step assigns it (field moves from unassigned to the step)', async () => {
+      const user = userEvent.setup();
+      const { client } = renderEditor();
+
+      // Add a field before entering multi-step so it lands in the initial step
+      await user.click(screen.getByRole('button', { name: 'Text Input' }));
+      await user.click(screen.getByRole('radio', { name: 'Multi-Step' }));
+
+      // Add a second step, then remove the field from step 1 so it becomes unassigned
+      await user.click(screen.getByRole('button', { name: 'Add step' }));
+      await user.click(screen.getByRole('button', { name: 'Remove Text Input from Step 1' }));
+
+      // Now assign the field to Step 2
+      await user.selectOptions(
+        screen.getByRole('combobox', { name: 'Assign Text Input to step' }),
+        'Step 2',
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => {
+        const saveCalls = client.calls.filter((c) => c.method === 'PUT');
+        expect(saveCalls).toHaveLength(1);
+        const { config } = saveCalls[0].body as {
+          config: { fields: { id: string }[]; steps: { id: string; fieldIds: string[] }[] };
+        };
+        // Step 1 should have no fields
+        expect(config.steps[0].fieldIds).toHaveLength(0);
+        // Step 2 should have the field
+        expect(config.steps[1].fieldIds).toHaveLength(1);
+        expect(config.steps[1].fieldIds[0]).toBe(config.fields[0].id);
+      });
+    });
+
+    it('removing a field from a step moves it back to unassigned', async () => {
+      const user = userEvent.setup();
+      renderEditor();
+
+      // Add a field, enter multi-step (field goes to Step 1)
+      await user.click(screen.getByRole('button', { name: 'Text Input' }));
+      await user.click(screen.getByRole('radio', { name: 'Multi-Step' }));
+
+      // Remove the field from Step 1
+      await user.click(screen.getByRole('button', { name: 'Remove Text Input from Step 1' }));
+
+      // The unassigned fields list should now appear
+      expect(screen.getByRole('list', { name: 'Unassigned fields' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('combobox', { name: 'Assign Text Input to step' }),
+      ).toBeInTheDocument();
+    });
+  });
 });
