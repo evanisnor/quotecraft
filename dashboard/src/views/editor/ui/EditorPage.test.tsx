@@ -673,6 +673,41 @@ describe('EditorPage', () => {
       });
     });
 
+    it('moving a field to its current step is a no-op (no duplicate fieldIds)', async () => {
+      const user = userEvent.setup();
+      const { client } = renderEditor();
+
+      // Add a field, enter multi-step (field goes to Step 1)
+      await user.click(screen.getByRole('button', { name: 'Text Input' }));
+      await user.click(screen.getByRole('radio', { name: 'Multi-Step' }));
+
+      // Add a second step, move the field to Step 2, then move it to Step 2 again
+      await user.click(screen.getByRole('button', { name: 'Add step' }));
+      await user.click(screen.getByRole('button', { name: 'Remove Text Input from Step 1' }));
+      await user.selectOptions(
+        screen.getByRole('combobox', { name: 'Assign Text Input to step' }),
+        'Step 2',
+      );
+      // Move to Step 2 a second time — should still only appear once
+      await user.click(screen.getByRole('button', { name: 'Remove Text Input from Step 2' }));
+      await user.selectOptions(
+        screen.getByRole('combobox', { name: 'Assign Text Input to step' }),
+        'Step 2',
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => {
+        const saveCalls = client.calls.filter((c) => c.method === 'PUT');
+        expect(saveCalls).toHaveLength(1);
+        const { config } = saveCalls[0].body as {
+          config: { steps: { fieldIds: string[] }[] };
+        };
+        // Step 2 should contain the field exactly once
+        expect(config.steps[1].fieldIds).toHaveLength(1);
+      });
+    });
+
     it('removing a field from a step moves it back to unassigned', async () => {
       const user = userEvent.setup();
       renderEditor();
