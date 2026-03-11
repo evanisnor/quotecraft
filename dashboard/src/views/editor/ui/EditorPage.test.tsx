@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EditorPage } from './EditorPage';
 import { StubApiClient } from '@/shared/api/testing';
+import { DEFAULT_THEME } from '@/shared/config';
 
 function renderEditor(calculatorId = 'calc-1') {
   const client = new StubApiClient();
@@ -724,6 +725,62 @@ describe('EditorPage', () => {
       expect(
         screen.getByRole('combobox', { name: 'Assign Text Input to step' }),
       ).toBeInTheDocument();
+    });
+  });
+
+  describe('theme color pickers', () => {
+    it('renders the theme colors section', () => {
+      renderEditor();
+
+      expect(screen.getByRole('region', { name: 'Theme Colors' })).toBeInTheDocument();
+    });
+
+    it('all four color inputs are present in the theme colors section', () => {
+      renderEditor();
+
+      expect(screen.getByLabelText('Primary Color')).toBeInTheDocument();
+      expect(screen.getByLabelText('Secondary Color')).toBeInTheDocument();
+      expect(screen.getByLabelText('Background Color')).toBeInTheDocument();
+      expect(screen.getByLabelText('Text Color')).toBeInTheDocument();
+    });
+
+    it('theme is included in the saved config with default values when saved', async () => {
+      const user = userEvent.setup();
+      const { client } = renderEditor();
+
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => {
+        const saveCalls = client.calls.filter((c) => c.method === 'PUT');
+        expect(saveCalls).toHaveLength(1);
+        const { config } = saveCalls[0].body as {
+          config: { theme: typeof DEFAULT_THEME };
+        };
+        expect(config.theme).toEqual(DEFAULT_THEME);
+      });
+    });
+
+    it('changing the primary color picker updates the saved config theme', async () => {
+      const user = userEvent.setup();
+      const { client } = renderEditor();
+
+      fireEvent.change(screen.getByLabelText('Primary Color'), {
+        target: { value: '#ff0000' },
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => {
+        const saveCalls = client.calls.filter((c) => c.method === 'PUT');
+        expect(saveCalls).toHaveLength(1);
+        const { config } = saveCalls[0].body as {
+          config: { theme: typeof DEFAULT_THEME };
+        };
+        expect(config.theme.primaryColor).toBe('#ff0000');
+        expect(config.theme.secondaryColor).toBe(DEFAULT_THEME.secondaryColor);
+        expect(config.theme.backgroundColor).toBe(DEFAULT_THEME.backgroundColor);
+        expect(config.theme.textColor).toBe(DEFAULT_THEME.textColor);
+      });
     });
   });
 });

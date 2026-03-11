@@ -1,6 +1,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { useAutoSave } from './useAutoSave';
 import { StubApiClient } from '@/shared/api/testing';
+import { DEFAULT_THEME } from '@/shared/config';
 import type { CalculatorEditorConfig } from '@/shared/config';
 
 const EMPTY_CONFIG: CalculatorEditorConfig = {
@@ -8,6 +9,7 @@ const EMPTY_CONFIG: CalculatorEditorConfig = {
   outputs: [],
   layoutMode: 'single-page',
   steps: [],
+  theme: DEFAULT_THEME,
 };
 const DELAY_MS = 500;
 
@@ -17,6 +19,7 @@ function makeConfig(id: string): CalculatorEditorConfig {
     outputs: [],
     layoutMode: 'single-page',
     steps: [],
+    theme: DEFAULT_THEME,
   };
 }
 

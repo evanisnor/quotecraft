@@ -5,6 +5,7 @@ import {
   updateCalculatorConfig,
 } from './calculators';
 import { StubApiClient } from '@/shared/api/testing';
+import { DEFAULT_THEME } from '@/shared/config';
 
 describe('listCalculators', () => {
   it('returns an array of CalculatorSummary on success', async () => {
@@ -108,6 +109,7 @@ describe('updateCalculatorConfig', () => {
         outputs: [],
         layoutMode: 'single-page',
         steps: [],
+        theme: DEFAULT_THEME,
       }),
     ).resolves.toBeUndefined();
   });
@@ -135,6 +137,7 @@ describe('updateCalculatorConfig', () => {
       outputs: [],
       layoutMode: 'single-page' as const,
       steps: [],
+      theme: DEFAULT_THEME,
     };
     await updateCalculatorConfig(client, 'calc-id', config);
 
@@ -154,6 +157,7 @@ describe('updateCalculatorConfig', () => {
         outputs: [],
         layoutMode: 'single-page',
         steps: [],
+        theme: DEFAULT_THEME,
       }),
     ).rejects.toThrow('access forbidden');
   });

@@ -5,6 +5,7 @@ import type { ApiClient } from '@/shared/api';
 import { FieldTypePalette } from '@/features/add-field';
 import { LayoutModeToggle } from '@/features/toggle-layout';
 import { StepManager } from '@/features/manage-steps';
+import { ColorPickerPanel } from '@/features/style-theme';
 import { DraggableFieldList } from '@/features/reorder-fields';
 import { useAutoSave, SaveStatusIndicator } from '@/features/auto-save';
 import { OutputList, FormulaInput } from '@/features/manage-outputs';
@@ -20,8 +21,9 @@ import type {
   ResultOutputConfig,
   LayoutMode,
   Step,
+  ThemeConfig,
 } from '@/shared/config';
-import { FIELD_TYPE_LABELS } from '@/shared/config';
+import { FIELD_TYPE_LABELS, DEFAULT_THEME } from '@/shared/config';
 import { generateId, generateVariableName, buildFieldDefaults } from '@/shared/lib';
 
 interface EditorPageProps {
@@ -59,12 +61,13 @@ export function EditorPage({ calculatorId, client }: EditorPageProps) {
   const [selectedOutputId, setSelectedOutputId] = useState<string | null>(null);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('single-page');
   const [steps, setSteps] = useState<Step[]>([]);
+  const [theme, setTheme] = useState<ThemeConfig>(DEFAULT_THEME);
 
   const selectedField = fields.find((f) => f.id === selectedFieldId) ?? null;
 
   const config = useMemo(
-    () => ({ fields, outputs, layoutMode, steps }),
-    [fields, outputs, layoutMode, steps],
+    () => ({ fields, outputs, layoutMode, steps, theme }),
+    [fields, outputs, layoutMode, steps, theme],
   );
   const fieldDefaults = useMemo(() => buildFieldDefaults(fields), [fields]);
 
@@ -236,6 +239,7 @@ export function EditorPage({ calculatorId, client }: EditorPageProps) {
               fieldValues={fieldDefaults}
             />
           )}
+          <ColorPickerPanel theme={theme} onChange={setTheme} />
         </div>
         <div className="flex-1">
           <PreviewPane>

@@ -78,14 +78,29 @@ export interface Step {
   fieldIds: string[];
 }
 
+export interface ThemeConfig {
+  primaryColor: string;
+  secondaryColor: string;
+  backgroundColor: string;
+  textColor: string;
+}
+
+export const DEFAULT_THEME: ThemeConfig = {
+  primaryColor: '#3B82F6',
+  secondaryColor: '#6B7280',
+  backgroundColor: '#FFFFFF',
+  textColor: '#111827',
+};
+
 /**
  * The full calculator configuration payload sent to and stored by the API.
  * Contains all editor state: input fields, formula output configurations,
- * layout mode, and step definitions.
+ * layout mode, step definitions, and theme settings.
  */
 export interface CalculatorEditorConfig {
   fields: BaseFieldConfig[];
   outputs: ResultOutputConfig[];
   layoutMode: LayoutMode;
   steps: Step[];
+  theme: ThemeConfig;
 }

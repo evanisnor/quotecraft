@@ -14,5 +14,7 @@ export type {
   ResultOutputConfig,
   LayoutMode,
   Step,
+  ThemeConfig,
   CalculatorEditorConfig,
 } from './calculatorConfig';
+export { DEFAULT_THEME } from './calculatorConfig';
