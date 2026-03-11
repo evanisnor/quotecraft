@@ -7,6 +7,7 @@ import type {
   DropdownFieldConfig,
   ImageSelectFieldConfig,
   ResultOutputConfig,
+  Step,
 } from '@/shared/config';
 import { CalculatorPreviewForm } from './CalculatorPreviewForm';
 
@@ -340,5 +341,259 @@ describe('CalculatorPreviewForm — formula engine integration', () => {
     expect(screen.getByText('6')).toBeInTheDocument();
     expect(screen.getByText('Tax')).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument();
+  });
+});
+
+describe('CalculatorPreviewForm — multi-step mode', () => {
+  function makeStep(overrides: Partial<Step> = {}): Step {
+    return {
+      id: 'step-1',
+      title: 'Step 1',
+      fieldIds: [],
+      ...overrides,
+    };
+  }
+
+  function makeOutput(overrides: Partial<ResultOutputConfig> = {}): ResultOutputConfig {
+    return {
+      id: 'output-1',
+      label: 'Total',
+      expression: '{quantity} * 10',
+      ...overrides,
+    };
+  }
+
+  it('does not render a progress bar in single-page mode (default)', () => {
+    render(<CalculatorPreviewForm fields={[makeNumberField()]} />);
+
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+  });
+
+  it('does not render step navigation in single-page mode (default)', () => {
+    render(<CalculatorPreviewForm fields={[makeNumberField()]} />);
+
+    expect(screen.queryByRole('navigation', { name: 'Step navigation' })).not.toBeInTheDocument();
+  });
+
+  it('renders a progress bar in multi-step mode when steps are present', () => {
+    const field = makeNumberField();
+    const step = makeStep({ fieldIds: [field.id] });
+
+    render(
+      <CalculatorPreviewForm
+        fields={[field]}
+        outputs={[]}
+        layoutMode="multi-step"
+        steps={[step]}
+      />,
+    );
+
+    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+  });
+
+  it('shows the correct step count on initial render (Step 1 of N)', () => {
+    const field1 = makeNumberField({ id: 'f1', variableName: 'quantity' });
+    const field2 = makeSliderField({ id: 'f2', variableName: 'budget' });
+    const step1 = makeStep({ id: 'step-1', fieldIds: ['f1'] });
+    const step2 = makeStep({ id: 'step-2', title: 'Step 2', fieldIds: ['f2'] });
+
+    render(
+      <CalculatorPreviewForm
+        fields={[field1, field2]}
+        outputs={[]}
+        layoutMode="multi-step"
+        steps={[step1, step2]}
+      />,
+    );
+
+    expect(screen.getByText('Step 1 of 2')).toBeInTheDocument();
+  });
+
+  it('shows only fields belonging to the current step', () => {
+    const field1 = makeNumberField({ id: 'f1', variableName: 'quantity' });
+    const field2 = makeSliderField({ id: 'f2', variableName: 'budget' });
+    const step1 = makeStep({ id: 'step-1', fieldIds: ['f1'] });
+    const step2 = makeStep({ id: 'step-2', title: 'Step 2', fieldIds: ['f2'] });
+
+    render(
+      <CalculatorPreviewForm
+        fields={[field1, field2]}
+        outputs={[]}
+        layoutMode="multi-step"
+        steps={[step1, step2]}
+      />,
+    );
+
+    expect(screen.getByLabelText('Quantity')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Budget')).not.toBeInTheDocument();
+  });
+
+  it('Next button is disabled on the last step', () => {
+    const field = makeNumberField({ id: 'f1', variableName: 'quantity' });
+    const step = makeStep({ fieldIds: ['f1'] });
+
+    render(
+      <CalculatorPreviewForm
+        fields={[field]}
+        outputs={[]}
+        layoutMode="multi-step"
+        steps={[step]}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Next step' })).toBeDisabled();
+  });
+
+  it('Back button is disabled on the first step', () => {
+    const field = makeNumberField({ id: 'f1', variableName: 'quantity' });
+    const step = makeStep({ fieldIds: ['f1'] });
+
+    render(
+      <CalculatorPreviewForm
+        fields={[field]}
+        outputs={[]}
+        layoutMode="multi-step"
+        steps={[step]}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Previous step' })).toBeDisabled();
+  });
+
+  it('clicking Next advances to the next step and shows the next step fields', async () => {
+    const user = userEvent.setup();
+    const field1 = makeNumberField({ id: 'f1', variableName: 'quantity' });
+    const field2 = makeSliderField({ id: 'f2', variableName: 'budget' });
+    const step1 = makeStep({ id: 'step-1', fieldIds: ['f1'] });
+    const step2 = makeStep({ id: 'step-2', title: 'Step 2', fieldIds: ['f2'] });
+
+    render(
+      <CalculatorPreviewForm
+        fields={[field1, field2]}
+        outputs={[]}
+        layoutMode="multi-step"
+        steps={[step1, step2]}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Next step' }));
+
+    expect(screen.queryByLabelText('Quantity')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Budget')).toBeInTheDocument();
+    expect(screen.getByText('Step 2 of 2')).toBeInTheDocument();
+  });
+
+  it('clicking Back goes to the previous step', async () => {
+    const user = userEvent.setup();
+    const field1 = makeNumberField({ id: 'f1', variableName: 'quantity' });
+    const field2 = makeSliderField({ id: 'f2', variableName: 'budget' });
+    const step1 = makeStep({ id: 'step-1', fieldIds: ['f1'] });
+    const step2 = makeStep({ id: 'step-2', title: 'Step 2', fieldIds: ['f2'] });
+
+    render(
+      <CalculatorPreviewForm
+        fields={[field1, field2]}
+        outputs={[]}
+        layoutMode="multi-step"
+        steps={[step1, step2]}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Next step' }));
+    expect(screen.getByLabelText('Budget')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Previous step' }));
+    expect(screen.getByLabelText('Quantity')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Budget')).not.toBeInTheDocument();
+  });
+
+  it('results section is hidden on non-last steps in multi-step mode', () => {
+    const field1 = makeNumberField({ id: 'f1', variableName: 'quantity', defaultValue: 2 });
+    const field2 = makeSliderField({ id: 'f2', variableName: 'budget' });
+    const step1 = makeStep({ id: 'step-1', fieldIds: ['f1'] });
+    const step2 = makeStep({ id: 'step-2', title: 'Step 2', fieldIds: ['f2'] });
+    const output = makeOutput({ expression: '{quantity} * 10', label: 'Total' });
+
+    render(
+      <CalculatorPreviewForm
+        fields={[field1, field2]}
+        outputs={[output]}
+        layoutMode="multi-step"
+        steps={[step1, step2]}
+      />,
+    );
+
+    // On step 1 (not the last step), Results should not be shown
+    expect(screen.queryByRole('region', { name: 'Results' })).not.toBeInTheDocument();
+  });
+
+  it('results section is shown on the last step in multi-step mode', async () => {
+    const user = userEvent.setup();
+    const field1 = makeNumberField({ id: 'f1', variableName: 'quantity', defaultValue: 2 });
+    const field2 = makeSliderField({ id: 'f2', variableName: 'budget' });
+    const step1 = makeStep({ id: 'step-1', fieldIds: ['f1'] });
+    const step2 = makeStep({ id: 'step-2', title: 'Step 2', fieldIds: ['f2'] });
+    const output = makeOutput({ expression: '{quantity} * 10', label: 'Total' });
+
+    render(
+      <CalculatorPreviewForm
+        fields={[field1, field2]}
+        outputs={[output]}
+        layoutMode="multi-step"
+        steps={[step1, step2]}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Next step' }));
+
+    expect(screen.getByRole('region', { name: 'Results' })).toBeInTheDocument();
+  });
+
+  it('shows the empty state when in multi-step mode with no steps', () => {
+    render(
+      <CalculatorPreviewForm
+        fields={[makeNumberField()]}
+        outputs={[]}
+        layoutMode="multi-step"
+        steps={[]}
+      />,
+    );
+
+    expect(screen.getByText('Add fields to preview your calculator.')).toBeInTheDocument();
+  });
+
+  it('clamps step index if steps are removed while on a later step', async () => {
+    const user = userEvent.setup();
+    const field1 = makeNumberField({ id: 'f1', variableName: 'quantity' });
+    const field2 = makeSliderField({ id: 'f2', variableName: 'budget' });
+    const step1 = makeStep({ id: 'step-1', fieldIds: ['f1'] });
+    const step2 = makeStep({ id: 'step-2', title: 'Step 2', fieldIds: ['f2'] });
+
+    const { rerender } = render(
+      <CalculatorPreviewForm
+        fields={[field1, field2]}
+        outputs={[]}
+        layoutMode="multi-step"
+        steps={[step1, step2]}
+      />,
+    );
+
+    // Navigate to step 2
+    await user.click(screen.getByRole('button', { name: 'Next step' }));
+    expect(screen.getByText('Step 2 of 2')).toBeInTheDocument();
+
+    // Remove step 2 — now only step 1 exists
+    rerender(
+      <CalculatorPreviewForm
+        fields={[field1, field2]}
+        outputs={[]}
+        layoutMode="multi-step"
+        steps={[step1]}
+      />,
+    );
+
+    // Step index should be clamped to 0 (Step 1 of 1)
+    expect(screen.getByText('Step 1 of 1')).toBeInTheDocument();
+    expect(screen.getByLabelText('Quantity')).toBeInTheDocument();
   });
 });

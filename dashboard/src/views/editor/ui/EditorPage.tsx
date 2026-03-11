@@ -239,7 +239,12 @@ export function EditorPage({ calculatorId, client }: EditorPageProps) {
         </div>
         <div className="flex-1">
           <PreviewPane>
-            <CalculatorPreviewForm fields={fields} outputs={outputs} />
+            <CalculatorPreviewForm
+              fields={fields}
+              outputs={outputs}
+              layoutMode={layoutMode}
+              steps={steps}
+            />
           </PreviewPane>
         </div>
       </div>
