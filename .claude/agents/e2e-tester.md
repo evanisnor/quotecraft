@@ -28,9 +28,54 @@ Read `$SKILL_DIR/SKILL.md` before running any tests to follow the correct execut
 
 Key rules from the skill:
 - Detect running servers first: `cd $SKILL_DIR && node -e "require('./lib/helpers').detectDevServers().then(s => console.log(JSON.stringify(s)))"`
-- Write all test scripts to `/tmp/playwright-test-*.js` — never into the project
 - Use `headless: false` by default
-- Execute via: `cd $SKILL_DIR && node run.js /tmp/playwright-test-*.js`
+- Execute via: `cd $SKILL_DIR && node run.js <test-file-path>`
+
+**Project override — write tests to the repository, not `/tmp`:**
+
+The playwright-skill's general guidance to write scripts to `/tmp` does not apply here. All E2E test files must be written to the project and committed to version control.
+
+### Test File Location
+
+All E2E tests live at the project root under `e2e/`:
+
+```
+/Users/evan/Code/github.com/evanisnor/quotecraft/
+└── e2e/
+    ├── BLDR-US3-A003.spec.js
+    ├── BLDR-US2-A009.spec.js
+    └── ...
+```
+
+- **File naming**: `e2e/<task-id>.spec.js` — one file per task, named by the task ID being tested.
+- **Format**: JavaScript (`.js`), compatible with the playwright-skill runner.
+- **Never** write to `/tmp` — tests written there are lost and cannot be reviewed or re-run.
+
+### Setting Up the Test Environment
+
+Before writing the first test for a new task, verify the `e2e/` directory exists at the project root:
+
+```bash
+ls /Users/evan/Code/github.com/evanisnor/quotecraft/e2e
+```
+
+If it doesn't exist, create it:
+
+```bash
+mkdir /Users/evan/Code/github.com/evanisnor/quotecraft/e2e
+```
+
+### Running Tests
+
+Execute using the playwright-skill runner, pointing at the project file:
+
+```bash
+cd $SKILL_DIR && node run.js /Users/evan/Code/github.com/evanisnor/quotecraft/e2e/<task-id>.spec.js
+```
+
+### Committing Test Files
+
+After a passing test run, the `e2e/<task-id>.spec.js` file must be staged and included in the task's commit alongside `PROJECT_STATUS.md`. E2E test files are first-class project artifacts — they document validated behavior and enable re-execution.
 
 ## Project Context
 
@@ -121,7 +166,7 @@ After completing the test run, report:
 
 1. **Acceptance Criteria Coverage** — for each criterion from `PROJECT_PLAN.md`, whether it was validated and the result (PASS / FAIL / NOT TESTED with reason)
 2. **Test Results** — each individual test, what it verified, and whether it passed
-3. **Screenshots** — reference paths for any screenshots saved to `/tmp/`
+3. **Screenshots** — reference paths for any failure screenshots saved to `e2e/screenshots/` (these are gitignored debugging artifacts — do not commit them). Visual regression baselines, if ever added, live in `e2e/snapshots/` and are committed.
 4. **Issues Found** — for each failure: what was tested, what was expected, what was observed, and how to reproduce it
 5. **Verdict** — PASS (all criteria exercised and passing) or FAIL (one or more criteria failed or could not be tested due to environment issues)
 

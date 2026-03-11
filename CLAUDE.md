@@ -82,12 +82,28 @@ After implementation is complete but **before committing**, invoke the **code-re
 
 After a passing code review, invoke the **e2e-tester agent** with the task ID for any task that touches the dashboard UI, widget, authentication flows, or any user-facing behavior. The agent starts the dev environment, exercises the feature in a real browser, and validates behavioral outcomes against acceptance criteria.
 
-- If the verdict is **PASS**: proceed to commit.
+- If the verdict is **PASS**: proceed to regression check (below).
 - If the verdict is **FAIL**: determine whether the failure is caused by the current task or is a pre-existing gap from before E2E testing was part of the workflow.
   - **Failure caused by the current task**: fix the issues, re-run code review if code changed, then re-run E2E testing before committing.
   - **Pre-existing failure unrelated to the current task**: commit the current task's changes (which passed code review) first, then fix the pre-existing E2E failures in one or more separate follow-up commits. Each fix commit should have a descriptive message with no task ID required.
 
 Skip this step for tasks with no user-facing surface (e.g., pure infrastructure, migrations with no UI impact).
+
+#### Regression Check (Required after E2E passes)
+
+After the new task's E2E tests pass, run the full suite of existing E2E tests to verify no regressions were introduced:
+
+```bash
+SKILL_RUNNER=/Users/evan/.claude/plugins/marketplaces/playwright-skill/skills/playwright-skill/run.js
+for f in $(ls e2e/*.spec.js | sort); do
+  echo "--- $f ---"
+  node "$SKILL_RUNNER" "$f" 2>&1 | grep -E "Total:|Verdict:|FAIL:"
+done
+```
+
+- If all existing tests pass: proceed to commit.
+- If a test fails: determine whether the failure is caused by the current task or is pre-existing (same triage as above). Fix or commit first, then fix separately.
+- The new task's `e2e/<task-id>.spec.js` file must also be staged and included in the task's commit.
 
 ### 6. Commit the Task
 

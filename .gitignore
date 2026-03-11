@@ -21,6 +21,12 @@ out/
 coverage/
 .nyc_output/
 
+# Playwright E2E — failure artifacts (screenshots, videos, traces) are not committed
+# Visual regression baselines (e2e/snapshots/) ARE committed if used
+e2e/screenshots/
+test-results/
+playwright-report/
+
 # Environment variables
 .env
 .env.local
