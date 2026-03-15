@@ -16,5 +16,6 @@ export type {
   Step,
   ThemeConfig,
   CalculatorEditorConfig,
+  FeatureFlags,
 } from './calculatorConfig';
 export { DEFAULT_THEME } from './calculatorConfig';

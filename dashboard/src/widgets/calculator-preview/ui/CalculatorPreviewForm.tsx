@@ -1,7 +1,13 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import type { BaseFieldConfig, ResultOutputConfig, LayoutMode, Step } from '@/shared/config';
+import type {
+  BaseFieldConfig,
+  ResultOutputConfig,
+  LayoutMode,
+  Step,
+  FeatureFlags,
+} from '@/shared/config';
 import { FieldPreviewRenderer, PoweredByBadge } from '@/shared/ui/field-renderers';
 import { evaluate } from '@quotecraft/formula-engine';
 import type { FormulaResult } from '@quotecraft/formula-engine';
@@ -13,6 +19,7 @@ export interface CalculatorPreviewFormProps {
   outputs?: ResultOutputConfig[];
   layoutMode?: LayoutMode;
   steps?: Step[];
+  featureFlags?: FeatureFlags;
 }
 
 export function CalculatorPreviewForm({
@@ -20,6 +27,7 @@ export function CalculatorPreviewForm({
   outputs = [],
   layoutMode,
   steps = [],
+  featureFlags,
 }: CalculatorPreviewFormProps) {
   // Tracks values the user has explicitly changed; merged with field defaults so
   // newly added fields appear with their defaults without resetting existing inputs.
@@ -127,9 +135,11 @@ export function CalculatorPreviewForm({
           ))}
         </section>
       )}
-      <footer>
-        <PoweredByBadge />
-      </footer>
+      {!featureFlags?.brandingRemovable && (
+        <footer>
+          <PoweredByBadge />
+        </footer>
+      )}
     </form>
   );
 }

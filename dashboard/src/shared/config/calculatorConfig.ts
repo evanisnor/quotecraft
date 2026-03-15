@@ -104,3 +104,7 @@ export interface CalculatorEditorConfig {
   steps: Step[];
   theme: ThemeConfig;
 }
+
+export interface FeatureFlags {
+  brandingRemovable: boolean;
+}

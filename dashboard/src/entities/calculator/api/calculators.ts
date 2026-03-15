@@ -1,5 +1,5 @@
 import type { ApiClient } from '@/shared/api';
-import type { CalculatorEditorConfig } from '@/shared/config';
+import type { CalculatorEditorConfig, FeatureFlags } from '@/shared/config';
 import type { CalculatorSummary } from '../model/types';
 
 interface CalculatorData {
@@ -30,6 +30,22 @@ export async function createCalculator(client: ApiClient): Promise<CalculatorSum
 
 export async function deleteCalculator(client: ApiClient, id: string): Promise<void> {
   await client.delete(`/v1/calculators/${id}`);
+}
+
+interface PublicConfigData {
+  id: string;
+  config: unknown;
+  config_version: number;
+  feature_flags?: {
+    branding_removable?: boolean;
+  };
+}
+
+export async function fetchPublicConfig(client: ApiClient, id: string): Promise<FeatureFlags> {
+  const data = await client.get<PublicConfigData>(`/v1/calculators/${id}/config`);
+  return {
+    brandingRemovable: data.feature_flags?.branding_removable ?? false,
+  };
 }
 
 export async function updateCalculatorConfig(

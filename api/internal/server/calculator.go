@@ -290,11 +290,18 @@ type CalculatorPublicConfigGetter interface {
 	GetPublicConfig(ctx context.Context, id string) (*calculator.Calculator, error)
 }
 
+// featureFlags carries billing-gated capability flags included in the public config response.
+// All flags default to the free-tier values until billing is implemented.
+type featureFlags struct {
+	BrandingRemovable bool `json:"branding_removable"`
+}
+
 // publicConfigResponse is the data payload returned on successful public config fetch.
 type publicConfigResponse struct {
 	ID            string          `json:"id"`
 	Config        json.RawMessage `json:"config"`
 	ConfigVersion int             `json:"config_version"`
+	FeatureFlags  featureFlags    `json:"feature_flags"`
 }
 
 // publicConfigHandler returns an http.HandlerFunc for GET /v1/calculators/{id}/config.
@@ -317,6 +324,7 @@ func publicConfigHandler(svc CalculatorPublicConfigGetter) http.HandlerFunc {
 			ID:            calc.ID,
 			Config:        json.RawMessage(calc.Config),
 			ConfigVersion: calc.ConfigVersion,
+			FeatureFlags:  featureFlags{BrandingRemovable: false},
 		})
 	}
 }

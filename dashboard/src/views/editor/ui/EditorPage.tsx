@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ApiClient } from '@/shared/api';
 import { FieldTypePalette } from '@/features/add-field';
 import { LayoutModeToggle } from '@/features/toggle-layout';
@@ -22,8 +22,10 @@ import type {
   LayoutMode,
   Step,
   ThemeConfig,
+  FeatureFlags,
 } from '@/shared/config';
 import { FIELD_TYPE_LABELS, DEFAULT_THEME } from '@/shared/config';
+import { fetchPublicConfig } from '@/entities/calculator';
 import { generateId, generateVariableName, buildFieldDefaults } from '@/shared/lib';
 
 interface EditorPageProps {
@@ -62,6 +64,13 @@ export function EditorPage({ calculatorId, client }: EditorPageProps) {
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('single-page');
   const [steps, setSteps] = useState<Step[]>([]);
   const [theme, setTheme] = useState<ThemeConfig>(DEFAULT_THEME);
+  const [featureFlags, setFeatureFlags] = useState<FeatureFlags>({ brandingRemovable: false });
+
+  useEffect(() => {
+    fetchPublicConfig(client, calculatorId)
+      .then(setFeatureFlags)
+      .catch(() => {});
+  }, [client, calculatorId]);
 
   const selectedField = fields.find((f) => f.id === selectedFieldId) ?? null;
 
@@ -248,6 +257,7 @@ export function EditorPage({ calculatorId, client }: EditorPageProps) {
               outputs={outputs}
               layoutMode={layoutMode}
               steps={steps}
+              featureFlags={featureFlags}
             />
           </PreviewPane>
         </div>

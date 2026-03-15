@@ -1016,6 +1016,14 @@ func TestPublicConfigHandler_Success(t *testing.T) {
 	if !ok || int(cv) != 1 {
 		t.Errorf("expected config_version 1, got %v", env.Data["config_version"])
 	}
+	ff, ok := env.Data["feature_flags"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected feature_flags to be a JSON object, got %T", env.Data["feature_flags"])
+	}
+	brandingRemovable, ok := ff["branding_removable"].(bool)
+	if !ok || brandingRemovable != false {
+		t.Errorf("expected feature_flags.branding_removable false, got %v", ff["branding_removable"])
+	}
 }
 
 func TestPublicConfigHandler_NotFound(t *testing.T) {

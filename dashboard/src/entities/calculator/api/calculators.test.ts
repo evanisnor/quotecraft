@@ -3,6 +3,7 @@ import {
   createCalculator,
   deleteCalculator,
   updateCalculatorConfig,
+  fetchPublicConfig,
 } from './calculators';
 import { StubApiClient } from '@/shared/api/testing';
 import { DEFAULT_THEME } from '@/shared/config';
@@ -160,5 +161,37 @@ describe('updateCalculatorConfig', () => {
         theme: DEFAULT_THEME,
       }),
     ).rejects.toThrow('access forbidden');
+  });
+});
+
+describe('fetchPublicConfig', () => {
+  it('returns FeatureFlags with brandingRemovable from the API response', async () => {
+    const client = new StubApiClient();
+    client.enqueueSuccess({
+      id: 'c1',
+      config: {},
+      config_version: 1,
+      feature_flags: { branding_removable: true },
+    });
+
+    const result = await fetchPublicConfig(client, 'c1');
+
+    expect(result).toEqual({ brandingRemovable: true });
+  });
+
+  it('defaults brandingRemovable to false when feature_flags is absent', async () => {
+    const client = new StubApiClient();
+    client.enqueueSuccess({ id: 'c1', config: {}, config_version: 1 });
+
+    const result = await fetchPublicConfig(client, 'c1');
+
+    expect(result).toEqual({ brandingRemovable: false });
+  });
+
+  it('throws when fetchPublicConfig receives an API error', async () => {
+    const client = new StubApiClient();
+    client.enqueueError('not found');
+
+    await expect(fetchPublicConfig(client, 'c1')).rejects.toThrow('not found');
   });
 });

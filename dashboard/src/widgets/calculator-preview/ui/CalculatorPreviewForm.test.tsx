@@ -8,6 +8,7 @@ import type {
   ImageSelectFieldConfig,
   ResultOutputConfig,
   Step,
+  FeatureFlags,
 } from '@/shared/config';
 import { CalculatorPreviewForm } from './CalculatorPreviewForm';
 
@@ -78,6 +79,20 @@ describe('CalculatorPreviewForm — badge', () => {
 
     // Badge footer is the last child of the form
     expect(form.lastElementChild).toBe(footer);
+  });
+
+  it('hides the badge when featureFlags.brandingRemovable is true', () => {
+    const featureFlags: FeatureFlags = { brandingRemovable: true };
+    render(<CalculatorPreviewForm fields={[]} featureFlags={featureFlags} />);
+
+    expect(screen.queryByRole('link', { name: 'Powered by QuoteCraft' })).not.toBeInTheDocument();
+  });
+
+  it('shows the badge when featureFlags.brandingRemovable is false', () => {
+    const featureFlags: FeatureFlags = { brandingRemovable: false };
+    render(<CalculatorPreviewForm fields={[]} featureFlags={featureFlags} />);
+
+    expect(screen.getByRole('link', { name: 'Powered by QuoteCraft' })).toBeInTheDocument();
   });
 });
 

@@ -410,9 +410,11 @@ describe('EditorPage', () => {
   it('uploading an image calls client.uploadFile and updates the imageUrl on the option', async () => {
     const user = userEvent.setup();
 
-    // Use a fresh client with the upload response queued first (before any auto-save responses)
-    // so that the uploadFile call receives the expected URL rather than an auto-save placeholder.
+    // Use a fresh client with the upload response queued after the public config fetch.
+    // The first response is consumed by fetchPublicConfig on mount; the second is the upload URL;
+    // the rest are auto-save placeholders.
     const client = new StubApiClient();
+    client.enqueueSuccess({}); // consumed by fetchPublicConfig
     client.enqueueSuccess({ url: 'https://cdn.example.com/uploaded.png' });
     // Pre-enqueue auto-save placeholders after the upload response
     for (let i = 0; i < 20; i++) {
@@ -726,6 +728,47 @@ describe('EditorPage', () => {
         screen.getByRole('combobox', { name: 'Assign Text Input to step' }),
       ).toBeInTheDocument();
     });
+  });
+
+  it('shows the badge by default when feature flags are not yet loaded', async () => {
+    // Uses renderEditor() — existing stub responses work fine
+    renderEditor();
+    const host = screen.getByTestId('preview-shadow-host');
+    // The badge is visible immediately (initial state: brandingRemovable = false)
+    await waitFor(() => {
+      const badge = host.shadowRoot?.querySelector('a[href="https://quotecraft.io"]');
+      expect(badge).not.toBeNull();
+    });
+  });
+
+  it('hides the badge when the public config returns branding_removable: true', async () => {
+    const client = new StubApiClient();
+    client.enqueueSuccess({
+      id: 'calc-1',
+      config: {},
+      config_version: 1,
+      feature_flags: { branding_removable: true },
+    });
+    for (let i = 0; i < 20; i++) client.enqueueSuccess({});
+    render(<EditorPage calculatorId="calc-1" client={client} />);
+    const host = screen.getByTestId('preview-shadow-host');
+    await waitFor(() => {
+      const badge = host.shadowRoot?.querySelector('a[href="https://quotecraft.io"]');
+      expect(badge).toBeNull();
+    });
+  });
+
+  it('keeps the badge visible when fetchPublicConfig fails', async () => {
+    const client = new StubApiClient();
+    client.enqueueError('network error');
+    for (let i = 0; i < 20; i++) client.enqueueSuccess({});
+    render(<EditorPage calculatorId="calc-1" client={client} />);
+    const host = screen.getByTestId('preview-shadow-host');
+    await waitFor(() => {
+      expect(host.shadowRoot).not.toBeNull();
+    });
+    const badge = host.shadowRoot!.querySelector('a[href="https://quotecraft.io"]');
+    expect(badge).not.toBeNull();
   });
 
   describe('theme color pickers', () => {

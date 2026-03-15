@@ -277,7 +277,7 @@ Last updated: 2026-02-28
 | Status | ID            | Task                                                         | P   | Completed |
 | ------ | ------------- | ------------------------------------------------------------ | --- | --------- |
 | ✅     | STYL-US2-A001 | Implement badge component in the shared field renderers      | 0   | 2026-03-15 |
-|        | STYL-US2-A002 | Wire badge visibility to the feature flag in config response | 0   |           |
+| ✅     | STYL-US2-A002 | Wire badge visibility to the feature flag in config response | 0   | 2026-03-15 |
 |        | STYL-US2-A003 | Add CSS sanitization rule to prevent badge hiding            | 1   |           |
 
 ---

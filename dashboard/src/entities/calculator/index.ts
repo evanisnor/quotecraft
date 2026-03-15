@@ -4,5 +4,6 @@ export {
   createCalculator,
   deleteCalculator,
   updateCalculatorConfig,
+  fetchPublicConfig,
 } from './api/calculators';
 export { CalculatorCard } from './ui/CalculatorCard';
