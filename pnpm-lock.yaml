@@ -37,6 +37,9 @@ importers:
 
   dashboard:
     dependencies:
+      '@quotecraft/field-renderers':
+        specifier: workspace:*
+        version: link:../packages/field-renderers
       '@quotecraft/formula-engine':
         specifier: workspace:*
         version: link:../packages/formula-engine

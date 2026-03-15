@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import type { BaseFieldConfig, ResultOutputConfig, LayoutMode, Step } from '@/shared/config';
-import { FieldPreviewRenderer } from '@/shared/ui/field-renderers';
+import { FieldPreviewRenderer, PoweredByBadge } from '@/shared/ui/field-renderers';
 import { evaluate } from '@quotecraft/formula-engine';
 import type { FormulaResult } from '@quotecraft/formula-engine';
 import { buildFieldDefaults } from '@/shared/lib';
@@ -127,6 +127,9 @@ export function CalculatorPreviewForm({
           ))}
         </section>
       )}
+      <footer>
+        <PoweredByBadge />
+      </footer>
     </form>
   );
 }

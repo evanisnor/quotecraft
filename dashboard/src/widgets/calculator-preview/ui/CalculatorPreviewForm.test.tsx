@@ -52,6 +52,35 @@ function makeDropdownField(overrides: Partial<DropdownFieldConfig> = {}): Dropdo
   };
 }
 
+describe('CalculatorPreviewForm — badge', () => {
+  it('renders the "Powered by QuoteCraft" badge linking to the QuoteCraft homepage', () => {
+    render(<CalculatorPreviewForm fields={[]} />);
+
+    const badge = screen.getByRole('link', { name: 'Powered by QuoteCraft' });
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveAttribute('href', 'https://quotecraft.io');
+  });
+
+  it('renders the badge inside a footer at the bottom of the form', () => {
+    render(
+      <CalculatorPreviewForm
+        fields={[makeNumberField()]}
+        outputs={[{ id: 'out-1', label: 'Total', expression: '1' }]}
+      />,
+    );
+
+    const form = screen.getByRole('form', { name: 'Calculator Preview Form' });
+    const footer = form.querySelector('footer');
+    expect(footer).not.toBeNull();
+
+    const badge = screen.getByRole('link', { name: 'Powered by QuoteCraft' });
+    expect(footer).toContainElement(badge);
+
+    // Badge footer is the last child of the form
+    expect(form.lastElementChild).toBe(footer);
+  });
+});
+
 describe('CalculatorPreviewForm', () => {
   it('renders a form with aria-label "Calculator Preview Form"', () => {
     render(<CalculatorPreviewForm fields={[]} />);
