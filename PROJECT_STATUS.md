@@ -178,7 +178,7 @@ Last updated: 2026-02-28
 | ✅     | BLDR-US3-A001 | Implement layout mode toggle (single-page vs multi-step)  | 1   | 2026-03-09 |
 | ✅     | BLDR-US3-A002 | Build step manager: assign fields to steps, reorder steps | 1   | 2026-03-10 |
 | ✅     | BLDR-US3-A003 | Implement progress bar component for multi-step mode      | 1   | 2026-03-10 |
-|        | BLDR-US3-A004 | Build conditional visibility rule editor UI               | 2   |           |
+| ✅     | BLDR-US3-A004 | Build conditional visibility rule editor UI               | 2   | 2026-03-15 |
 |        | BLDR-US3-A005 | Implement AND/OR rule combinators                         | 2   |           |
 |        | BLDR-US3-A006 | Wire conditional logic into the live preview              | 2   |           |
 

@@ -9,6 +9,7 @@ import { ColorPickerPanel } from '@/features/style-theme';
 import { DraggableFieldList } from '@/features/reorder-fields';
 import { useAutoSave, SaveStatusIndicator } from '@/features/auto-save';
 import { OutputList, FormulaInput } from '@/features/manage-outputs';
+import { ConditionalRuleEditor } from '@/features/manage-conditional-rules';
 import { FieldEditorWidget } from '@/widgets/field-editor';
 import { PreviewPane, CalculatorPreviewForm } from '@/widgets/calculator-preview';
 import type {
@@ -23,6 +24,7 @@ import type {
   Step,
   ThemeConfig,
   FeatureFlags,
+  VisibilityRule,
 } from '@/shared/config';
 import { FIELD_TYPE_LABELS, DEFAULT_THEME } from '@/shared/config';
 import { fetchPublicConfig } from '@/entities/calculator';
@@ -65,6 +67,7 @@ export function EditorPage({ calculatorId, client }: EditorPageProps) {
   const [steps, setSteps] = useState<Step[]>([]);
   const [theme, setTheme] = useState<ThemeConfig>(DEFAULT_THEME);
   const [featureFlags, setFeatureFlags] = useState<FeatureFlags>({ brandingRemovable: false });
+  const [visibilityRules, setVisibilityRules] = useState<VisibilityRule[]>([]);
 
   useEffect(() => {
     fetchPublicConfig(client, calculatorId)
@@ -75,8 +78,8 @@ export function EditorPage({ calculatorId, client }: EditorPageProps) {
   const selectedField = fields.find((f) => f.id === selectedFieldId) ?? null;
 
   const config = useMemo(
-    () => ({ fields, outputs, layoutMode, steps, theme }),
-    [fields, outputs, layoutMode, steps, theme],
+    () => ({ fields, outputs, layoutMode, steps, theme, visibilityRules }),
+    [fields, outputs, layoutMode, steps, theme, visibilityRules],
   );
   const fieldDefaults = useMemo(() => buildFieldDefaults(fields), [fields]);
 
@@ -195,6 +198,31 @@ export function EditorPage({ calculatorId, client }: EditorPageProps) {
     return result.url;
   }
 
+  function handleAddRule(): void {
+    const newRule: VisibilityRule = {
+      id: generateId(),
+      targetFieldId: fields[0]?.id ?? '',
+      conditions: [
+        {
+          id: generateId(),
+          sourceFieldId: '',
+          operator: '=',
+          value: '',
+        },
+      ],
+      combinator: 'AND',
+    };
+    setVisibilityRules((prev) => [...prev, newRule]);
+  }
+
+  function handleUpdateRule(rule: VisibilityRule): void {
+    setVisibilityRules((prev) => prev.map((r) => (r.id === rule.id ? rule : r)));
+  }
+
+  function handleDeleteRule(ruleId: string): void {
+    setVisibilityRules((prev) => prev.filter((r) => r.id !== ruleId));
+  }
+
   return (
     <main data-calculator-id={calculatorId}>
       <h1>Calculator Editor</h1>
@@ -214,6 +242,13 @@ export function EditorPage({ calculatorId, client }: EditorPageProps) {
               onRemoveFieldFromStep={handleRemoveFieldFromStep}
             />
           )}
+          <ConditionalRuleEditor
+            rules={visibilityRules}
+            fields={fields}
+            onAddRule={handleAddRule}
+            onUpdateRule={handleUpdateRule}
+            onDeleteRule={handleDeleteRule}
+          />
           <FieldTypePalette onAdd={handleAddField} />
           <DraggableFieldList
             fields={fields}

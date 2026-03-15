@@ -771,6 +771,44 @@ describe('EditorPage', () => {
     expect(badge).not.toBeNull();
   });
 
+  describe('conditional visibility rules', () => {
+    it('renders the conditional visibility rules section', () => {
+      renderEditor();
+
+      expect(
+        screen.getByRole('region', { name: 'Conditional visibility rules' }),
+      ).toBeInTheDocument();
+    });
+
+    it('clicking "Add rule" adds a rule row when fields are present', async () => {
+      const user = userEvent.setup();
+      renderEditor();
+
+      // Add a field so rules can be defined
+      await user.click(screen.getByRole('button', { name: 'Text Input' }));
+
+      await user.click(screen.getByRole('button', { name: 'Add rule' }));
+
+      expect(screen.getByRole('combobox', { name: 'Rule 1 target field' })).toBeInTheDocument();
+    });
+
+    it('visibilityRules is included in the saved config payload', async () => {
+      const user = userEvent.setup();
+      const { client } = renderEditor();
+
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => {
+        const saveCalls = client.calls.filter((c) => c.method === 'PUT');
+        expect(saveCalls).toHaveLength(1);
+        const { config } = saveCalls[0].body as {
+          config: { visibilityRules: unknown[] };
+        };
+        expect(config.visibilityRules).toEqual([]);
+      });
+    });
+  });
+
   describe('theme color pickers', () => {
     it('renders the theme colors section', () => {
       renderEditor();

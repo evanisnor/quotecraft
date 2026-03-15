@@ -92,10 +92,26 @@ export const DEFAULT_THEME: ThemeConfig = {
   textColor: '#111827',
 };
 
+export type ComparisonOperator = '=' | '!=' | '>' | '<' | '>=' | '<=';
+
+export interface VisibilityCondition {
+  id: string;
+  sourceFieldId: string;
+  operator: ComparisonOperator;
+  value: string;
+}
+
+export interface VisibilityRule {
+  id: string;
+  targetFieldId: string;
+  conditions: VisibilityCondition[];
+  combinator: 'AND' | 'OR';
+}
+
 /**
  * The full calculator configuration payload sent to and stored by the API.
  * Contains all editor state: input fields, formula output configurations,
- * layout mode, step definitions, and theme settings.
+ * layout mode, step definitions, theme settings, and visibility rules.
  */
 export interface CalculatorEditorConfig {
   fields: BaseFieldConfig[];
@@ -103,6 +119,7 @@ export interface CalculatorEditorConfig {
   layoutMode: LayoutMode;
   steps: Step[];
   theme: ThemeConfig;
+  visibilityRules: VisibilityRule[];
 }
 
 export interface FeatureFlags {

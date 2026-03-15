@@ -17,5 +17,8 @@ export type {
   ThemeConfig,
   CalculatorEditorConfig,
   FeatureFlags,
+  ComparisonOperator,
+  VisibilityCondition,
+  VisibilityRule,
 } from './calculatorConfig';
 export { DEFAULT_THEME } from './calculatorConfig';

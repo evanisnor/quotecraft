@@ -10,6 +10,7 @@ const EMPTY_CONFIG: CalculatorEditorConfig = {
   layoutMode: 'single-page',
   steps: [],
   theme: DEFAULT_THEME,
+  visibilityRules: [],
 };
 const DELAY_MS = 500;
 
@@ -20,6 +21,7 @@ function makeConfig(id: string): CalculatorEditorConfig {
     layoutMode: 'single-page',
     steps: [],
     theme: DEFAULT_THEME,
+    visibilityRules: [],
   };
 }
 

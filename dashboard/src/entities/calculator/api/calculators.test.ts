@@ -111,6 +111,7 @@ describe('updateCalculatorConfig', () => {
         layoutMode: 'single-page',
         steps: [],
         theme: DEFAULT_THEME,
+        visibilityRules: [],
       }),
     ).resolves.toBeUndefined();
   });
@@ -139,6 +140,7 @@ describe('updateCalculatorConfig', () => {
       layoutMode: 'single-page' as const,
       steps: [],
       theme: DEFAULT_THEME,
+      visibilityRules: [],
     };
     await updateCalculatorConfig(client, 'calc-id', config);
 
@@ -159,6 +161,7 @@ describe('updateCalculatorConfig', () => {
         layoutMode: 'single-page',
         steps: [],
         theme: DEFAULT_THEME,
+        visibilityRules: [],
       }),
     ).rejects.toThrow('access forbidden');
   });
