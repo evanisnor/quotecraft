@@ -875,4 +875,46 @@ describe('evaluate', () => {
       expect(evaluate('IF({status} != 0, 100, 0)', { status: 0 })).toEqual({ value: 0 });
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Execution timeout
+  // ---------------------------------------------------------------------------
+
+  describe('execution timeout', () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('returns a timeout error when evaluation exceeds 100ms', () => {
+      let callCount = 0;
+      jest.spyOn(Date, 'now').mockImplementation(() => {
+        callCount++;
+        // First call sets deadline = 1000 + 100 = 1100
+        // Second call (in evalNode) returns 1101 — past the deadline
+        return callCount === 1 ? 1000 : 1101;
+      });
+
+      const result = evaluate('1 + 2', {});
+      expect(result.value).toBe(0);
+      expect(result.error).toBeDefined();
+      expect(result.error).toContain('timed out');
+    });
+
+    it('does not time out for a normal expression that completes quickly', () => {
+      // No mocking — real Date.now() — simple expression runs in microseconds
+      const result = evaluate('1 + 2', {});
+      expect(result).toEqual({ value: 3 });
+    });
+
+    it('includes "100ms" in the timeout error message', () => {
+      let callCount = 0;
+      jest.spyOn(Date, 'now').mockImplementation(() => {
+        callCount++;
+        return callCount === 1 ? 1000 : 1101;
+      });
+
+      const result = evaluate('42', {});
+      expect(result.error).toContain('100ms');
+    });
+  });
 });

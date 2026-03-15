@@ -15,6 +15,17 @@ export class EvaluateError extends Error {
 }
 
 /**
+ * Thrown when formula evaluation exceeds the 100ms deadline. Caught by
+ * `evaluate()` and converted into a FormulaResult error.
+ */
+export class TimeoutError extends Error {
+  constructor() {
+    super('Formula evaluation timed out (exceeded 100ms)');
+    this.name = 'TimeoutError';
+  }
+}
+
+/**
  * Recursively evaluates an AST node against a formula context.
  *
  * - NumberLiteralNode → returns the literal value
@@ -32,7 +43,11 @@ export class EvaluateError extends Error {
  * @throws {EvaluateError} when a variable name is not present in the context,
  *   or when a function is called with the wrong number of arguments.
  */
-function evalNode(node: ASTNode, context: FormulaContext): number {
+function evalNode(node: ASTNode, context: FormulaContext, deadline: number): number {
+  if (Date.now() > deadline) {
+    throw new TimeoutError();
+  }
+
   switch (node.kind) {
     case 'NumberLiteral':
       return node.value;
@@ -45,11 +60,11 @@ function evalNode(node: ASTNode, context: FormulaContext): number {
     }
 
     case 'UnaryOp':
-      return -evalNode(node.operand, context);
+      return -evalNode(node.operand, context, deadline);
 
     case 'BinaryOp': {
-      const left = evalNode(node.left, context);
-      const right = evalNode(node.right, context);
+      const left = evalNode(node.left, context, deadline);
+      const right = evalNode(node.right, context, deadline);
       const op = node.op;
 
       switch (op) {
@@ -92,15 +107,15 @@ function evalNode(node: ASTNode, context: FormulaContext): number {
             `IF requires exactly 3 arguments (condition, then, else), got ${args.length}`,
           );
         }
-        const condition = evalNode(args[0], context);
-        return condition !== 0 ? evalNode(args[1], context) : evalNode(args[2], context);
+        const condition = evalNode(args[0], context, deadline);
+        return condition !== 0 ? evalNode(args[1], context, deadline) : evalNode(args[2], context, deadline);
       }
 
       if (name === 'MIN') {
         if (args.length < 1) {
           throw new EvaluateError(`MIN requires at least 1 argument, got ${args.length}`);
         }
-        const values = args.map((arg) => evalNode(arg, context));
+        const values = args.map((arg) => evalNode(arg, context, deadline));
         return Math.min(...values);
       }
 
@@ -108,7 +123,7 @@ function evalNode(node: ASTNode, context: FormulaContext): number {
         if (args.length < 1) {
           throw new EvaluateError(`MAX requires at least 1 argument, got ${args.length}`);
         }
-        const values = args.map((arg) => evalNode(arg, context));
+        const values = args.map((arg) => evalNode(arg, context, deadline));
         return Math.max(...values);
       }
 
@@ -116,18 +131,18 @@ function evalNode(node: ASTNode, context: FormulaContext): number {
         if (args.length !== 1) {
           throw new EvaluateError(`ABS requires exactly 1 argument, got ${args.length}`);
         }
-        return Math.abs(evalNode(args[0], context));
+        return Math.abs(evalNode(args[0], context, deadline));
       }
 
       if (name === 'ROUND') {
         if (args.length < 1 || args.length > 2) {
           throw new EvaluateError(`ROUND requires 1 or 2 arguments, got ${args.length}`);
         }
-        const value = evalNode(args[0], context);
+        const value = evalNode(args[0], context, deadline);
         if (args.length === 1) {
           return Math.round(value);
         }
-        const decimals = evalNode(args[1], context);
+        const decimals = evalNode(args[1], context, deadline);
         const factor = Math.pow(10, Math.round(decimals));
         return Math.round(value * factor) / factor;
       }
@@ -164,10 +179,12 @@ export function evaluate(expression: string, context: FormulaContext): FormulaRe
     return { value: 0 };
   }
 
+  const deadline = Date.now() + 100;
+
   try {
     const tokens = tokenize(expression);
     const ast = parse(tokens);
-    const value = evalNode(ast, context);
+    const value = evalNode(ast, context, deadline);
     return { value };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
