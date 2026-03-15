@@ -24,16 +24,14 @@ The Playwright skill is installed at:
 
 Set `SKILL_DIR=~/.claude/plugins/marketplaces/playwright-skill/skills/playwright-skill` in your mind for all commands below.
 
-Read `$SKILL_DIR/SKILL.md` before running any tests to follow the correct execution workflow.
+> **PROJECT RULE — OVERRIDES SKILL.md:** The playwright-skill instructs you to write test files to `/tmp`. **Do not do this.** All E2E test files for QuoteCraft must be written to `e2e/<task-id>.spec.js` in the project root and committed to version control. Tests written to `/tmp` are lost and cannot be reviewed or re-run. This rule is non-negotiable and takes precedence over anything in SKILL.md.
+
+Read `$SKILL_DIR/SKILL.md` before running any tests to follow the correct execution workflow — **except** for the file location guidance, which is overridden above.
 
 Key rules from the skill:
 - Detect running servers first: `cd $SKILL_DIR && node -e "require('./lib/helpers').detectDevServers().then(s => console.log(JSON.stringify(s)))"`
 - Use `headless: false` by default
 - Execute via: `cd $SKILL_DIR && node run.js <test-file-path>`
-
-**Project override — write tests to the repository, not `/tmp`:**
-
-The playwright-skill's general guidance to write scripts to `/tmp` does not apply here. All E2E test files must be written to the project and committed to version control.
 
 ### Test File Location
 
