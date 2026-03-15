@@ -221,12 +221,18 @@ class Parser {
   }
 
   /**
-   * args → expression (, expression)*
+   * args → ε | expression (, expression)*
    *
    * Parses function arguments after '(' has been consumed. Does NOT consume
-   * the closing ')'.
+   * the closing ')'. Returns an empty array when the next token is ')' so
+   * that zero-argument calls like MIN() reach the evaluator's arity checks
+   * and produce domain-appropriate error messages.
    */
   private parseArgs(): ASTNode[] {
+    if (this.peek().kind === 'RPAREN') {
+      return [];
+    }
+
     const args: ASTNode[] = [];
     args.push(this.parseExpression());
 

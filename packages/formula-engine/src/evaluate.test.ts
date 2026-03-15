@@ -205,32 +205,192 @@ describe('evaluate', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // Errors — unsupported function calls (MIN, MAX, ABS, ROUND not yet implemented)
+  // MIN function
   // ---------------------------------------------------------------------------
 
-  describe('unsupported function calls', () => {
-    it('returns an error for MIN()', () => {
-      const result = evaluate('MIN(1, 2)', {});
+  describe('MIN function', () => {
+    it('returns the smaller of two values: MIN(1, 2) → 1', () => {
+      expect(evaluate('MIN(1, 2)', {})).toEqual({ value: 1 });
+    });
+
+    it('returns the smaller of two values: MIN(5, 3) → 3', () => {
+      expect(evaluate('MIN(5, 3)', {})).toEqual({ value: 3 });
+    });
+
+    it('returns the minimum of 3+ arguments: MIN(1, 2, 3) → 1', () => {
+      expect(evaluate('MIN(1, 2, 3)', {})).toEqual({ value: 1 });
+    });
+
+    it('handles negative numbers: MIN(-1, -5) → -5', () => {
+      expect(evaluate('MIN(-1, -5)', {})).toEqual({ value: -5 });
+    });
+
+    it('resolves variable arguments: MIN({a}, {b})', () => {
+      expect(evaluate('MIN({a}, {b})', { a: 7, b: 3 })).toEqual({ value: 3 });
+    });
+
+    it('evaluates expression arguments: MIN(2+3, 1+1) → 2', () => {
+      expect(evaluate('MIN(2+3, 1+1)', {})).toEqual({ value: 2 });
+    });
+
+    it('returns an error for MIN() with 0 arguments', () => {
+      const result = evaluate('MIN()', {});
+      expect(result.value).toBe(0);
+      expect(result.error).toBeDefined();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // MAX function
+  // ---------------------------------------------------------------------------
+
+  describe('MAX function', () => {
+    it('returns the larger of two values: MAX(1, 2) → 2', () => {
+      expect(evaluate('MAX(1, 2)', {})).toEqual({ value: 2 });
+    });
+
+    it('returns the larger of two values: MAX(5, 3) → 5', () => {
+      expect(evaluate('MAX(5, 3)', {})).toEqual({ value: 5 });
+    });
+
+    it('returns the maximum of 3+ arguments: MAX(1, 2, 3) → 3', () => {
+      expect(evaluate('MAX(1, 2, 3)', {})).toEqual({ value: 3 });
+    });
+
+    it('handles negative numbers: MAX(-1, -5) → -1', () => {
+      expect(evaluate('MAX(-1, -5)', {})).toEqual({ value: -1 });
+    });
+
+    it('resolves variable arguments: MAX({a}, {b})', () => {
+      expect(evaluate('MAX({a}, {b})', { a: 7, b: 3 })).toEqual({ value: 7 });
+    });
+
+    it('evaluates expression arguments: MAX(2+3, 1+1) → 5', () => {
+      expect(evaluate('MAX(2+3, 1+1)', {})).toEqual({ value: 5 });
+    });
+
+    it('returns an error for MAX() with 0 arguments', () => {
+      const result = evaluate('MAX()', {});
+      expect(result.value).toBe(0);
+      expect(result.error).toBeDefined();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // ABS function
+  // ---------------------------------------------------------------------------
+
+  describe('ABS function', () => {
+    it('returns the absolute value of a negative number: ABS(-5) → 5', () => {
+      expect(evaluate('ABS(-5)', {})).toEqual({ value: 5 });
+    });
+
+    it('returns the absolute value of a positive number: ABS(5) → 5', () => {
+      expect(evaluate('ABS(5)', {})).toEqual({ value: 5 });
+    });
+
+    it('returns zero for ABS(0) → 0', () => {
+      expect(evaluate('ABS(0)', {})).toEqual({ value: 0 });
+    });
+
+    it('resolves a negative variable: ABS({x}) with x=-3 → 3', () => {
+      expect(evaluate('ABS({x})', { x: -3 })).toEqual({ value: 3 });
+    });
+
+    it('evaluates an expression argument: ABS(2 - 7) → 5', () => {
+      expect(evaluate('ABS(2 - 7)', {})).toEqual({ value: 5 });
+    });
+
+    it('returns an error for ABS() with 0 arguments', () => {
+      const result = evaluate('ABS()', {});
       expect(result.value).toBe(0);
       expect(result.error).toBeDefined();
     });
 
-    it('returns an error for MAX()', () => {
-      const result = evaluate('MAX(1, 2)', {});
+    it('returns an error for ABS(1, 2) with 2 arguments', () => {
+      const result = evaluate('ABS(1, 2)', {});
+      expect(result.value).toBe(0);
+      expect(result.error).toBeDefined();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // ROUND function
+  // ---------------------------------------------------------------------------
+
+  describe('ROUND function', () => {
+    it('rounds up when decimal is >= 0.5: ROUND(3.7) → 4', () => {
+      expect(evaluate('ROUND(3.7)', {})).toEqual({ value: 4 });
+    });
+
+    it('rounds down when decimal is < 0.5: ROUND(3.2) → 3', () => {
+      expect(evaluate('ROUND(3.2)', {})).toEqual({ value: 3 });
+    });
+
+    it('rounds 0.5 up: ROUND(3.5) → 4', () => {
+      expect(evaluate('ROUND(3.5)', {})).toEqual({ value: 4 });
+    });
+
+    it('rounds -0.5 toward +Infinity (JS semantics): ROUND(-3.5) → -3', () => {
+      expect(evaluate('ROUND(-3.5)', {})).toEqual({ value: -3 });
+    });
+
+    it('rounds to 2 decimal places: ROUND(3.456, 2) → 3.46', () => {
+      expect(evaluate('ROUND(3.456, 2)', {})).toEqual({ value: 3.46 });
+    });
+
+    it('rounds down to 2 decimal places: ROUND(3.454, 2) → 3.45', () => {
+      expect(evaluate('ROUND(3.454, 2)', {})).toEqual({ value: 3.45 });
+    });
+
+    it('rounds to 0 decimal places with explicit second arg: ROUND(3.456, 0) → 3', () => {
+      expect(evaluate('ROUND(3.456, 0)', {})).toEqual({ value: 3 });
+    });
+
+    it('resolves a variable argument: ROUND({x})', () => {
+      expect(evaluate('ROUND({x})', { x: 2.7 })).toEqual({ value: 3 });
+    });
+
+    it('resolves variable with decimal places: ROUND({x}, 1)', () => {
+      expect(evaluate('ROUND({x}, 1)', { x: 2.75 })).toEqual({ value: 2.8 });
+    });
+
+    it('returns an error for ROUND() with 0 arguments', () => {
+      const result = evaluate('ROUND()', {});
       expect(result.value).toBe(0);
       expect(result.error).toBeDefined();
     });
 
-    it('returns an error for ABS()', () => {
-      const result = evaluate('ABS(-5)', {});
+    it('returns an error for ROUND(1, 2, 3) with 3 arguments', () => {
+      const result = evaluate('ROUND(1, 2, 3)', {});
       expect(result.value).toBe(0);
       expect(result.error).toBeDefined();
     });
+  });
 
-    it('returns an error for ROUND()', () => {
-      const result = evaluate('ROUND(3.7)', {});
-      expect(result.value).toBe(0);
-      expect(result.error).toBeDefined();
+  // ---------------------------------------------------------------------------
+  // Combined math functions
+  // ---------------------------------------------------------------------------
+
+  describe('combined math functions', () => {
+    it('nests ABS inside MIN: MIN(ABS(-3), 5) → 3', () => {
+      expect(evaluate('MIN(ABS(-3), 5)', {})).toEqual({ value: 3 });
+    });
+
+    it('nests ROUND inside MAX: MAX(ROUND(3.7), 2) → 4', () => {
+      expect(evaluate('MAX(ROUND(3.7), 2)', {})).toEqual({ value: 4 });
+    });
+
+    it('combines IF with MAX and MIN: qty=8 takes MAX branch → 10', () => {
+      expect(
+        evaluate('IF({qty} > 5, MAX({qty}, 10), MIN({qty}, 3))', { qty: 8 }),
+      ).toEqual({ value: 10 });
+    });
+
+    it('combines IF with MAX and MIN: qty=2 takes MIN branch → 2', () => {
+      expect(
+        evaluate('IF({qty} > 5, MAX({qty}, 10), MIN({qty}, 3))', { qty: 2 }),
+      ).toEqual({ value: 2 });
     });
   });
 

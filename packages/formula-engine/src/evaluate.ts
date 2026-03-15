@@ -24,10 +24,13 @@ export class EvaluateError extends Error {
  * - BinaryOpNode      → arithmetic (+, -, *, /, %) or comparison (=, !=, >, <, >=, <=)
  *                       Comparisons return 1 (true) or 0 (false).
  *                       Division by zero follows JS semantics: n/0 → Infinity, 0/0 → NaN.
- * - FunctionCallNode  → throws EvaluateError (functions are implemented in later tasks)
+ * - FunctionCallNode  → IF(cond, then, else) for conditional branching;
+ *                       MIN/MAX(a, b, ...) for min/max of 1+ values;
+ *                       ABS(x) for absolute value; ROUND(x[, n]) for rounding.
+ *                       Invalid argument counts throw EvaluateError.
  *
  * @throws {EvaluateError} when a variable name is not present in the context,
- *   or when an unsupported function call is encountered.
+ *   or when a function is called with the wrong number of arguments.
  */
 function evalNode(node: ASTNode, context: FormulaContext): number {
   switch (node.kind) {
@@ -93,7 +96,46 @@ function evalNode(node: ASTNode, context: FormulaContext): number {
         return condition !== 0 ? evalNode(args[1], context) : evalNode(args[2], context);
       }
 
-      throw new EvaluateError(`Function '${name}' is not yet supported`);
+      if (name === 'MIN') {
+        if (args.length < 1) {
+          throw new EvaluateError(`MIN requires at least 1 argument, got ${args.length}`);
+        }
+        const values = args.map((arg) => evalNode(arg, context));
+        return Math.min(...values);
+      }
+
+      if (name === 'MAX') {
+        if (args.length < 1) {
+          throw new EvaluateError(`MAX requires at least 1 argument, got ${args.length}`);
+        }
+        const values = args.map((arg) => evalNode(arg, context));
+        return Math.max(...values);
+      }
+
+      if (name === 'ABS') {
+        if (args.length !== 1) {
+          throw new EvaluateError(`ABS requires exactly 1 argument, got ${args.length}`);
+        }
+        return Math.abs(evalNode(args[0], context));
+      }
+
+      if (name === 'ROUND') {
+        if (args.length < 1 || args.length > 2) {
+          throw new EvaluateError(`ROUND requires 1 or 2 arguments, got ${args.length}`);
+        }
+        const value = evalNode(args[0], context);
+        if (args.length === 1) {
+          return Math.round(value);
+        }
+        const decimals = evalNode(args[1], context);
+        const factor = Math.pow(10, Math.round(decimals));
+        return Math.round(value * factor) / factor;
+      }
+
+      // TypeScript exhaustiveness guard — FunctionName is a closed union and all
+      // cases are handled above. This keeps the compiler satisfied.
+      const _exhaustive: never = name;
+      throw new EvaluateError(`Function '${String(_exhaustive)}' is not supported`);
     }
   }
 }
