@@ -26,6 +26,62 @@ export class TimeoutError extends Error {
 }
 
 /**
+ * Computes the Levenshtein edit distance between two strings using the
+ * standard iterative dynamic-programming approach. No external dependencies.
+ */
+function levenshteinDistance(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+
+  // Allocate a (m+1) × (n+1) matrix, but only keep two rows at a time.
+  const prev: number[] = Array.from({ length: n + 1 }, (_, i) => i);
+  const curr: number[] = new Array<number>(n + 1);
+
+  for (let i = 1; i <= m; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(
+        curr[j - 1] + 1,       // insertion
+        prev[j] + 1,           // deletion
+        prev[j - 1] + cost,    // substitution
+      );
+    }
+    for (let k = 0; k <= n; k++) {
+      prev[k] = curr[k];
+    }
+  }
+
+  return prev[n];
+}
+
+/**
+ * Returns the closest candidate variable name to `name` from `candidates`,
+ * provided its Levenshtein distance is within the threshold
+ * Math.max(1, Math.floor(name.length / 3)). Returns undefined when no
+ * candidate meets the threshold. Ties are broken lexicographically.
+ */
+function findClosestVariable(name: string, candidates: string[]): string | undefined {
+  if (candidates.length === 0) {
+    return undefined;
+  }
+
+  const threshold = Math.max(1, Math.floor(name.length / 3));
+  let bestCandidate: string | undefined;
+  let bestDistance = Infinity;
+
+  for (const candidate of candidates) {
+    const d = levenshteinDistance(name, candidate);
+    if (d <= threshold && (d < bestDistance || (d === bestDistance && candidate < (bestCandidate as string)))) {
+      bestDistance = d;
+      bestCandidate = candidate;
+    }
+  }
+
+  return bestCandidate;
+}
+
+/**
  * Recursively evaluates an AST node against a formula context.
  *
  * - NumberLiteralNode → returns the literal value
@@ -54,7 +110,9 @@ function evalNode(node: ASTNode, context: FormulaContext, deadline: number): num
 
     case 'Variable': {
       if (!(node.name in context)) {
-        throw new EvaluateError(`Unknown variable: {${node.name}}`);
+        const suggestion = findClosestVariable(node.name, Object.keys(context));
+        const hint = suggestion !== undefined ? `. Did you mean {${suggestion}}?` : '';
+        throw new EvaluateError(`Unknown variable: {${node.name}}${hint}`);
       }
       return context[node.name];
     }

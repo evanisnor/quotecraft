@@ -877,6 +877,72 @@ describe('evaluate', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // "Did you mean?" suggestions for unknown variable errors
+  // ---------------------------------------------------------------------------
+
+  describe('did you mean? suggestions', () => {
+    it('includes "Did you mean?" when a single close match exists', () => {
+      const result = evaluate('{numbathrooms}', { num_bathrooms: 5 });
+      expect(result.error).toBeDefined();
+      expect(result.error).toContain('Did you mean');
+    });
+
+    it('wraps the suggestion in braces', () => {
+      const result = evaluate('{numbathrooms}', { num_bathrooms: 5 });
+      expect(result.error).toBeDefined();
+      expect(result.error).toContain('{num_bathrooms}');
+    });
+
+    it('does not include "Did you mean?" when the context is empty', () => {
+      const result = evaluate('{somevar}', {});
+      expect(result.error).toBeDefined();
+      expect(result.error).not.toContain('Did you mean');
+    });
+
+    it('does not include "Did you mean?" when the closest candidate is too far', () => {
+      const result = evaluate('{xyz}', { abcdefghij: 1 });
+      expect(result.error).toBeDefined();
+      expect(result.error).not.toContain('Did you mean');
+    });
+
+    it('suggests the closest candidate when multiple exist', () => {
+      const result = evaluate('{pric}', { price: 10, discount: 20 });
+      expect(result.error).toBeDefined();
+      expect(result.error).toContain('{price}');
+      expect(result.error).not.toContain('{discount}');
+    });
+
+    it('returns the lexicographically first candidate when two are equidistant', () => {
+      // {aoo} vs candidates {boo} and {coo} — both distance 1, alphabetically {boo} comes first
+      const result = evaluate('{aoo}', { boo: 1, coo: 2 });
+      expect(result.error).toBeDefined();
+      expect(result.error).toContain('{boo}');
+      expect(result.error).not.toContain('{coo}');
+    });
+
+    it('still includes the unknown variable name in the error regardless of suggestion', () => {
+      const result = evaluate('{numbathrooms}', { num_bathrooms: 5 });
+      expect(result.error).toBeDefined();
+      expect(result.error).toContain('{numbathrooms}');
+    });
+
+    it('suggests a 1-edit-distance candidate for a 1-character unknown variable (threshold = 1)', () => {
+      // Math.max(1, Math.floor(1/3)) = 1 — so a distance-1 candidate is within threshold
+      const result = evaluate('{x}', { y: 5 });
+      expect(result.error).toBeDefined();
+      expect(result.error).toContain('Did you mean');
+      expect(result.error).toContain('{y}');
+    });
+
+    it('does not suggest a 2-edit-distance candidate for a 1-character unknown variable (threshold = 1)', () => {
+      // {x} vs {ab}: distance 2 > threshold 1 — no suggestion
+      const result = evaluate('{x}', { ab: 5 });
+      expect(result.error).toBeDefined();
+      expect(result.error).not.toContain('Did you mean');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // Execution timeout
   // ---------------------------------------------------------------------------
 
